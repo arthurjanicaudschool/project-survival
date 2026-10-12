@@ -293,7 +293,18 @@ class AzureReasoner:
         response = self.client.chat.completions.create(
             model=os.environ["AZURE_OPENAI_DEPLOYMENT"],
             messages=[
-                {"role": "system", "content": agent["prompt"]},
+                {
+                    "role": "system",
+                    "content": agent["prompt"] + "\nOUTPUT CONTRACT: "
+                    + f'agent_id must be exactly "{agent["id"]}", without the strategy name. '
+                    + "Return every field in the supplied schema and no additional fields. "
+                    "estimated_probability, confidence, proposed_stake and expected_edge must be finite JSON numbers, "
+                    "never prose, null, NaN or Infinity. estimated_probability and confidence must be between 0 and 1. "
+                    "If evidence is insufficient, return WAIT, outcome=null, estimated_probability=0.5, "
+                    "confidence=0, proposed_stake=0 and expected_edge=0; explain the uncertainty in reasoning. "
+                    "sources must contain only exact strings from allowed_sources, or be empty. "
+                    "market_id must be an exact supplied market id; use an empty string only if no markets were supplied.",
+                },
                 {"role": "user", "content": json.dumps(payload)},
             ],
             response_format={"type": "json_object"},

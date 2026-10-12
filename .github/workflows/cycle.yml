@@ -5,9 +5,9 @@ on:
   workflow_dispatch:
     inputs:
       action:
-        description: 'START explicitly creates the competition. cycle resumes it.'
+        description: 'api-check tests public market access without START. start creates the competition; cycle resumes it.'
         type: choice
-        options: [cycle, start, export]
+        options: [cycle, start, export, api-check]
         default: cycle
 permissions:
   contents: read
