@@ -474,6 +474,8 @@ def cycle(store, eid, provider, reasoner, cycle_id=None, now=None):
                         # GitHub logs; never log prompts, keys or model contents.
                         log.info("LLM_USAGE agent=%s cycle=%s metrics=%s", a["id"], cycle_id, json.dumps(metrics, default=str))
                         totals = a["stats"].setdefault("llm_usage", {"requests": 0, "prompt_tokens": 0, "completion_tokens": 0, "cached_prompt_tokens": 0})
+                        totals.setdefault("sessions", int(totals.get("requests", 0) > 0))
+                        totals["sessions"] += int(metrics.get("requests", 0) > 0)
                         for key in ("requests", "prompt_tokens", "completion_tokens", "cached_prompt_tokens"):
                             totals[key] += metrics.get(key, 0)
                         totals["model"] = metrics.get("model")

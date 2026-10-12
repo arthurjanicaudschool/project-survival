@@ -47,3 +47,22 @@ Commandes : `python -m survival.cli research-check`, `health`, `cost-report`, `e
 Un statut GitHub vert ne suffit pas : consulter health, RESEARCH_ERROR et les décisions. Le heartbeat n'affiche une exécution automatique confirmée qu'après un vrai événement schedule. La cadence GitHub n'est pas garantie. Aucun journal synthétique n'est injecté dans l'expérience réelle.
 
 Sources techniques : https://github.com/Polymarket/py-sdk ; https://docs.polymarket.com/api-reference/search/search-markets-events-and-profiles ; https://developers.openai.com/api/docs/guides/function-calling ; https://blog.gdeltproject.org/gdelt-doc-2-0-api-debuts/ ; https://azure.microsoft.com/en-us/pricing/details/azure-openai/ .
+
+## Validation en production du 13 octobre 2026
+
+Le cycle [38316778029](https://github.com/arthurjanicaudschool/project-survival/actions/runs/38316778029), terminé à 00:35:45 Paris, a relié Polymarket, les dix agents Azure, les recherches, Supabase et https://project-survival.pages.dev/. Durée 466,97 secondes, 21 marchés dont 9 hors collecte initiale, dix décisions WAIT valides, zéro rejet d'ordre et zéro erreur technique d'analyse. Les outils ont réussi 10 recherches de marchés, 10 recherches web, 12 inspections et 20 lectures de pages. Cinq autres appels d'outils ont échoué explicitement : certains sites et recherches restent indisponibles. Les traces complètes sont dans system_events.
+
+Le contrôle [38317424623](https://github.com/arthurjanicaudschool/project-survival/actions/runs/38317424623) valide une deuxième page réelle du SDK, les carnets, huit résultats d'actualité et une lecture BBC. Les premières erreurs Azure et de clé étrangère ont été corrigées ; leurs journaux restent conservés. Les achats/ventes passent les tests déterministes et PostgreSQL ; aucun achat IA de papier n'est encore observé. START et l'échéance du 19 octobre à 22:36:07 Paris sont conservés.
+
+Mesure : 40 complétions, 377 575 tokens d'entrée dont 101 669 en cache, 10 084 tokens de sortie, dix sessions. Tarifs fournis par l'utilisateur ; l'offre effective du déploiement reste à identifier :
+
+| Offre | Dix sessions mesurées | Extrapolation 504 sessions / 7 j | Option 924 sessions / 7 j |
+|---|---:|---:|---:|
+| Court Global | 0,58 EUR | 29,41 EUR | 53,91 EUR |
+| Court Data Zone | 0,70 EUR | 35,41 EUR | 64,92 EUR |
+| Long Global | 1,12 EUR | 56,58 EUR | 103,73 EUR |
+| Long Data Zone | 1,35 EUR | 68,00 EUR | 124,66 EUR |
+
+Calcul : (entrées hors cache × tarif entrée + entrées en cache × tarif cache + sorties × tarif sortie) / 1 000 000. Les écritures de cache distinctement facturées sont exclues : leur nombre de tokens n'est pas exposé séparément. Ces extrapolations supposent le même coût moyen par session et tous les quotas utilisés. Ce ne sont ni une prévision fiable ni un plafond financier. Les cycles annulés, les appels historiques et certaines reprises SDK sont exclus ; la facture Azure fait foi. Le coût historique v1 est inconnu. Tarifs configurables dans config/azure_pricing_eur.json ; cost-report calcule les quatre offres.
+
+Point encore non confirmé : aucun événement GitHub schedule observé malgré un workflow actif sur main. Les lancements ci-dessus sont manuels. Le cron a été réenregistré et le workflow réactivé ; seul un vrai cycle schedule permettra de déclarer l'autonomie PC éteint vérifiée. Le dashboard indique cette absence de preuve. GitHub Status indiquait Actions opérationnel lors de l'inspection ; aucune cause certaine n'est établie.
