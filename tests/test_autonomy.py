@@ -72,18 +72,15 @@ def test_azure_tool_loop_retrieves_market_and_accounts_for_tokens(monkeypatch):
     azure = AzureReasoner.__new__(AzureReasoner)
     azure.provider, azure.research, azure.last_audit = provider, ResearchTools(provider), {}
     d = FixtureReasoner().decide(agent, wallet, {}, {})
-    tool_call = NS(id="one", function=NS(name="get_market", arguments='{"reference":"12345"}'))
-    class Message:
-        tool_calls = [tool_call]
-        content = None
+    class ToolCall:
+        type, call_id, name, arguments = "function_call", "one", "get_market", '{"reference":"12345"}'
         def model_dump(self, **kwargs):
-            return {"role": "assistant", "tool_calls": [{"id": "one", "type": "function", "function": {"name": "get_market", "arguments": tool_call.function.arguments}}]}
+            return {"type": self.type, "call_id": self.call_id, "name": self.name, "arguments": self.arguments}
     calls = []
     def create(**kwargs):
         calls.append(kwargs)
-        message = Message() if len(calls) == 1 else NS(tool_calls=[], content=d.model_dump_json())
-        return NS(model="test-model", usage=NS(prompt_tokens=100, completion_tokens=30, prompt_tokens_details=None), choices=[NS(message=message, finish_reason="stop")])
-    azure.client = NS(chat=NS(completions=NS(create=create)))
+        return NS(model="test-model", usage=NS(input_tokens=100, output_tokens=30, input_tokens_details=None), output=[ToolCall()] if len(calls) == 1 else [], status="completed", output_text=d.model_dump_json())
+    azure.responses_client = NS(responses=NS(create=create))
     monkeypatch.setenv("AZURE_OPENAI_DEPLOYMENT", "test")
     watched = {}
     result = azure.decide(agent, wallet, watched, {})

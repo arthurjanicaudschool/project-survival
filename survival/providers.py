@@ -254,7 +254,10 @@ class AzureReasoner:
         self.last_audit = {}
         if provider is not None:
             from .research import ResearchTools
+            from openai import OpenAI
             self.research = ResearchTools(provider)
+            self.responses_client = OpenAI(api_key=os.environ["AZURE_OPENAI_API_KEY"],
+                base_url=os.environ["AZURE_OPENAI_ENDPOINT"].rstrip("/") + "/openai/v1/", timeout=45, max_retries=2)
 
     def decide(self, agent, wallet, markets, memory):
         if getattr(self, "provider", None) is not None:
@@ -296,38 +299,39 @@ class AzureReasoner:
             # Compact old tool bodies, preserving tool-call pairing and source
             # provenance, before they can grow the bill without bound.
             for old in messages:
-                if sum(len(str(m.get("content", ""))) for m in messages) <= SETTINGS["max_context_characters"]:
+                if sum(len(str(m.get("content", m.get("output", "")))) for m in messages) <= SETTINGS["max_context_characters"]:
                     break
-                if old.get("role") == "tool" and len(old.get("content", "")) > 2000:
-                    old["content"] = json.dumps({"compacted": True, "retrieved_excerpt": old["content"][:1800]})
-            response = self.client.chat.completions.create(model=os.environ["AZURE_OPENAI_DEPLOYMENT"],
-                messages=messages, max_completion_tokens=SETTINGS["max_llm_tokens"], **kwargs)
+                if old.get("type") == "function_call_output" and len(old.get("output", "")) > 2000:
+                    old["output"] = json.dumps({"compacted": True, "retrieved_excerpt": old["output"][:1800]})
+            response = self.responses_client.responses.create(model=os.environ["AZURE_OPENAI_DEPLOYMENT"],
+                input=messages, max_output_tokens=SETTINGS["max_llm_tokens"], store=False,
+                include=["reasoning.encrypted_content"], **kwargs)
             audit["requests"] += 1
             audit["model"] = response.model
             usage = response.usage
             if usage:
-                audit["prompt_tokens"] += usage.prompt_tokens
-                audit["completion_tokens"] += usage.completion_tokens
-                audit["cached_prompt_tokens"] += getattr(usage.prompt_tokens_details, "cached_tokens", 0) or 0
+                audit["prompt_tokens"] += usage.input_tokens
+                audit["completion_tokens"] += usage.output_tokens
+                audit["cached_prompt_tokens"] += getattr(usage.input_tokens_details, "cached_tokens", 0) or 0
             return response
 
         try:
             for round_index in range(SETTINGS["research_rounds"]):
                 if time.monotonic() - started > SETTINGS["research_timeout_seconds"]:
                     break
-                response = request(tools=TOOLS, tool_choice="required" if round_index == 0 else "auto")
-                message = response.choices[0].message
-                if not message.tool_calls:
-                    # Ask for final output using the validated JSON contract below.
-                    if message.content:
-                        messages.append({"role": "assistant", "content": message.content})
+                response = request(tools=[{"type": "function", **t["function"]} for t in TOOLS],
+                                   tool_choice="required" if round_index == 0 else "auto")
+                # Preserve reasoning and all function calls in the stateless
+                # Responses transcript, including encrypted reasoning content.
+                messages.extend(item.model_dump(exclude_none=True) for item in response.output)
+                calls = [item for item in response.output if item.type == "function_call"]
+                if not calls:
                     break
-                messages.append(message.model_dump(exclude_none=True))
-                for index, call in enumerate(message.tool_calls):
+                for index, call in enumerate(calls):
                     if index >= SETTINGS["research_tools_per_round"] or time.monotonic() - started > SETTINGS["research_timeout_seconds"]:
                         result = {"error": "RESEARCH_BUDGET_REACHED", "instruction": "Decide using retrieved evidence; do not invent missing information"}
                     else:
-                        result = self.research.call(call.function.name, call.function.arguments, markets)
+                        result = self.research.call(call.name, call.arguments, markets)
                     def urls(value):
                         if isinstance(value, dict):
                             for key, item in value.items():
@@ -342,13 +346,13 @@ class AzureReasoner:
                     if len(content) > 22000:
                         content = json.dumps({"truncated": True, "retrieved_excerpt": content[:21000],
                                               "instruction": "Refine query or inspect a market for complete data"})
-                    messages.append({"role": "tool", "tool_call_id": call.id, "content": content})
+                    messages.append({"type": "function_call_output", "call_id": call.call_id, "output": content})
             messages.append({"role": "user", "content": json.dumps({"instruction": "Research finished. Make your investment decision now as a valid Decision JSON. WAIT is not an execution rejection. Use exact agent_id and numeric fields.",
                 "agent_id": agent["id"], "allowed_sources": sorted(allowed)})})
-            response = request(response_format={"type": "json_object"})
-            if response.choices[0].finish_reason == "length":
+            response = request(text={"format": {"type": "json_object"}})
+            if response.status != "completed":
                 raise ValueError("Decision truncated by token budget")
-            decision = Decision.model_validate_json(response.choices[0].message.content or "")
+            decision = Decision.model_validate_json(response.output_text or "")
             if decision.agent_id != agent["id"] or any(url not in allowed for url in decision.sources):
                 raise ValueError("Invalid agent identity or unsupported source")
             if decision.action in ("BUY", "SELL") and decision.market_id not in markets:

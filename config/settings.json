@@ -2,6 +2,7 @@
   "duration_hours": 168,
   "policy_version": "autonomy-v2",
   "research_rounds": 3,
+  "research_api": "responses-v1",
   "research_tools_per_round": 3,
   "research_timeout_seconds": 90,
   "search_page_size": 15,
