@@ -29,6 +29,7 @@ export type Decision = {
   exit_plan: string;
   risk_factors: string[];
   rejection: string;
+  decision_status?: string;
 };
 export type Order = {
   id: string;
@@ -48,7 +49,8 @@ export type Agent = {
   initial_eur: string;
   dynamic: boolean;
   prompt: string;
-  risk: Record<string, string | number>;
+  risk: Record<string, string | number | boolean>;
+  runtime?: { status: string; at: string; reason: string };
   wallet: {
     initial: string;
     cash: string;
@@ -59,6 +61,7 @@ export type Agent = {
     summary?: string;
     exit_plan?: string;
     calls?: number;
+    last_call?: string;
     paused_until?: string;
   };
   stats: {
@@ -67,6 +70,7 @@ export type Agent = {
     wins: number;
     closed: number;
     categories: Record<string, string>;
+    llm_usage?: {requests: number; prompt_tokens: number; completion_tokens: number; model?: string; metering_started_at?: string};
   };
   snapshot?: Snapshot;
   decisions: Decision[];
@@ -103,6 +107,7 @@ export type Activity = {
   kind: string;
   message: string;
   agent_id: string | null;
+  details?: Record<string, unknown> | null;
 };
 export type State = {
   id: string;
@@ -112,6 +117,7 @@ export type State = {
   end_at: string;
   updated_at: string;
   last_market_sync?: string;
+  health?: {cycle_count: number; completed_at: string; duration_seconds: number; market_count: number; market_provider_ok: boolean; policy_version: string; trigger?: string; logs_url?: string; last_scheduled_cycle?: string};
   agents: Agent[];
   markets: Record<string, Market>;
   events: Activity[];

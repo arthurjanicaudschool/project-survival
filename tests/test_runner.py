@@ -129,3 +129,20 @@ def test_sqlite_concurrent_cycle_lock(setup):
                     pass
     finally:
         second.close()
+
+
+def test_policy_upgrade_preserves_capital_deadline_and_reports_health(setup, monkeypatch):
+    store, now = setup
+    state = store.load("test")
+    original_wallet = state["agents"][0]["wallet"].copy()
+    end_at = state["end_at"]
+    state["settings"]["policy_version"] = "v1"
+    store.save(state, {})
+    monkeypatch.setenv("GITHUB_EVENT_NAME", "schedule")
+    state = cycle(store, "test", FixtureProvider(now), FixtureReasoner(), "upgrade", now)
+    assert state["end_at"] == end_at
+    assert state["agents"][0]["wallet"]["initial"] == original_wallet["initial"]
+    assert state["agents"][0]["risk"]["prudence_enabled"] is False
+    assert state["health"]["trigger"] == "schedule" and state["health"]["last_scheduled_cycle"]
+    assert sum(e["kind"] == "POLICY_CHANGE" for e in state["events"]) == 1
+    assert state["health"]["cycle_count"] == 1

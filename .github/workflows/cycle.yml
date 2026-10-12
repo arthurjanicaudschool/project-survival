@@ -1,13 +1,13 @@
 name: SURVIVAL cycles
 on:
   schedule:
-    - cron: '7,17,27,37,47,57 * * * *'
+    - cron: '3-59/10 * * * *'
   workflow_dispatch:
     inputs:
       action:
         description: 'api-check tests public market access without START. start creates the competition; cycle resumes it.'
         type: choice
-        options: [cycle, start, export, api-check]
+        options: [cycle, start, export, api-check, research-check, health, cost-report]
         default: cycle
 permissions:
   contents: read
@@ -17,7 +17,7 @@ concurrency:
 jobs:
   cycle:
     runs-on: ubuntu-latest
-    timeout-minutes: 9
+    timeout-minutes: 25
     env:
       DATABASE_URL: ${{ secrets.DATABASE_URL }}
       EXPERIMENT_ID: ${{ vars.EXPERIMENT_ID || 'survival-001' }}

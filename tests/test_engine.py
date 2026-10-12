@@ -92,7 +92,10 @@ def test_probability_no_is_complement_and_model_edge_untrusted(market):
     d.expected_edge = D(100)
     d.proposed_stake = D(5)
     e, reason, edge = authorize(agent, w, d, {market.id: market}, utcnow(), {})
-    assert e is None and reason == "INSUFFICIENT_VERIFIED_EDGE" and edge < 0
+    # An unrestricted agent can knowingly accept negative edge; the estimate
+    # must still be independently recalculated rather than trusting 100.
+    assert e is not None and e.fills and reason == "" and edge < 0
+    assert abs(edge - (D(".1") - (e.gross + e.fees) / e.quantity)) < D(".000001")
 
 
 def test_json_validation():

@@ -1,6 +1,7 @@
 import hashlib
 import json
 import logging
+import os
 import httpx
 from openai import OpenAIError
 from polymarket.errors import PolymarketError
@@ -76,7 +77,10 @@ def event(store, state, kind, message, aid=None, details=None):
         "agent_id": aid,
         "details": details,
     }
-    state["events"].append(e)
+    public_event = e.copy()
+    if details is not None and len(json.dumps(details, default=str)) > 6000:
+        public_event["details"] = {"archived_in_system_events": True, "tool": details.get("tool") if isinstance(details, dict) else None}
+    state["events"].append(public_event)
     state["events"] = state["events"][-500:]
     store.record(
         "system_events",
@@ -149,6 +153,24 @@ def cycle(store, eid, provider, reasoner, cycle_id=None, now=None):
             raise ValueError("Synthetic provider forbidden in live mode")
         if state["status"] == "FINISHED" or cycle_id in state["cycles"]:
             return state
+        cycle_started = utcnow()
+        revision = hashlib.sha256(json.dumps(SETTINGS, sort_keys=True).encode()).hexdigest()[:12]
+        if state.get("policy_revision") != revision or state.get("settings", {}).get("policy_version") != SETTINGS["policy_version"]:
+            previous = state.get("settings", {})
+            configs = {a["id"]: a for a in definitions()}
+            for a in state["agents"]:
+                a.update({k: configs[a["id"]][k] for k in ("prompt", "risk", "dynamic")})
+                a["risk"]["autonomous_discovery"] = True
+                a["memory"]["needs_policy_review"] = True
+                if not a["risk"].get("prudence_enabled", True):
+                    a["memory"].pop("paused_until", None)
+                    a["memory"]["pause_triggered"] = False
+            state["settings"] = json.loads(json.dumps(SETTINGS))
+            state["policy_revision"] = revision
+            event(store, state, "POLICY_CHANGE", "Autonomous market/web research enabled; A1/A6 unrestricted; other risk limits relaxed. Capital and deadline unchanged.", details={"previous_policy": previous.get("policy_version", "v1"), "new_policy": SETTINGS["policy_version"], "settings": SETTINGS})
+        for a in state["agents"]:
+            a["risk"]["autonomous_discovery"] = True
+        event(store, state, "CYCLE_START", "Cycle started", details={"cycle_id": cycle_id, "at": cycle_started.isoformat()})
         if store.quota_usage()["database_bytes"] >= SETTINGS["max_database_bytes"]:
             raise RuntimeError(
                 "Database safety threshold reached; cycles suspended. Export and inspect Supabase usage."
@@ -163,6 +185,9 @@ def cycle(store, eid, provider, reasoner, cycle_id=None, now=None):
         healthy = True
         try:
             markets = provider.collect(held)
+            if not markets:
+                healthy = False
+                event(store, state, "ERROR", "No usable public market books; decisions suspended")
         except Exception as exc:
             markets = {}
             healthy = False
@@ -186,6 +211,7 @@ def cycle(store, eid, provider, reasoner, cycle_id=None, now=None):
         store.record(
             "cycles", experiment_id=eid, id=cycle_id, created_at=now.isoformat()
         )
+        snapshotted = set(markets)
         for mid, m in markets.items():
             store.record(
                 "market_snapshots",
@@ -245,6 +271,7 @@ def cycle(store, eid, provider, reasoner, cycle_id=None, now=None):
                 )
             if (
                 not unpriced
+                and a["risk"].get("prudence_enabled", True)
                 and drawdown >= D(a["risk"]["pause_drawdown"])
                 and not memory.get("pause_triggered")
             ):
@@ -282,6 +309,7 @@ def cycle(store, eid, provider, reasoner, cycle_id=None, now=None):
             ):
                 # Count attempted requests too, including validation/provider failure.
                 memory["calls"] = memory.get("calls", 0) + 1
+                memory.pop("needs_policy_review", None)
                 memory["last_call"] = now.isoformat()
                 memory["portfolio_changed"] = False
                 memory["prices"] = {
@@ -291,7 +319,11 @@ def cycle(store, eid, provider, reasoner, cycle_id=None, now=None):
                     if b.asks
                 }
                 try:
-                    decision = reasoner.decide(a, wallet, eligible, memory)
+                    try:
+                        decision = reasoner.decide(a, wallet, eligible, memory)
+                    finally:
+                        # Tools can inspect markets outside the original watchlist.
+                        markets.update(eligible)
                     execution_time = utcnow() if state["mode"] == "live" else now
                     # An LLM that crosses the deadline cannot cause a trade.
                     if execution_time >= datetime.fromisoformat(state["end_at"]):
@@ -314,6 +346,7 @@ def cycle(store, eid, provider, reasoner, cycle_id=None, now=None):
                         "verified_edge": str(edge),
                         "at": now.isoformat(),
                         "rejection": rejection,
+                        "decision_status": "WAIT" if decision.action == "WAIT" else "HOLD" if decision.action == "HOLD" else "EXECUTION_REJECTED" if rejection else "EXECUTED",
                     }
                     store.record(
                         "agent_decisions",
@@ -325,6 +358,7 @@ def cycle(store, eid, provider, reasoner, cycle_id=None, now=None):
                         payload=payload,
                     )
                     a["decisions"] = (a["decisions"] + [payload])[-30:]
+                    a["runtime"] = {"status": payload["decision_status"], "at": utcnow().isoformat(), "reason": rejection or decision.reasoning[:250]}
                     memory["summary"] = decision.reasoning[:1500]
                     memory["exit_plan"] = decision.exit_plan
                     event(
@@ -342,6 +376,7 @@ def cycle(store, eid, provider, reasoner, cycle_id=None, now=None):
                             "execution": execution.model_dump(mode="json")
                             if execution
                             else None,
+                            "observed_book": markets[decision.market_id].books[decision.outcome].model_dump(mode="json") if decision.market_id in markets and decision.outcome in markets[decision.market_id].books else None,
                         }
                         store.record(
                             "simulated_orders",
@@ -421,6 +456,21 @@ def cycle(store, eid, provider, reasoner, cycle_id=None, now=None):
                         f"Analysis rejected or unavailable: {type(exc).__name__}",
                         a["id"],
                     )
+                    a["runtime"] = {"status": "TECHNICAL_ERROR", "at": utcnow().isoformat(), "reason": type(exc).__name__}
+                finally:
+                    audit = getattr(reasoner, "last_audit", {})
+                    if audit:
+                        metrics = {k: v for k, v in audit.items() if k != "research"}
+                        totals = a["stats"].setdefault("llm_usage", {"requests": 0, "prompt_tokens": 0, "completion_tokens": 0, "cached_prompt_tokens": 0})
+                        for key in ("requests", "prompt_tokens", "completion_tokens", "cached_prompt_tokens"):
+                            totals[key] += metrics.get(key, 0)
+                        totals["model"] = metrics.get("model")
+                        totals["metering_started_at"] = totals.get("metering_started_at", utcnow().isoformat())
+                        event(store, state, "LLM_USAGE", f"Azure · {metrics.get('requests', 0)} requests · {metrics.get('prompt_tokens', 0)} input / {metrics.get('completion_tokens', 0)} output tokens", a["id"], metrics)
+                        for trace in audit.get("research", []):
+                            event(store, state, "RESEARCH" if trace["ok"] else "RESEARCH_ERROR", f"{trace['tool']} · {'OK' if trace['ok'] else 'unavailable'}", a["id"], trace)
+            else:
+                a["runtime"] = {"status": "FINISHED" if ending else "PROVIDER_ERROR" if not healthy else "NOT_DUE", "at": utcnow().isoformat(), "reason": "Deadline reached" if ending else "Market data unavailable" if not healthy else "Waiting for the configured session interval or quota"}
             valuation_time = utcnow() if state["mode"] == "live" else now
             nav, invested, stranded = value(
                 wallet, markets, valuation_time, SETTINGS["max_age_seconds"]
@@ -468,6 +518,23 @@ def cycle(store, eid, provider, reasoner, cycle_id=None, now=None):
         state["markets"] = {
             mid: m.model_dump(mode="json") for mid, m in markets.items()
         }
+        for mid in set(markets) - snapshotted:
+            store.record("market_snapshots", id=f"{eid}:{cycle_id}:{mid}", experiment_id=eid,
+                         cycle_id=cycle_id, market_id=mid, created_at=utcnow().isoformat(), payload=markets[mid].model_dump(mode="json"))
+        completed = utcnow()
+        state["updated_at"] = completed.isoformat()
+        state["health"] = {"last_cycle_id": cycle_id, "started_at": cycle_started.isoformat(),
+            "completed_at": completed.isoformat(), "duration_seconds": round((completed - cycle_started).total_seconds(), 2),
+            "market_count": len(markets), "market_provider_ok": healthy,
+            "cycle_count": len(state["cycles"]), "policy_version": SETTINGS["policy_version"],
+            "agents": {a["id"]: a.get("runtime", {}) for a in state["agents"]}}
+        state["health"]["trigger"] = os.getenv("GITHUB_EVENT_NAME", "local")
+        if os.getenv("GITHUB_REPOSITORY") and os.getenv("GITHUB_RUN_ID"):
+            state["health"]["logs_url"] = f"https://github.com/{os.environ['GITHUB_REPOSITORY']}/actions/runs/{os.environ['GITHUB_RUN_ID']}"
+        if os.getenv("GITHUB_EVENT_NAME") == "schedule":
+            state["last_scheduled_cycle"] = completed.isoformat()
+        state["health"]["last_scheduled_cycle"] = state.get("last_scheduled_cycle")
+        event(store, state, "CYCLE_COMPLETE", f"Cycle complete · {len(markets)} markets · {len(state['cycles'])} persisted cycles", details=state["health"])
         if ending:
             state["status"] = "FINISHED"
             ranking = sorted(

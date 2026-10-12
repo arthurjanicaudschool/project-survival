@@ -155,11 +155,11 @@ def authorize(agent, wallet, decision, markets, now, memory):
 
     if decision.agent_id != agent["id"]:
         return None, "WRONG_AGENT", ZERO
+    if decision.action not in ("BUY", "SELL"):
+        return None, "", ZERO
     m = markets.get(decision.market_id)
     if not m or not m.active or m.resolved or decision.outcome not in m.books:
         return None, "MARKET_UNAVAILABLE", ZERO
-    if decision.action not in ("BUY", "SELL"):
-        return None, decision.action, ZERO
     book = m.books[decision.outcome]
     risk = agent["risk"]
     nav, _, _ = value(wallet, markets, now, SETTINGS["max_age_seconds"])
@@ -168,7 +168,7 @@ def authorize(agent, wallet, decision, markets, now, memory):
     budget = decision.proposed_stake
     cap = p.quantity if p else ZERO
     if decision.action == "BUY":
-        if memory.get("paused_until"):
+        if risk.get("prudence_enabled", True) and memory.get("paused_until"):
             from datetime import datetime
 
             if now < datetime.fromisoformat(memory["paused_until"]):
@@ -181,12 +181,14 @@ def authorize(agent, wallet, decision, markets, now, memory):
             ),
             ZERO,
         )
-        budget = min(
+        budget = min(budget, wallet.cash)
+        if risk.get("prudence_enabled", True):
+            budget = min(
             budget,
             wallet.cash - nav * D(risk["cash_reserve_fraction"]),
             nav * D(risk["max_position_fraction"]) - (p.cost if p else ZERO),
             nav * D(risk["max_group_fraction"]) - group_cost,
-        )
+            )
         cap = None
     e = execute(
         book,
@@ -194,7 +196,7 @@ def authorize(agent, wallet, decision, markets, now, memory):
         budget,
         now,
         SETTINGS["max_age_seconds"],
-        D(SETTINGS["max_slippage"]),
+        D(risk.get("max_slippage", SETTINGS["max_slippage"])),
         cap,
     )
     if not e.fills:
@@ -205,7 +207,7 @@ def authorize(agent, wallet, decision, markets, now, memory):
         else 1 - decision.estimated_probability
     )
     edge = probability - (e.gross + e.fees) / e.quantity
-    if decision.action == "BUY" and (
+    if decision.action == "BUY" and risk.get("prudence_enabled", True) and (
         edge < D(SETTINGS["min_edge"])
         or decision.confidence < D(SETTINGS["min_confidence"])
     ):

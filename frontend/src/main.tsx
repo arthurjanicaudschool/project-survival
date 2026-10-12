@@ -171,7 +171,7 @@ function Badge({ agent }: { agent: Agent }) {
   return (
     <span className={`risk ${agent.dynamic ? "dynamic" : ""}`}>
       {agent.dynamic ? <Zap size={11} /> : <Shield size={11} />}{" "}
-      {agent.dynamic ? "Dynamique" : "Standard"}
+        {agent.risk.prudence_enabled === false ? "Libre" : agent.dynamic ? "Dynamique" : "Prudent"}
     </span>
   );
 }
@@ -367,7 +367,7 @@ function Feed({ state, limit }: { state: State; limit?: number }) {
         rows.map((e) => (
           <article key={e.id}>
             <span
-              className={`event-dot ${e.kind === "ERROR" || e.kind === "REJECTION" ? "amber" : ""}`}
+              className={`event-dot ${e.kind === "ERROR" || e.kind === "REJECTION" || e.kind === "RESEARCH_ERROR" ? "amber" : ""}`}
             />
             <div>
               <div className="event-title">
@@ -376,6 +376,9 @@ function Feed({ state, limit }: { state: State; limit?: number }) {
                 <time>{time(e.at)}</time>
               </div>
               <p>{e.message}</p>
+              {e.details && ["RESEARCH", "RESEARCH_ERROR", "LLM_USAGE", "CYCLE_COMPLETE", "POLICY_CHANGE"].includes(e.kind) && (
+                <details><summary>Preuve et détails techniques</summary><pre className="audit-json">{JSON.stringify(e.details, null, 2)}</pre></details>
+              )}
             </div>
           </article>
         ))
@@ -412,7 +415,7 @@ function Overview({
           {state.status === "FINISHED" ? "COMPLETE" : "RUNNING"}
         </div>
         <h1>La survie est une stratégie.</h1>
-        <p>Dix intelligences. Les mêmes marchés. Une seule place au sommet.</p>
+        <p>Dix intelligences. Leurs marchés. Leurs décisions. Une seule place au sommet.</p>
       </div>
       <div className="kpi-grid">
         <Kpi
@@ -438,6 +441,19 @@ function Overview({
           sub={`${state.agents.reduce((s, a) => s + a.stats.trades, 0)} transactions fictives enregistrées`}
         />
       </div>
+      <section className="panel padded">
+        <h2>État du moteur et preuves de fonctionnement</h2>
+        {state.health ? <>
+          <p>Dernier cycle terminé : {new Date(state.health.completed_at).toLocaleString("fr-FR")} · {state.health.duration_seconds}s · {state.health.market_count} marchés · {state.health.cycle_count} cycles enregistrés.</p>
+          <p className={state.health.market_provider_ok ? "positive" : "negative"}>Polymarket : {state.health.market_provider_ok ? "données reçues" : "indisponible"} · politique {state.health.policy_version}</p>
+          <p>Planification automatique : {state.health.last_scheduled_cycle ? `confirmée le ${new Date(state.health.last_scheduled_cycle).toLocaleString("fr-FR")}` : "en attente d'une exécution schedule confirmée"} · dernier déclencheur : {state.health.trigger || "inconnu"}</p>
+          {state.health.logs_url && <a href={state.health.logs_url} target="_blank" rel="noreferrer">Voir les logs GitHub du cycle <External size={12}/></a>}
+        </> : <p>En attente d'un cycle avec diagnostic. Aucun état technique n'est inventé.</p>}
+        <div className="table-scroll"><table><thead><tr><th>AGENT</th><th>ÉTAT</th><th>DERNIÈRE ANALYSE</th><th>REQUÊTES AZURE MESURÉES</th><th>TOKENS ENTRÉE / SORTIE</th></tr></thead><tbody>
+          {state.agents.map(a => <tr key={a.id}><td>{a.id} {a.name}</td><td>{a.runtime?.status || "Non mesuré"}</td><td>{a.memory.last_call ? new Date(a.memory.last_call).toLocaleString("fr-FR") : "Aucune"}</td><td>{a.stats.llm_usage?.requests ?? "Non mesuré"}</td><td>{a.stats.llm_usage ? `${a.stats.llm_usage.prompt_tokens} / ${a.stats.llm_usage.completion_tokens}` : "Non mesuré"}</td></tr>)}
+        </tbody></table></div>
+        <p className="subtle">WAIT / HOLD = choix de l'agent · NOT_DUE = prochaine session pas encore due · EXECUTION_REJECTED = ordre non exécuté · TECHNICAL_ERROR / PROVIDER_ERROR = panne. Tokens comptés depuis l'activation de la mesure ; l'historique antérieur est inconnu.</p>
+      </section>
       <div className="overview-grid">
         <section className="panel">
           <div className="panel-heading">
@@ -781,7 +797,7 @@ function AgentDetail({ a, state }: { a: Agent; state: State }) {
           <h3>Plan de sortie</h3>
           <p>{a.memory.exit_plan || "En attente de décision."}</p>
           <p className="subtle">
-            {a.memory.calls || 0} appels IA aujourd'hui{" "}
+            {a.memory.calls || 0} sessions IA aujourd'hui{" "}
             {a.memory.paused_until &&
               `· suspension jusqu'au ${new Date(a.memory.paused_until).toLocaleString("fr-FR")}`}
           </p>
@@ -844,7 +860,7 @@ function AgentDetail({ a, state }: { a: Agent; state: State }) {
             <p>{d.reasoning}</p>
             <p className="subtle">
               Confiance : {pct(d.confidence)} · P(YES) :{" "}
-              {pct(d.estimated_probability)} · {d.rejection}
+               {pct(d.estimated_probability)} · {d.decision_status || d.action}{d.rejection && d.action !== "WAIT" && d.action !== "HOLD" ? ` · ${d.rejection}` : ""}
             </p>
             <p>Sortie : {d.exit_plan}</p>
             <p>Risques : {d.risk_factors.join(" · ")}</p>

@@ -27,12 +27,38 @@ def main():
             "export",
             "migrate",
             "quota-check",
+            "research-check",
+            "health",
+            "cost-report",
         ],
     )
     p.add_argument("--experiment", default=os.getenv("EXPERIMENT_ID", "survival-001"))
     p.add_argument("--output", default="exports")
     p.add_argument("--cycle-id")
     args = p.parse_args()
+    if args.command == "research-check":
+        from .research import ResearchTools
+        provider = Polymarket()
+        try:
+            tools = ResearchTools(provider)
+            markets = {}
+            search = tools.call("search_markets", {"query": "Bitcoin"}, markets)
+            browse = tools.call("browse_markets", {"order": "liquidity"}, markets)
+            results = search.get("markets", []) or browse.get("markets", [])
+            inspected = tools.call("get_market", {"reference": results[0]["id"]}, markets) if results else {"error": "No search result"}
+            news = tools.call("search_web", {"query": "Bitcoin"}, markets)
+            # Verify at least one independent page read, not only a search index.
+            page = tools.call("read_web", {"url": "https://www.bbc.com/news"}, markets)
+            print(json.dumps({"search": {"ok": "error" not in search, "markets": len(search.get("markets", []))},
+                "browse": {"ok": "error" not in browse, "markets": len(browse.get("markets", []))},
+                "inspection": {"ok": "error" not in inspected, "error": inspected.get("error")},
+                "web_search": {"ok": "error" not in news, "articles": len(news.get("articles", [])), "provider": news.get("provider"), "errors": news.get("provider_errors")},
+                "web_read": {"ok": "error" not in page, "characters": len(page.get("excerpt", "")), "error": page.get("error")}}, indent=2))
+            if "error" in search or "error" in browse or "error" in inspected or "error" in news:
+                raise RuntimeError("Research preflight incomplete; inspect provider/tool availability")
+        finally:
+            provider.close()
+        return
     if args.command == "api-check":
         provider = Polymarket()
         try:
@@ -69,6 +95,19 @@ def main():
         elif args.command == "export":
             store.export(args.experiment, args.output)
             print(f"Exported to {args.output}")
+        elif args.command in ("health", "cost-report"):
+            state = store.load(args.experiment)
+            if not state:
+                raise ValueError("No experiment; explicit START required")
+            if args.command == "cost-report":
+                from .costs import report
+                print(json.dumps(report(state), indent=2))
+            else:
+                print(json.dumps({"status": state["status"], "now_utc": utcnow().isoformat(),
+                    "last_market_sync": state.get("last_market_sync"), "health": state.get("health"),
+                    "agents": [{"id": a["id"], "runtime": a.get("runtime"), "last_analysis": a["memory"].get("last_call"),
+                        "last_decision": a["decisions"][-1]["action"] if a["decisions"] else None,
+                        "usage": a["stats"].get("llm_usage")} for a in state["agents"]]}, indent=2))
         elif args.command == "start":
             state = initialize(store, args.experiment, "live", reference_fx())
             print(f"START {state['started_at']} → {state['end_at']}")
@@ -103,8 +142,16 @@ def main():
             try:
                 # Lazy initialization permits valuation even when Azure is down.
                 class LazyAzure:
+                    instance = None
+
                     def decide(self, *a):
-                        return AzureReasoner().decide(*a)
+                        if self.instance is None:
+                            self.instance = AzureReasoner(provider)
+                        return self.instance.decide(*a)
+
+                    @property
+                    def last_audit(self):
+                        return self.instance.last_audit if self.instance else {}
 
                 state = cycle(
                     store, args.experiment, provider, LazyAzure(), args.cycle_id
@@ -115,6 +162,8 @@ def main():
                             "status": state["status"],
                             "updated_at": state["updated_at"],
                             "cycles": len(state["cycles"]),
+                            "health": state.get("health"),
+                            "agents": [{"id": a["id"], "runtime": a.get("runtime"), "usage": a["stats"].get("llm_usage")} for a in state["agents"]],
                         }
                     )
                 )

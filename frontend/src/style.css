@@ -1450,3 +1450,4 @@ pre {
     transition: none !important;
   }
 }
+.audit-json { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 11px; max-height: 340px; overflow: auto; color: #aeb9c6; }
