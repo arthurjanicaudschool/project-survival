@@ -44,6 +44,7 @@ def main():
             markets = {}
             search = tools.call("search_markets", {"query": "Bitcoin"}, markets)
             browse = tools.call("browse_markets", {"order": "liquidity"}, markets)
+            pagination = tools.call("browse_markets", {"order": "liquidity", "cursor": browse["next_cursor"]}, markets) if browse.get("next_cursor") else {"error": "No browsing cursor returned"}
             results = search.get("markets", []) or browse.get("markets", [])
             inspected = tools.call("get_market", {"reference": results[0]["id"]}, markets) if results else {"error": "No search result"}
             news = tools.call("search_web", {"query": "Bitcoin"}, markets)
@@ -51,10 +52,11 @@ def main():
             page = tools.call("read_web", {"url": "https://www.bbc.com/news"}, markets)
             print(json.dumps({"search": {"ok": "error" not in search, "markets": len(search.get("markets", []))},
                 "browse": {"ok": "error" not in browse, "markets": len(browse.get("markets", []))},
+                "pagination": {"ok": "error" not in pagination, "markets": len(pagination.get("markets", [])), "error": pagination.get("error")},
                 "inspection": {"ok": "error" not in inspected, "error": inspected.get("error")},
                 "web_search": {"ok": "error" not in news, "articles": len(news.get("articles", [])), "provider": news.get("provider"), "errors": news.get("provider_errors")},
                 "web_read": {"ok": "error" not in page, "characters": len(page.get("excerpt", "")), "error": page.get("error")}}, indent=2))
-            if "error" in search or "error" in browse or "error" in inspected or "error" in news:
+            if any("error" in result for result in (search, browse, pagination, inspected, news, page)):
                 raise RuntimeError("Research preflight incomplete; inspect provider/tool availability")
         finally:
             provider.close()

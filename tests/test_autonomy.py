@@ -64,6 +64,20 @@ def test_research_failure_is_explicit_and_does_not_add_markets():
     assert "error" in result and not watched and not tools.trace[-1]["ok"]
 
 
+def test_search_preserves_opaque_sdk_pagination_cursor():
+    seen = []
+    cursor = "eyJ2IjoxLCJwIjoyfQ=="
+    page = NS(items=[], has_more=False, next_cursor=None)
+    paginator = NS(first_page=lambda: page)
+    def from_cursor(value):
+        seen.append(value)
+        return paginator
+    paginator.from_cursor = from_cursor
+    tools = ResearchTools(NS(client=NS(search=lambda **kwargs: paginator)))
+    result = tools.call("search_markets", {"query": "Bitcoin", "cursor": cursor}, {})
+    assert "error" not in result and seen == [cursor]
+
+
 def test_azure_tool_loop_retrieves_market_and_accounts_for_tokens(monkeypatch):
     agent = definitions()[0]
     wallet = Wallet(initial=D(10), cash=D(10))

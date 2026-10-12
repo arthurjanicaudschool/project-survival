@@ -86,8 +86,8 @@ class ResearchTools:
         client = self.provider.client
         if name in ("search_markets", "browse_markets"):
             cursor = args.get("cursor") or None
-            if cursor and (not cursor.isdigit() or len(cursor) > 6):
-                raise ValueError("Invalid page cursor")
+            # SDK cursors are opaque encoded strings, not page numbers.
+            # The SDK validates their format and binding to this query.
             if name == "search_markets":
                 query = args["query"].strip()
                 if not query:
