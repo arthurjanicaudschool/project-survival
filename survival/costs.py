@@ -24,4 +24,4 @@ def report(state):
                 "max_successful_completions_per_week": 7 * (4 * dynamic + 6 * standard) * rounds,
                 "max_output_tokens_per_week": 7 * (4 * dynamic + 6 * standard) * rounds * SETTINGS["max_llm_tokens"]}
                 for name, dynamic, standard, rounds in [("v1", 12, 4, 1), ("v2_current", 12, 4, max_requests), ("v2_more_frequent_not_enabled", 24, 6, max_requests)]],
-            "limitations": "Upper bounds, not a forecast. Input context, provider failures, token truncation and SDK retries affect actual usage. Session frequency is unchanged in v2. Web providers have no per-request commercial charge; quotas/availability still apply."}
+            "limitations": "Upper bounds, not a forecast. Database totals cover committed cycles only; calls from a rolled-back cycle and some SDK retries may be absent. Consult LLM_USAGE in GitHub logs and Azure billing for complete charges. Input context, provider failures and token truncation affect actual usage. Session frequency is unchanged in v2. Web providers have no per-request commercial charge; quotas/availability still apply."}
