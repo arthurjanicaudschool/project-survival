@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=75"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "project-survival"
+version = "1.0.0"
+requires-python = ">=3.11"
+dependencies = ["polymarket-client==0.13.0", "pydantic==2.14.1", "openai==3.29.0", "psycopg[binary]==3.3.6", "httpx==0.28.1", "python-dotenv==1.2.4"]
+
+[project.optional-dependencies]
+test = ["pytest==9.1.1"]
+
+[project.scripts]
+survival = "survival.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["survival*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = ["integration: requires explicit network or PostgreSQL opt-in"]

@@ -1,0 +1,213 @@
+"""Immediate-or-cancel fills against observed depth. Pure Decimal accounting."""
+
+from decimal import Decimal as D, ROUND_DOWN, ROUND_HALF_UP, ROUND_UP
+from .models import Execution, Fill, Position, ZERO, position_key
+
+
+def fee(quantity, price, book):
+    # Per-market parameters; current documented formula exponent=1.
+    return (
+        quantity * book.fee_rate * (price * (1 - price)) ** book.fee_exponent
+    ).quantize(D("0.00001"), rounding=ROUND_HALF_UP)
+
+
+def execute(
+    book,
+    side,
+    budget,
+    now,
+    max_age=180,
+    slippage=D("0.03"),
+    quantity_cap=None,
+    enforce_minimum=True,
+):
+    def reject(reason):
+        return Execution(status="REJECTED", reason=reason)
+
+    age = (now - book.observed_at).total_seconds()
+    if age < -5 or age > max_age:
+        return reject("STALE_BOOK")
+    if budget <= 0:
+        return reject("ZERO_BUDGET")
+    levels = sorted(
+        book.asks if side == "BUY" else book.bids,
+        key=lambda l: l.price,
+        reverse=side == "SELL",
+    )
+    if not levels:
+        return reject("NO_LIQUIDITY")
+    best = levels[0].price
+    remaining, cap, fills = budget, quantity_cap, []
+    for level in levels:
+        if abs(level.price - best) > slippage:
+            break
+        if level.price % book.tick != 0:
+            return reject("INVALID_TICK_IN_BOOK")
+        unit = (
+            level.price
+            + book.fee_rate * (level.price * (1 - level.price)) ** book.fee_exponent
+            if side == "BUY"
+            else level.price
+        )
+        q = min(level.size, remaining / unit)
+        if cap is not None:
+            q = min(q, cap)
+        q = q.quantize(D("0.000001"), rounding=ROUND_DOWN)
+        # Rounding per match may exceed the rounded unit fee estimate.
+        while (
+            q > 0
+            and side == "BUY"
+            and q * level.price + fee(q, level.price, book) > remaining
+        ):
+            excess = q * level.price + fee(q, level.price, book) - remaining
+            q -= max(
+                D("0.000001"),
+                (excess / level.price).quantize(D("0.000001"), rounding=ROUND_UP),
+            )
+        if q <= 0:
+            break
+        f = Fill(price=level.price, quantity=q, fee=fee(q, level.price, book))
+        fills.append(f)
+        remaining -= q * level.price + (f.fee if side == "BUY" else ZERO)
+        if cap is not None:
+            cap -= q
+        if remaining < D("0.00001") or cap == 0:
+            break
+    quantity = sum((f.quantity for f in fills), ZERO)
+    if not fills or (enforce_minimum and quantity < book.minimum):
+        return reject("BELOW_MARKET_MINIMUM")
+    return Execution(
+        status="FILLED" if remaining < D("0.00001") or cap == 0 else "PARTIAL",
+        fills=fills,
+    )
+
+
+def apply(wallet, market_id, outcome, side, execution):
+    if not execution.fills:
+        return ZERO
+    key = position_key(market_id, outcome)
+    position = wallet.positions.get(key, Position(market_id=market_id, outcome=outcome))
+    q, gross, fees = execution.quantity, execution.gross, execution.fees
+    if side == "BUY":
+        if gross + fees > wallet.cash:
+            raise ValueError("Insufficient cash")
+        wallet.cash -= gross + fees
+        position.quantity += q
+        position.cost += gross + fees
+        realized = ZERO
+    else:
+        if q > position.quantity:
+            raise ValueError("No short selling")
+        basis = (
+            position.cost
+            if q == position.quantity
+            else position.cost * q / position.quantity
+        )
+        realized = gross - fees - basis
+        wallet.cash += gross - fees
+        position.quantity -= q
+        position.cost -= basis
+        wallet.realized += realized
+    wallet.positions[key] = position
+    return realized
+
+
+def settle(wallet, market):
+    entries = []
+    if (
+        not market.resolved
+        or set(market.payouts) != {"YES", "NO"}
+        or sum(market.payouts.values()) != 1
+    ):
+        return entries
+    for key, p in wallet.positions.items():
+        if p.market_id == market.id and p.quantity > 0:
+            payout = p.quantity * market.payouts[p.outcome]
+            pnl = payout - p.cost
+            wallet.cash += payout
+            wallet.realized += pnl
+            entries.append({"position": key, "amount": str(payout), "pnl": str(pnl)})
+            p.quantity, p.cost = ZERO, ZERO
+    return entries
+
+
+def value(wallet, markets, now, max_age=180):
+    available, stranded, invested = wallet.cash, [], ZERO
+    for key, p in wallet.positions.items():
+        if p.quantity == 0:
+            continue
+        m = markets.get(p.market_id)
+        b = m.books.get(p.outcome) if m else None
+        invested += p.cost
+        if b is None:
+            stranded.append(key)
+            continue
+        # Valuation uses all observed bid depth, fees, without order minimums.
+        e = execute(b, "SELL", D("1e30"), now, max_age, D(1), p.quantity, False)
+        available += e.gross - e.fees
+        if e.quantity < p.quantity:
+            stranded.append(key)
+    return available, invested, stranded
+
+
+def authorize(agent, wallet, decision, markets, now, memory):
+    from .agents import SETTINGS
+
+    if decision.agent_id != agent["id"]:
+        return None, "WRONG_AGENT", ZERO
+    m = markets.get(decision.market_id)
+    if not m or not m.active or m.resolved or decision.outcome not in m.books:
+        return None, "MARKET_UNAVAILABLE", ZERO
+    if decision.action not in ("BUY", "SELL"):
+        return None, decision.action, ZERO
+    book = m.books[decision.outcome]
+    risk = agent["risk"]
+    nav, _, _ = value(wallet, markets, now, SETTINGS["max_age_seconds"])
+    key = position_key(m.id, decision.outcome)
+    p = wallet.positions.get(key)
+    budget = decision.proposed_stake
+    cap = p.quantity if p else ZERO
+    if decision.action == "BUY":
+        if memory.get("paused_until"):
+            from datetime import datetime
+
+            if now < datetime.fromisoformat(memory["paused_until"]):
+                return None, "DRAWDOWN_COOLDOWN", ZERO
+        group_cost = sum(
+            (
+                pos.cost
+                for pos in wallet.positions.values()
+                if pos.market_id in markets and markets[pos.market_id].group == m.group
+            ),
+            ZERO,
+        )
+        budget = min(
+            budget,
+            wallet.cash - nav * D(risk["cash_reserve_fraction"]),
+            nav * D(risk["max_position_fraction"]) - (p.cost if p else ZERO),
+            nav * D(risk["max_group_fraction"]) - group_cost,
+        )
+        cap = None
+    e = execute(
+        book,
+        decision.action,
+        budget,
+        now,
+        SETTINGS["max_age_seconds"],
+        D(SETTINGS["max_slippage"]),
+        cap,
+    )
+    if not e.fills:
+        return e, e.reason, ZERO
+    probability = (
+        decision.estimated_probability
+        if decision.outcome == "YES"
+        else 1 - decision.estimated_probability
+    )
+    edge = probability - (e.gross + e.fees) / e.quantity
+    if decision.action == "BUY" and (
+        edge < D(SETTINGS["min_edge"])
+        or decision.confidence < D(SETTINGS["min_confidence"])
+    ):
+        return None, "INSUFFICIENT_VERIFIED_EDGE", edge
+    return e, "", edge

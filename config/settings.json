@@ -1,0 +1,18 @@
+{
+  "duration_hours": 168,
+  "max_markets": 12,
+  "markets_per_agent": 4,
+  "book_depth_levels": 12,
+  "max_database_bytes": 450000000,
+  "discovery_limit": 100,
+  "max_age_seconds": 180,
+  "signal_price_change": "0.03",
+  "min_liquidity": "1000",
+  "min_edge": "0.03",
+  "min_confidence": "0.60",
+  "max_slippage": "0.03",
+  "survival_roi": "0",
+  "max_llm_tokens": 1600,
+  "dynamic": {"calls_per_day": 12, "max_position_fraction": "0.35", "max_group_fraction": "0.45", "cash_reserve_fraction": "0.15", "pause_drawdown": "0.40", "cooldown_hours": 6},
+  "standard": {"calls_per_day": 4, "max_position_fraction": "0.20", "max_group_fraction": "0.30", "cash_reserve_fraction": "0.30", "pause_drawdown": "0.25", "cooldown_hours": 12}
+}

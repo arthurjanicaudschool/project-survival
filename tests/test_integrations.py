@@ -1,0 +1,107 @@
+import os
+from pathlib import Path
+from datetime import timedelta
+from decimal import Decimal as D
+import pytest
+import psycopg
+from survival.store import Store
+from survival.runner import initialize, cycle
+from survival.fixtures import FixtureProvider, FixtureReasoner
+from survival.models import utcnow
+
+
+@pytest.mark.integration
+def test_live_public_api():
+    if os.getenv("RUN_NETWORK_TESTS") != "1":
+        pytest.skip("Set RUN_NETWORK_TESTS=1 for public API test")
+    from survival.providers import Polymarket
+
+    p = Polymarket()
+    try:
+        markets = p.collect()
+        assert markets and any(m.books for m in markets.values())
+        assert all(
+            b.evidence and b.minimum > 0
+            for m in markets.values()
+            for b in m.books.values()
+        )
+    finally:
+        p.close()
+
+
+@pytest.mark.integration
+def test_postgresql_transaction_rls_and_concurrency():
+    url = os.getenv("TEST_DATABASE_URL")
+    if not url:
+        pytest.skip(
+            "TEST_DATABASE_URL requires a dedicated disposable PostgreSQL database"
+        )
+    # Dedicated test database only. No destructive cleanup, unique experiment ID.
+    with psycopg.connect(url, autocommit=True) as db:
+        db.execute(
+            "do $$ begin if not exists(select 1 from pg_roles where rolname='anon') then create role anon; end if; if not exists(select 1 from pg_roles where rolname='authenticated') then create role authenticated; end if; end $$"
+        )
+        if not db.execute(
+            "select 1 from pg_publication where pubname='supabase_realtime'"
+        ).fetchone():
+            db.execute("create publication supabase_realtime")
+        db.execute(
+            (
+                Path(__file__).resolve().parent.parent
+                / "supabase/migrations/001_initial.sql"
+            ).read_text()
+        )
+    from uuid import uuid4
+
+    eid = f"test-{uuid4()}"
+    store = Store(url)
+    second = Store(url)
+    now = utcnow()
+    try:
+        initialize(store, eid, "demo", {"usd_per_eur": "1.10"}, now)
+        # PostgreSQL is also exercised with isolated demo data; runner mode guard
+        # is for live-vs-fixture safety, so use a public-shaped stub for this test.
+        state = store.load(eid)
+        state["mode"] = "live"
+        with store.locked(eid):
+            store.save(state, state)
+
+        class PublicShaped:
+            errors = []
+
+            def collect(self, *args):
+                return FixtureProvider(utcnow()).collect()
+
+        class Reasoner:
+            def decide(self, *args):
+                return FixtureReasoner().decide(*args)
+
+        state = cycle(store, eid, PublicShaped(), Reasoner(), "one", now)
+        assert cycle(store, eid, PublicShaped(), Reasoner(), "one", now) == state
+        with store.locked(eid):
+            with pytest.raises(RuntimeError):
+                with second.locked(eid):
+                    pass
+        for a in state["agents"]:
+            balance = store.db.execute(
+                "select sum(amount) from ledger_entries where experiment_id=%s and agent_id=%s",
+                (eid, a["id"]),
+            ).fetchone()[0]
+            assert balance == D(a["wallet"]["cash"])
+        with pytest.raises(psycopg.errors.RaiseException):
+            store.db.execute(
+                "update ledger_entries set amount=0 where experiment_id=%s", (eid,)
+            )
+        store.db.execute("set role anon")
+        assert (
+            store.db.execute(
+                "select count(*) from dashboard_states where experiment_id=%s", (eid,)
+            ).fetchone()[0]
+            == 1
+        )
+        with pytest.raises(psycopg.errors.InsufficientPrivilege):
+            store.db.execute("select * from ledger_entries")
+        store.db.execute("reset role")
+    finally:
+        store.close()
+        second.close()
