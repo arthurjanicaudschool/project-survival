@@ -449,12 +449,17 @@ def cycle(store, eid, provider, reasoner, cycle_id=None, now=None):
                     PolymarketError,
                 ) as exc:
                     log.warning("Agent %s failed: %s", a["id"], type(exc).__name__)
+                    diagnostic = {"error_type": type(exc).__name__, "http_status": getattr(exc, "status_code", None),
+                                  "code": getattr(exc, "code", None), "parameter": getattr(exc, "param", None)}
+                    if hasattr(exc, "errors"):
+                        diagnostic["validation"] = [{"field": list(item["loc"]), "type": item["type"]} for item in exc.errors()[:6]]
                     event(
                         store,
                         state,
                         "ERROR",
                         f"Analysis rejected or unavailable: {type(exc).__name__}",
                         a["id"],
+                        diagnostic,
                     )
                     a["runtime"] = {"status": "TECHNICAL_ERROR", "at": utcnow().isoformat(), "reason": type(exc).__name__}
                 finally:
