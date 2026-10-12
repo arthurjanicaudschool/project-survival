@@ -154,6 +154,8 @@ def cycle(store, eid, provider, reasoner, cycle_id=None, now=None):
         if state["status"] == "FINISHED" or cycle_id in state["cycles"]:
             return state
         cycle_started = utcnow()
+        if "policy_history" not in state:
+            state["policy_history"] = [{"at": e["at"], "message": e["message"], "details": e.get("details")} for e in state["events"] if e["kind"] == "POLICY_CHANGE"]
         revision = hashlib.sha256(json.dumps(SETTINGS, sort_keys=True).encode()).hexdigest()[:12]
         if state.get("policy_revision") != revision or state.get("settings", {}).get("policy_version") != SETTINGS["policy_version"]:
             previous = state.get("settings", {})
@@ -167,6 +169,8 @@ def cycle(store, eid, provider, reasoner, cycle_id=None, now=None):
                     a["memory"]["pause_triggered"] = False
             state["settings"] = json.loads(json.dumps(SETTINGS))
             state["policy_revision"] = revision
+            state["policy_history"].append({"at": cycle_started.isoformat(), "revision": revision,
+                                           "previous_policy": previous.get("policy_version", "v1"), "settings": SETTINGS})
             event(store, state, "POLICY_CHANGE", "Autonomous market/web research enabled; A1/A6 unrestricted; other risk limits relaxed. Capital and deadline unchanged.", details={"previous_policy": previous.get("policy_version", "v1"), "new_policy": SETTINGS["policy_version"], "settings": SETTINGS})
         for a in state["agents"]:
             a["risk"]["autonomous_discovery"] = True
@@ -523,9 +527,6 @@ def cycle(store, eid, provider, reasoner, cycle_id=None, now=None):
         state["markets"] = {
             mid: m.model_dump(mode="json") for mid, m in markets.items()
         }
-        for mid in set(markets) - snapshotted:
-            store.record("market_snapshots", id=f"{eid}:{cycle_id}:{mid}", experiment_id=eid,
-                         cycle_id=cycle_id, market_id=mid, created_at=utcnow().isoformat(), payload=markets[mid].model_dump(mode="json"))
         completed = utcnow()
         state["updated_at"] = completed.isoformat()
         state["health"] = {"last_cycle_id": cycle_id, "started_at": cycle_started.isoformat(),
@@ -560,6 +561,7 @@ def cycle(store, eid, provider, reasoner, cycle_id=None, now=None):
                     }
                 )
             state["report"] = {
+                "policy_history": state.get("policy_history", []),
                 "generated_at": utcnow().isoformat(),
                 "deadline": state["end_at"],
                 "valuation_time": now.isoformat(),
@@ -613,4 +615,9 @@ def cycle(store, eid, provider, reasoner, cycle_id=None, now=None):
             )
             event(store, state, "FINISH", "Competition complete · final report saved")
         store.save(state, projection(state))
+        # save upserts newly discovered markets before their snapshot FK is used.
+        # Both writes remain inside the same atomic cycle transaction.
+        for mid in set(markets) - snapshotted:
+            store.record("market_snapshots", id=f"{eid}:{cycle_id}:{mid}", experiment_id=eid,
+                         cycle_id=cycle_id, market_id=mid, created_at=utcnow().isoformat(), payload=markets[mid].model_dump(mode="json"))
         return state

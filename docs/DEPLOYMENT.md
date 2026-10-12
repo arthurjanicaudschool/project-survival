@@ -1,5 +1,7 @@
 # Déploiement gratuit et exploitation
 
+Mise à jour autonomie v2 : lire [AUTONOMY.md](AUTONOMY.md) pour les règles et coûts actuels. Les sessions utilisent Azure Responses v1, les recherches couvrent l'univers public et les tokens sont mesurés. Le timeout GitHub est désormais de 25 minutes. Le tableau de bord n'annonce une planification confirmée qu'après un événement schedule réellement constaté. Avant une augmentation de fréquence, vérifier les crédits Azure et les minutes Actions restantes.
+
 ## 1. Supabase Free
 
 Créer un projet gratuit. Dans SQL Editor, exécuter `supabase/migrations/001_initial.sql`. Sinon renseigner `DATABASE_URL` en local puis `python -m survival.cli migrate`.

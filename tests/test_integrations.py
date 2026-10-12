@@ -73,11 +73,21 @@ def test_postgresql_transaction_rls_and_concurrency():
                 return FixtureProvider(utcnow()).collect()
 
         class Reasoner:
-            def decide(self, *args):
-                return FixtureReasoner().decide(*args)
+            def decide(self, agent, wallet, markets, memory):
+                # A research tool can discover a market absent at collection.
+                discovered = next(iter(markets.values())).model_copy(deep=True)
+                discovered.id = "research-discovered"
+                markets[discovered.id] = discovered
+                return FixtureReasoner().decide(agent, wallet, markets, memory).model_copy(
+                    update={"market_id": discovered.id}
+                )
 
         state = cycle(store, eid, PublicShaped(), Reasoner(), "one", now)
         assert cycle(store, eid, PublicShaped(), Reasoner(), "one", now) == state
+        assert store.db.execute(
+            "select count(*) from market_snapshots where experiment_id=%s and market_id=%s",
+            (eid, "research-discovered"),
+        ).fetchone()[0] == 1
         with store.locked(eid):
             with pytest.raises(RuntimeError):
                 with second.locked(eid):

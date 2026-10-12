@@ -2,6 +2,8 @@
 
 **10 AI Agents. 7 Days. One Winner.**
 
+Version autonomie v2 : recherche libre de marchés et du web, profils A1/A6 sans prudence imposée, limites assouplies pour les autres, diagnostics et mesure de tokens. Voir [les règles et le tableau de consommation](docs/AUTONOMY.md). Les quotas de sessions restent 12/j et 4/j ; une session peut comporter plusieurs requêtes Azure Responses.
+
 Compétition de paper trading : 10 portefeuilles fictifs indépendants, 300 EUR de capital initial total, données publiques Polymarket, analyses Azure OpenAI, comptabilité Decimal et dashboard React. Aucun wallet, clé privée, signature ou appel d'exécution d'ordre réel dans le code opérationnel.
 
 ## Démarrage local
