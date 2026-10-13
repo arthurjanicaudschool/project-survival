@@ -203,3 +203,24 @@ def test_exploration_fills_are_labelled_and_unestimated_edge_is_not_published(se
         else:
             assert not a["orders"] and a["participation"]["status"]=="DISCRETIONARY"
     assert cycle(store,"test",Provider(),Reasoner(),"participation",now)==state
+
+
+def test_rejected_exploration_does_not_fulfil_participation(setup):
+    from test_participation import affordable, exploration
+    store,now=setup
+    class Provider:
+        errors=[]
+        def collect(self,*args):
+            return affordable(now)[0]
+    class TooSmall:
+        def decide(self,agent,wallet,markets,memory):
+            if agent["risk"].get("participation_required"):
+                return exploration(agent,wallet,markets,".01")
+            return FixtureReasoner().decide(agent,wallet,markets,memory).model_copy(update={"action":"WAIT","outcome":None})
+    state=cycle(store,"test",Provider(),TooSmall(),"unfilled-participation",now)
+    for a in state["agents"]:
+        assert a["stats"]["trades"]==0 and a["wallet"]["cash"]==a["wallet"]["initial"]
+        if a["participation"]["required"]:
+            assert a["participation"]["status"]=="PENDING"
+            assert a["orders"][-1]["status"]=="REJECTED"
+            assert "participation_fulfilled_at" not in a["memory"]

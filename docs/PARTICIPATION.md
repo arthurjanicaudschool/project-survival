@@ -1,5 +1,20 @@
 # Participation des HUNTER et SPRINTER
 
+## Validation réelle du 13 octobre 2026
+
+La politique a été appliquée à 16:12:02 Paris dans le cycle [38411257084](https://github.com/arthurjanicaudschool/project-survival/actions/runs/38411257084). Les quatre IA ont choisi et exécuté leur premier achat fictif dans cette session :
+
+| Agent | Marché choisi | Outcome | Budget EUR frais inclus, arrondi | Type |
+|---|---|---|---:|---|
+| A1 HUNTER | Bitcoin au-dessus de 86 000 USD le 14 octobre | YES | 1,00 | EXPLORATION |
+| A2 SPRINTER | Gemini 4.0 publié au 13 octobre | NO | 1,00 | EXPLORATION |
+| A6 HUNTER | Aucun changement de taux Fed à la réunion d'octobre | NO | 5,00 | EXPLORATION |
+| A7 SPRINTER | 90–114 publications Elon Musk du 12 au 14 octobre | YES | 5,00 | EXPLORATION |
+
+Les quatre décisions sont UNESTIMATED : aucun avantage probabiliste n'est revendiqué. Les ordres sont FILLED, les minimums respectés, chaque fill correspond aux prix et quantités du carnet enregistré, et les frais recalculés correspondent aux frais persistés. Les soldes correspondent au journal financier. L'écart infinitésimal avec exactement 1/5 EUR vient de la précision de quantité et de frais, pas du change.
+
+Le cycle automatique suivant [38411306587](https://github.com/arthurjanicaudschool/project-survival/actions/runs/38411306587) a conservé exactement ces quatre opérations sans répétition forcée, et actualisé les valorisations. Le dashboard public affichait les quatre obligations remplies à 16:17:35. Les six autres agents sont restés discrétionnaires. Les échéances de participation du 14 octobre à 16:12:02 sont donc déjà satisfaites ; celle de la compétition reste le 19 octobre à 22:36:07.
+
 La politique participation-v3 concerne uniquement A1/A6 HUNTER et A2/A7 SPRINTER. Elle commence à sa première application dans un cycle persistant, sans remettre les comptes à zéro ni changer la fin de la compétition. Les six autres agents gardent leurs décisions discrétionnaires et leurs fréquences.
 
 ## Règle
