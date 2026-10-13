@@ -312,7 +312,10 @@ def cycle(store, eid, provider, reasoner, cycle_id=None, now=None):
                 )
             ):
                 # Count attempted requests too, including validation/provider failure.
+                analysis_memory = memory.copy()
                 memory["calls"] = memory.get("calls", 0) + 1
+                analysis_memory["calls"] = memory["calls"]
+                analysis_memory["session_started_at"] = now.isoformat()
                 memory.pop("needs_policy_review", None)
                 memory["last_call"] = now.isoformat()
                 memory["portfolio_changed"] = False
@@ -324,7 +327,7 @@ def cycle(store, eid, provider, reasoner, cycle_id=None, now=None):
                 }
                 try:
                     try:
-                        decision = reasoner.decide(a, wallet, eligible, memory)
+                        decision = reasoner.decide(a, wallet, eligible, analysis_memory)
                     finally:
                         # Tools can inspect markets outside the original watchlist.
                         markets.update(eligible)

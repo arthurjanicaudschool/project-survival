@@ -161,3 +161,20 @@ def test_valuation_only_cycle_does_not_hide_last_analysis_failure(setup):
     assert all(a["runtime"]["status"] == "NOT_DUE" for a in state["agents"])
     assert all(a["last_analysis"]["status"] == "TECHNICAL_ERROR" for a in state["agents"])
     assert assess(state, later)["status"] == "DEGRADED"
+
+
+def test_agents_receive_previous_analysis_time_not_current_reservation(setup):
+    store, now = setup
+    seen = []
+    class InspectMemory:
+        def decide(self, agent, wallet, markets, memory):
+            seen.append((memory.get("last_call"), memory["session_started_at"]))
+            return FixtureReasoner().decide(agent, wallet, markets, memory)
+    first = cycle(store, "test", FixtureProvider(now), InspectMemory(), "first-memory", now)
+    assert len(seen) == 10 and all(previous is None and current == now.isoformat() for previous, current in seen)
+    assert all(a["memory"]["last_call"] == now.isoformat() for a in first["agents"])
+    seen.clear()
+    later = now + timedelta(hours=6)
+    second = cycle(store, "test", FixtureProvider(later), InspectMemory(), "next-memory", later)
+    assert len(seen) == 10 and all(previous == now.isoformat() and current == later.isoformat() for previous, current in seen)
+    assert all(a["memory"]["last_call"] == later.isoformat() for a in second["agents"])
