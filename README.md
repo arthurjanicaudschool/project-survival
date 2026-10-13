@@ -135,3 +135,7 @@ $env:RUN_NETWORK_TESTS='1'
 $env:TEST_DATABASE_URL='postgresql://...'
 .venv/Scripts/python -m pytest tests/test_integrations.py -k postgresql -q
 ```
+# Fiabilité de la planification
+
+Le secours indépendant de GitHub Cron, son activation et ses preuves sont décrits dans [docs/RELIABILITY.md](docs/RELIABILITY.md).
+

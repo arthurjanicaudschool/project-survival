@@ -117,7 +117,7 @@ export type State = {
   end_at: string;
   updated_at: string;
   last_market_sync?: string;
-  health?: {cycle_count: number; completed_at: string; duration_seconds: number; market_count: number; market_provider_ok: boolean; policy_version: string; trigger?: string; logs_url?: string; last_scheduled_cycle?: string};
+  health?: {cycle_count: number; completed_at: string; duration_seconds: number; market_count: number; market_provider_ok: boolean; policy_version: string; trigger?: string; trigger_source?: string; logs_url?: string; last_scheduled_cycle?: string; last_watchdog_cycle?: string};
   agents: Agent[];
   markets: Record<string, Market>;
   events: Activity[];

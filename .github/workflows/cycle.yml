@@ -9,6 +9,11 @@ on:
         type: choice
         options: [cycle, start, export, api-check, research-check, health, cost-report]
         default: cycle
+      source:
+        description: 'Dispatch origin for operational diagnosis; never a trading instruction.'
+        type: choice
+        options: [manual, supabase-watchdog]
+        default: manual
 permissions:
   contents: read
 concurrency:
@@ -25,6 +30,7 @@ jobs:
       AZURE_OPENAI_API_KEY: ${{ secrets.AZURE_OPENAI_API_KEY }}
       AZURE_OPENAI_API_VERSION: ${{ vars.AZURE_OPENAI_API_VERSION || '2024-10-21' }}
       AZURE_OPENAI_DEPLOYMENT: ${{ secrets.AZURE_OPENAI_DEPLOYMENT }}
+      SURVIVAL_TRIGGER_SOURCE: ${{ inputs.source || github.event_name }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -35,7 +41,14 @@ jobs:
       - name: Run authorized command
         env:
           COMMAND: ${{ inputs.action || 'cycle' }}
-        run: python -m survival.cli "$COMMAND" --cycle-id "${{ github.run_id }}"
+        run: |
+          # A single retry preserves run identity and the independently committed
+          # LLM quotas. No repeated fill can be committed for this run.
+          python -m survival.cli "$COMMAND" --cycle-id "${{ github.run_id }}" || {
+            if [ "$COMMAND" != "cycle" ]; then exit 1; fi
+            sleep 20
+            python -m survival.cli "$COMMAND" --cycle-id "${{ github.run_id }}"
+          }
       - uses: actions/upload-artifact@v4
         if: inputs.action == 'export'
         with:

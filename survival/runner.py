@@ -540,6 +540,10 @@ def cycle(store, eid, provider, reasoner, cycle_id=None, now=None):
             "cycle_count": len(state["cycles"]), "policy_version": SETTINGS["policy_version"],
             "agents": {a["id"]: a.get("runtime", {}) for a in state["agents"]}}
         state["health"]["trigger"] = os.getenv("GITHUB_EVENT_NAME", "local")
+        state["health"]["trigger_source"] = os.getenv("SURVIVAL_TRIGGER_SOURCE", state["health"]["trigger"])
+        if state["health"]["trigger_source"] == "supabase-watchdog":
+            state["last_watchdog_cycle"] = completed.isoformat()
+        state["health"]["last_watchdog_cycle"] = state.get("last_watchdog_cycle")
         if os.getenv("GITHUB_REPOSITORY") and os.getenv("GITHUB_RUN_ID"):
             state["health"]["logs_url"] = f"https://github.com/{os.environ['GITHUB_REPOSITORY']}/actions/runs/{os.environ['GITHUB_RUN_ID']}"
         if os.getenv("GITHUB_EVENT_NAME") == "schedule":

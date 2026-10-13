@@ -45,12 +45,8 @@ def test_postgresql_transaction_rls_and_concurrency():
             "select 1 from pg_publication where pubname='supabase_realtime'"
         ).fetchone():
             db.execute("create publication supabase_realtime")
-        db.execute(
-            (
-                Path(__file__).resolve().parent.parent
-                / "supabase/migrations/001_initial.sql"
-            ).read_text()
-        )
+        for migration in sorted((Path(__file__).resolve().parent.parent / "supabase/migrations").glob("*.sql")):
+            db.execute(migration.read_text(encoding="utf-8"))
     from uuid import uuid4
 
     eid = f"test-{uuid4()}"
@@ -88,6 +84,12 @@ def test_postgresql_transaction_rls_and_concurrency():
             "select count(*) from market_snapshots where experiment_id=%s and market_id=%s",
             (eid, "research-discovered"),
         ).fetchone()[0] == 1
+        store.db.execute("insert into scheduler_config(experiment_id,repository,enabled) values(%s,'test/repository',true)", (eid,))
+        assert not store.db.execute("select survival_watchdog_due(%s,%s)", (eid, now)).fetchone()[0]
+        later = now + timedelta(minutes=11)
+        assert store.db.execute("select survival_watchdog_due(%s,%s)", (eid, later)).fetchone()[0]
+        store.db.execute("insert into scheduler_dispatches(experiment_id,created_at,status) values(%s,%s,'REQUESTED')", (eid, later))
+        assert not store.db.execute("select survival_watchdog_due(%s,%s)", (eid, later)).fetchone()[0]
         with store.locked(eid):
             with pytest.raises(RuntimeError):
                 with second.locked(eid):

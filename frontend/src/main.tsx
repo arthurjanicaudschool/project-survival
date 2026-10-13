@@ -443,10 +443,13 @@ function Overview({
       </div>
       <section className="panel padded">
         <h2>État du moteur et preuves de fonctionnement</h2>
+          {state.status !== "FINISHED" && Date.now() - new Date(state.health?.completed_at || state.updated_at).getTime() > 20 * 60000 &&
+            <p className="negative" role="alert"><strong>Cycle en retard : aucune mise à jour enregistrée depuis {Math.floor((Date.now() - new Date(state.health?.completed_at || state.updated_at).getTime()) / 60000)} minutes.</strong> Une ancienne exécution automatique réussie ne garantit pas la cadence actuelle.</p>}
         {state.health ? <>
           <p>Dernier cycle terminé : {new Date(state.health.completed_at).toLocaleString("fr-FR")} · {state.health.duration_seconds}s · {state.health.market_count} marchés · {state.health.cycle_count} cycles enregistrés.</p>
           <p className={state.health.market_provider_ok ? "positive" : "negative"}>Polymarket : {state.health.market_provider_ok ? "données reçues" : "indisponible"} · politique {state.health.policy_version}</p>
-          <p>Planification automatique : {state.health.last_scheduled_cycle ? `confirmée le ${new Date(state.health.last_scheduled_cycle).toLocaleString("fr-FR")}` : "en attente d'une exécution schedule confirmée"} · dernier déclencheur : {state.health.trigger || "inconnu"}</p>
+          <p>Dernier cycle du cron GitHub : {state.health.last_scheduled_cycle ? new Date(state.health.last_scheduled_cycle).toLocaleString("fr-FR") : "aucun confirmé"} · dernier déclencheur : {state.health.trigger_source || state.health.trigger || "inconnu"}</p>
+          <p>Dernier cycle du secours Supabase : {state.health.last_watchdog_cycle ? new Date(state.health.last_watchdog_cycle).toLocaleString("fr-FR") : "aucun confirmé — activation et vérification nécessaires"}.</p>
           {state.health.logs_url && <a href={state.health.logs_url} target="_blank" rel="noreferrer">Voir les logs GitHub du cycle <External size={12}/></a>}
         </> : <p>En attente d'un cycle avec diagnostic. Aucun état technique n'est inventé.</p>}
         <div className="table-scroll"><table><thead><tr><th>AGENT</th><th>ÉTAT</th><th>DERNIÈRE ANALYSE</th><th>REQUÊTES AZURE MESURÉES</th><th>TOKENS ENTRÉE / SORTIE</th></tr></thead><tbody>

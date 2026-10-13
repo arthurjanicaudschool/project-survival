@@ -30,6 +30,9 @@ def main():
             "research-check",
             "health",
             "cost-report",
+            "watchdog-install",
+            "watchdog-activate",
+            "watchdog-status",
         ],
     )
     p.add_argument("--experiment", default=os.getenv("EXPERIMENT_ID", "survival-001"))
@@ -86,12 +89,20 @@ def main():
     store = Store(demo_path="data/demo.sqlite" if demo else None)
     try:
         if args.command == "migrate":
-            sql = (
-                Path(__file__).resolve().parent.parent
-                / "supabase/migrations/001_initial.sql"
-            ).read_text()
-            store.db.execute(sql)
+            for migration in sorted((Path(__file__).resolve().parent.parent / "supabase/migrations").glob("*.sql")):
+                store.db.execute(migration.read_text(encoding="utf-8"))
             print("Migration applied")
+        elif args.command.startswith("watchdog-"):
+            from . import watchdog
+            if args.command == "watchdog-install":
+                result = watchdog.install(store, args.experiment)
+            elif args.command == "watchdog-activate":
+                import getpass
+                token = os.getenv("SURVIVAL_SCHEDULER_GITHUB_TOKEN") or getpass.getpass("Dedicated fine-grained GitHub token (hidden): ")
+                result = watchdog.activate(store, args.experiment, token.strip())
+            else:
+                result = watchdog.status(store, args.experiment)
+            print(json.dumps(result, indent=2, default=str))
         elif args.command == "quota-check":
             print(json.dumps(store.quota_usage(), indent=2))
         elif args.command == "export":
@@ -105,7 +116,8 @@ def main():
                 from .costs import report
                 print(json.dumps(report(state), indent=2))
             else:
-                print(json.dumps({"status": state["status"], "now_utc": utcnow().isoformat(),
+                from .health import assess
+                print(json.dumps({"current_health": assess(state), "status": state["status"], "now_utc": utcnow().isoformat(),
                     "last_market_sync": state.get("last_market_sync"), "health": state.get("health"),
                     "agents": [{"id": a["id"], "runtime": a.get("runtime"), "last_analysis": a["memory"].get("last_call"),
                         "last_decision": a["decisions"][-1]["action"] if a["decisions"] else None,
