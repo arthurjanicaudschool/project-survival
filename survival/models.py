@@ -54,6 +54,12 @@ class Market(Model):
     history: dict[str, list[dict]] = Field(default_factory=dict)
 
 
+class LearningReview(Model):
+    episode_ids: list[str] = Field(min_length=1, max_length=8)
+    lesson: str = Field(min_length=1, max_length=700)
+    adaptation: str = Field(min_length=1, max_length=700)
+
+
 class Decision(Model):
     agent_id: str
     market_id: str
@@ -69,6 +75,7 @@ class Decision(Model):
     risk_factors: list[str]
     decision_kind: Literal["STRATEGIC", "EXPLORATION"] = "STRATEGIC"
     probability_basis: Literal["ESTIMATED", "UNESTIMATED"] = "ESTIMATED"
+    learning_review: list[LearningReview] = Field(default_factory=list, max_length=3)
 
     @model_validator(mode="after")
     def trade_outcome(self):

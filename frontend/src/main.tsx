@@ -809,6 +809,16 @@ function AgentDetail({ a, state }: { a: Agent; state: State }) {
           </p>
           <h3>Plan de sortie</h3>
           <p>{a.memory.exit_plan || "En attente de décision."}</p>
+          <h3>Apprentissage par les résultats</h3>
+          {a.memory.learning ? <>
+            <p>{a.memory.learning.closed_events} sorties observées · {a.memory.learning.wins} positives · {a.memory.learning.losses} négatives · {a.memory.learning.open_position_count} positions suivies</p>
+            <p className="subtle">P&amp;L réalisé net : {a.memory.learning.realized_net_pnl} en unité de cotation. Frais cumulés : {a.memory.learning.execution_fees}.</p>
+            <p className="subtle">Calibration : {a.memory.learning.calibration.resolved_estimates} estimations résolues{a.memory.learning.calibration.brier_score !== null && ` · score de Brier ${Number(a.memory.learning.calibration.brier_score).toFixed(3)} (plus bas = mieux)`}.</p>
+            {a.memory.learning.recent_outcomes.slice(-4).reverse().map(e => <p key={e.id}>{e.result} · {e.market_id} · {e.net_pnl} net{e.partial_exit && " · sortie partielle"}</p>)}
+            {a.memory.learning.reviews.slice(-3).reverse().map((r, i) => <div key={i}><p><strong>Hypothèse :</strong> {r.lesson}</p><p><strong>Adaptation proposée :</strong> {r.adaptation}</p><p className="subtle">{r.episode_ids.length} résultat(s) cité(s) · {new Date(r.at).toLocaleString("fr-FR")}</p></div>)}
+            {!a.memory.learning.closed_events && <p className="subtle">Pas encore de résultat réalisé à analyser. Une position ouverte ou une décision WAIT ne constitue pas un échec.</p>}
+            <p className="subtle">Leçons provisoires propres à cet agent, réexaminées lors de ses prochaines réflexions. Un petit échantillon ne prouve pas qu'une stratégie fonctionne.</p>
+          </> : <p className="subtle">Mémoire d'apprentissage en attente de synchronisation.</p>}
           <p className="subtle">
             {a.memory.calls || 0} sessions IA aujourd'hui{" "}
             {a.memory.paused_until &&

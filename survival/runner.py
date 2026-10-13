@@ -10,6 +10,7 @@ from decimal import Decimal as D
 from .agents import definitions, SETTINGS, should_reason
 from .models import Wallet, Market, utcnow, ZERO
 from .engine import apply, authorize, settle, value
+from .learning import build_feedback, accept_reviews
 
 log = logging.getLogger(__name__)
 
@@ -174,7 +175,7 @@ def cycle(store, eid, provider, reasoner, cycle_id=None, now=None):
             state["policy_revision"] = revision
             state["policy_history"].append({"at": cycle_started.isoformat(), "revision": revision,
                                            "previous_policy": previous.get("policy_version", "v1"), "settings": SETTINGS})
-            event(store, state, "POLICY_CHANGE", f"Trading policy updated to {SETTINGS['policy_version']}; disclosed first-investment participation for HUNTER/SPRINTER. Capital and competition deadline unchanged.", details={"previous_policy": previous.get("policy_version", "v1"), "new_policy": SETTINGS["policy_version"], "settings": SETTINGS})
+            event(store, state, "POLICY_CHANGE", f"Trading policy updated to {SETTINGS['policy_version']}; agent-local learning from observed outcomes. Capital and competition deadline unchanged.", details={"previous_policy": previous.get("policy_version", "v1"), "new_policy": SETTINGS["policy_version"], "settings": SETTINGS})
         from .participation import status as participation_status
         for a in state["agents"]:
             a["risk"]["autonomous_discovery"] = True
@@ -267,6 +268,16 @@ def cycle(store, eid, provider, reasoner, cycle_id=None, now=None):
                         a["id"],
                         entry,
                     )
+            def refresh_learning():
+                ledger, decisions = store.learning_history(eid, a["id"])
+                previous_learning = memory.get("learning", {})
+                feedback = build_feedback(ledger, decisions, {mid: m.model_dump(mode="json") for mid, m in markets.items()}, previous_learning)
+                feedback["updated_at"] = now.isoformat()
+                memory["learning"] = feedback
+                if not previous_learning or feedback["closed_events"] != previous_learning.get("closed_events"):
+                    event(store, state, "LEARNING", f"Learning memory synchronized · {feedback['closed_events']} realized outcomes · {len(feedback['open_theses'])} open theses", a["id"], feedback)
+
+            refresh_learning()
             nav, _, unpriced = value(
                 wallet,
                 markets,
@@ -357,6 +368,9 @@ def cycle(store, eid, provider, reasoner, cycle_id=None, now=None):
                         a, wallet, decision, markets, execution_time, memory
                     )
                     did = f"{eid}:{cycle_id}:{a['id']}"
+                    accepted, rejected_reviews = accept_reviews(memory["learning"], decision.learning_review, now.isoformat(), did)
+                    if accepted or rejected_reviews:
+                        event(store, state, "LEARNING_REVIEW", f"Learning review · {len(accepted)} grounded hypotheses · {rejected_reviews} unsupported references excluded", a["id"], {"accepted": accepted, "rejected_references": rejected_reviews})
                     payload = decision.model_dump(mode="json") | {
                         "verified_edge": None if decision.probability_basis == "UNESTIMATED" else str(edge),
                         "at": now.isoformat(),
@@ -437,7 +451,7 @@ def cycle(store, eid, provider, reasoner, cycle_id=None, now=None):
                                 kind=decision.action,
                                 amount=str(delta),
                                 created_at=now.isoformat(),
-                                payload=order | {"realized_pnl": str(pnl)},
+                                payload=order | {"realized_pnl": str(pnl), "category": markets[decision.market_id].category},
                             )
                             a["stats"]["trades"] += 1
                             if decision.decision_kind == "EXPLORATION":
@@ -452,6 +466,7 @@ def cycle(store, eid, provider, reasoner, cycle_id=None, now=None):
                                     D(a["stats"]["categories"].get(category, "0")) + pnl
                                 )
                             memory["portfolio_changed"] = True
+                            refresh_learning()
                             event(
                                 store,
                                 state,

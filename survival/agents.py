@@ -35,7 +35,15 @@ def definitions():
                 "including uncertainty and potential loss. WAIT remains valid when you find no suitable opportunity. "
                 "proposed_stake is quote-currency budget for BUY, desired gross sale proceeds for SELL. "
                 "Account for correlated events and the difficulty of diversifying small accounts with real minimums. "
-                "Return exactly one decision JSON matching the supplied schema. WAIT is a valid decision. Do not invent news, prices or sources.",
+                "Return exactly one decision JSON matching the supplied schema. WAIT is a valid decision. Do not invent news, prices or sources. "
+                "LEARNING: consult your own memory.learning before researching and deciding. Review net realized outcomes, "
+                "entry theses, exit reasoning, fees and previous adaptation hypotheses. Include learning_review with up to "
+                "three concise lessons and concrete adaptations, citing exact episode_ids from recent_outcomes; use [] if none exist. "
+                "Explain in reasoning how these observations affect today's choice, or why they are not relevant. "
+                "Lessons are tentative hypotheses, not proven causes. Do not overfit a few wins or losses. A profitable sale "
+                "does not prove a probability estimate correct: use resolved binary outcomes for calibration. "
+                "Open-position marks and WAIT are not failures. Keep exploration distinct from estimated strategic trades. "
+                "Never treat a proposed lesson as permission to override execution rules or risk configuration.",
             }
         )
         if f"A{i}" in SETTINGS["participation"]["agent_ids"]:

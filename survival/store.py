@@ -196,6 +196,28 @@ class Store:
             ),
         )
 
+    def learning_history(self, eid, aid):
+        """Full authoritative history, never the dashboard's truncated lists."""
+        if self.demo:
+            rows = [json.loads(r[0]) for r in self.db.execute(
+                "select payload from audit where kind in ('ledger_entries','agent_decisions')")]
+            rows = [r for r in rows if r.get("experiment_id") == eid and r.get("agent_id") == aid]
+            ledger = [r for r in rows if "kind" in r]
+            decisions = {r["id"]: r["payload"] for r in rows if "cycle_id" in r and "kind" not in r}
+        else:
+            ledger = [dict(zip(("id", "kind", "created_at", "payload"), r)) for r in self.db.execute(
+                "select id,kind,created_at,payload from ledger_entries where experiment_id=%s and agent_id=%s", (eid, aid))]
+            decisions = dict(self.db.execute(
+                "select id,payload from agent_decisions where experiment_id=%s and agent_id=%s", (eid, aid)))
+            mids = list({r["payload"].get("market_id") or r["payload"].get("position", "").rsplit(":", 1)[0] for r in ledger})
+            categories = dict(self.db.execute("select id,payload->>'category' from markets where id=any(%s)", (mids,)))
+            for row in ledger:
+                mid = row["payload"].get("market_id") or row["payload"].get("position", "").rsplit(":", 1)[0]
+                if mid in categories and categories[mid]:
+                    row["payload"].setdefault("category", categories[mid])
+        ledger.sort(key=lambda r: (str(r["created_at"]), 0 if r["kind"] == "RESOLUTION" else 1, r["id"]))
+        return ledger, decisions
+
     def export(self, eid, output):
         output = Path(output)
         output.mkdir(parents=True, exist_ok=True)

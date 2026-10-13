@@ -1,6 +1,7 @@
 {
   "duration_hours": 168,
-  "policy_version": "participation-v3",
+  "policy_version": "learning-v4",
+  "learning": {"recent_outcomes": 8, "open_theses": 10, "entry_context": 3, "reviews": 5},
   "participation": {"agent_ids": ["A1", "A2", "A6", "A7"], "deadline_hours": 24, "target_fraction": "0.10", "max_fraction": "0.20", "retry_calls": 1},
   "research_rounds": 3,
   "research_api": "responses-v1",

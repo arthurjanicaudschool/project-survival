@@ -126,7 +126,9 @@ def settle(wallet, market):
             pnl = payout - p.cost
             wallet.cash += payout
             wallet.realized += pnl
-            entries.append({"position": key, "amount": str(payout), "pnl": str(pnl)})
+            entries.append({"position": key, "amount": str(payout), "pnl": str(pnl),
+                            "quantity": str(p.quantity), "payout_per_share": str(market.payouts[p.outcome]),
+                            "category": market.category})
             p.quantity, p.cost = ZERO, ZERO
     return entries
 

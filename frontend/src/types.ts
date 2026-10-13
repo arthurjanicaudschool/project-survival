@@ -68,6 +68,13 @@ export type Agent = {
     calls?: number;
     last_call?: string;
     paused_until?: string;
+    learning?: {
+      closed_events: number; wins: number; losses: number; realized_net_pnl: string; execution_fees: string;
+      open_theses: {position: string}[]; open_position_count: number;
+      calibration: {resolved_estimates: number; brier_score: string | null};
+      recent_outcomes: {id: string; market_id: string; result: string; net_pnl: string; partial_exit: boolean}[];
+      reviews: {at: string; lesson: string; adaptation: string; episode_ids: string[]}[];
+    };
   };
   stats: {
     max_drawdown: string;
