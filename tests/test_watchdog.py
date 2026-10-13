@@ -33,7 +33,8 @@ def test_watchdog_dispatch_missing_secret_lock_and_http_result():
           create type extensions.http_request as (method extensions.http_method,uri varchar,headers extensions.http_header[],content_type varchar,content varchar);
           create table if not exists extensions.test_requests(id bigint generated always as identity, url text, body jsonb);
           create table if not exists vault.decrypted_secrets(name text,decrypted_secret text);
-          create function extensions.http_set_curlopt(text,text) returns boolean language sql as $$ select true $$;
+          create function extensions.http_set_curlopt(text,text) returns boolean language plpgsql as $$
+          begin if $1 not in ('CURLOPT_CONNECTTIMEOUT_MS','CURLOPT_TIMEOUT_MS') then raise exception 'Unsupported test curl option'; end if; return true; end $$;
           create function extensions.http(rq extensions.http_request) returns table(status integer) language plpgsql as $$
           begin insert into extensions.test_requests(url,body) values(rq.uri,rq.content::jsonb); return query select 204; end $$;
         """)
@@ -67,5 +68,14 @@ def test_watchdog_dispatch_missing_secret_lock_and_http_result():
         with pytest.raises(psycopg.errors.InsufficientPrivilege):
             store.db.execute("select * from extensions.test_requests")
         store.db.execute("reset role")
+        failed = eid + "-http-failure"
+        initialize(store, failed, "demo", {"usd_per_eur": "1.1"}, now)
+        store.db.execute("insert into scheduler_config(experiment_id,repository,enabled) values(%s,'test/repository',true)", (failed,))
+        store.db.execute("""create or replace function extensions.http(rq extensions.http_request) returns table(status integer)
+          language sql as $$ select 503 $$""")
+        result = store.db.execute("select survival_watchdog_tick()").fetchone()[0]
+        assert next(r for r in result if r["experiment_id"] == failed)["http_status"] == 503
+        assert not store.db.execute("select survival_watchdog_due(%s)", (failed,)).fetchone()[0]
+        assert store.db.execute("select survival_watchdog_due(%s,%s)", (failed, utcnow()+timedelta(minutes=3))).fetchone()[0]
     finally:
         store.close(); second.close()

@@ -49,8 +49,8 @@ def status(store, eid):
         return result | {"installed": False, "enabled": False}
     config = store.db.execute("select repository,branch,enabled from scheduler_config where experiment_id=%s", (eid,)).fetchone()
     result.update(installed=config is not None, enabled=config[2] if config else False)
-    result["recent_dispatches"] = [dict(zip(("at", "status", "request_id", "http_status"), row)) for row in store.db.execute(
-        "select created_at,status,request_id,http_status from scheduler_dispatches where experiment_id=%s order by created_at desc limit 8", (eid,)).fetchall()]
+    result["recent_dispatches"] = [dict(zip(("at", "status", "request_id", "http_status", "error_code"), row)) for row in store.db.execute(
+        "select created_at,status,request_id,http_status,error_code from scheduler_dispatches where experiment_id=%s order by created_at desc limit 8", (eid,)).fetchall()]
     if store.db.execute("select to_regclass('cron.job') is not null").fetchone()[0]:
         result["cron_jobs"] = [dict(zip(("jobname", "schedule", "active"), row)) for row in store.db.execute(
             "select jobname,schedule,active from cron.job where jobname='survival-watchdog'").fetchall()]

@@ -4,7 +4,7 @@
 create or replace function public.survival_watchdog_tick()
 returns jsonb language plpgsql security definer
 set search_path = pg_catalog,public as $$
-declare c record; token text; rid bigint; code integer; result jsonb := '[]'::jsonb;
+declare c record; token text; rid bigint; code integer; failure text; result jsonb := '[]'::jsonb;
 begin
  for c in select * from public.scheduler_config where enabled loop
   if not pg_try_advisory_xact_lock(hashtextextended(c.experiment_id,2)) then continue; end if;
@@ -20,10 +20,10 @@ begin
   end if;
   insert into public.scheduler_dispatches(experiment_id,status) values(c.experiment_id,'REQUESTED') returning id into rid;
   code := null;
+  failure := null;
   begin
    perform extensions.http_set_curlopt('CURLOPT_CONNECTTIMEOUT_MS','5000');
    perform extensions.http_set_curlopt('CURLOPT_TIMEOUT_MS','15000');
-   perform extensions.http_set_curlopt('CURLOPT_FOLLOWLOCATION','0');
    select status into code from extensions.http(row(
     'POST'::extensions.http_method,
     'https://api.github.com/repos/' || c.repository || '/actions/workflows/cycle.yml/dispatches',
@@ -36,9 +36,10 @@ begin
   exception when others then
    -- Do not persist provider exception text, request bodies or headers.
    code := null;
+   get stacked diagnostics failure = returned_sqlstate;
   end;
-  insert into public.scheduler_dispatches(experiment_id,status,request_id,http_status) values(c.experiment_id,'HTTP_RESULT',rid,code);
-  result := result || jsonb_build_array(jsonb_build_object('experiment_id',c.experiment_id,'status','HTTP_RESULT','request_id',rid,'http_status',code));
+  insert into public.scheduler_dispatches(experiment_id,status,request_id,http_status,error_code) values(c.experiment_id,'HTTP_RESULT',rid,code,failure);
+  result := result || jsonb_build_array(jsonb_build_object('experiment_id',c.experiment_id,'status','HTTP_RESULT','request_id',rid,'http_status',code,'error_code',failure));
  end loop;
  return result;
 end;

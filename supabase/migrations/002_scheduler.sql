@@ -13,6 +13,7 @@ create table if not exists scheduler_dispatches (
  unique(request_id,status)
 );
 create index if not exists scheduler_recent on scheduler_dispatches(experiment_id,created_at desc);
+alter table scheduler_dispatches add column if not exists error_code text check(error_code ~ '^[A-Z0-9]{5}$');
 alter table scheduler_config enable row level security;
 alter table scheduler_dispatches enable row level security;
 revoke all on scheduler_config,scheduler_dispatches from public,anon,authenticated;
@@ -27,8 +28,13 @@ returns boolean language sql stable set search_path = pg_catalog,public as $$
    and coalesce((e.state->'health'->>'started_at')::timestamptz,e.updated_at)
        <= observed_at - interval '9 minutes'
    and not exists(select 1 from public.scheduler_dispatches d
-    where d.experiment_id=e.id and d.status <> 'HTTP_RESULT'
-      and d.created_at > observed_at - interval '9 minutes')
+    where d.experiment_id=e.id and d.status in ('REQUESTED','MISSING_TOKEN')
+      and d.created_at > observed_at - interval '90 seconds')
+   and not exists(select 1 from public.scheduler_dispatches d
+    where d.experiment_id=e.id and d.status in ('REQUESTED','MISSING_TOKEN')
+      and d.created_at > observed_at - interval '9 minutes'
+      and not exists(select 1 from public.scheduler_dispatches r
+        where r.status='HTTP_RESULT' and r.request_id=d.id and r.http_status is distinct from 204))
   from public.experiments e join public.scheduler_config c on c.experiment_id=e.id
   where e.id=eid
  ),false);
