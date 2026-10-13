@@ -146,3 +146,18 @@ def test_policy_upgrade_preserves_capital_deadline_and_reports_health(setup, mon
     assert state["health"]["trigger"] == "schedule" and state["health"]["last_scheduled_cycle"]
     assert sum(e["kind"] == "POLICY_CHANGE" for e in state["events"]) == 1
     assert state["health"]["cycle_count"] == 1
+
+
+def test_valuation_only_cycle_does_not_hide_last_analysis_failure(setup):
+    from survival.health import assess
+    store, now = setup
+    class Broken:
+        def decide(self, *args):
+            raise ValueError("Provider-shaped failure")
+    state = cycle(store, "test", FixtureProvider(now), Broken(), "failed-analysis", now)
+    assert all(a["last_analysis"]["status"] == "TECHNICAL_ERROR" for a in state["agents"])
+    later = now + timedelta(minutes=10)
+    state = cycle(store, "test", FixtureProvider(later), FixtureReasoner(), "valuation", later)
+    assert all(a["runtime"]["status"] == "NOT_DUE" for a in state["agents"])
+    assert all(a["last_analysis"]["status"] == "TECHNICAL_ERROR" for a in state["agents"])
+    assert assess(state, later)["status"] == "DEGRADED"

@@ -51,6 +51,7 @@ export type Agent = {
   prompt: string;
   risk: Record<string, string | number | boolean>;
   runtime?: { status: string; at: string; reason: string };
+  last_analysis?: { status: string; at: string; reason: string };
   wallet: {
     initial: string;
     cash: string;

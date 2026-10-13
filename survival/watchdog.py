@@ -13,7 +13,7 @@ def install(store, eid):
         raise ValueError("Explicit START required before scheduler installation")
     store.db.execute((ROOT / "supabase/migrations/002_scheduler.sql").read_text(encoding="utf-8"))
     store.db.execute("create extension if not exists pg_cron")
-    store.db.execute("create extension if not exists pg_net with schema extensions")
+    store.db.execute("create extension if not exists http with schema extensions")
     store.db.execute((ROOT / "supabase/operations/watchdog.sql").read_text(encoding="utf-8"))
     with store.db.transaction():
         store.db.execute("insert into scheduler_config(experiment_id,repository) values(%s,%s) on conflict(experiment_id) do nothing", (eid, REPOSITORY))
@@ -38,7 +38,7 @@ def activate(store, eid, token):
         else:
             store.db.execute("select vault.create_secret(%s,'survival_github_scheduler','Dedicated repository Actions scheduler token')", (token,))
         store.db.execute("update scheduler_config set enabled=true where experiment_id=%s", (eid,))
-    # HTTP only starts after commit. API acceptance is still not cycle completion.
+    # API acceptance is still not cycle completion.
     return {"tick": store.db.execute("select survival_watchdog_tick()").fetchone()[0], "scheduler": status(store, eid)}
 
 

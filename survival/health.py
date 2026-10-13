@@ -14,7 +14,7 @@ def assess(state, now=None):
         status = "OVERDUE"
     elif not health.get("market_provider_ok", False):
         status = "PROVIDER_ERROR"
-    elif any(a.get("runtime", {}).get("status") == "TECHNICAL_ERROR" for a in state["agents"]):
+    elif any(a.get("last_analysis", a.get("runtime", {})).get("status") == "TECHNICAL_ERROR" for a in state["agents"]):
         status = "DEGRADED"
     else:
         status = "HEALTHY"

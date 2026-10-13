@@ -27,12 +27,15 @@ def test_watchdog_dispatch_missing_secret_lock_and_http_result():
         initialize(store, eid, "demo", {"usd_per_eur": "1.1"}, now)
         # Disposable CI database only. Replace network/Vault with observable stubs.
         store.db.execute("""
-          create schema if not exists net; create schema if not exists vault;
-          create table if not exists net._http_response(id bigint primary key,status_code integer);
-          create table if not exists net.test_requests(id bigint generated always as identity, url text, body jsonb, headers jsonb);
+          create schema if not exists extensions; create schema if not exists vault;
+          create type extensions.http_method as enum('POST');
+          create type extensions.http_header as (field varchar,value varchar);
+          create type extensions.http_request as (method extensions.http_method,uri varchar,headers extensions.http_header[],content_type varchar,content varchar);
+          create table if not exists extensions.test_requests(id bigint generated always as identity, url text, body jsonb);
           create table if not exists vault.decrypted_secrets(name text,decrypted_secret text);
-          create or replace function net.http_post(url text,body jsonb,headers jsonb,timeout_milliseconds integer)
-          returns bigint language sql as $$ insert into net.test_requests(url,body,headers) values(url,body,headers) returning id $$;
+          create function extensions.http_set_curlopt(text,text) returns boolean language sql as $$ select true $$;
+          create function extensions.http(rq extensions.http_request) returns table(status integer) language plpgsql as $$
+          begin insert into extensions.test_requests(url,body) values(rq.uri,rq.content::jsonb); return query select 204; end $$;
         """)
         store.db.execute((Path(__file__).resolve().parent.parent / "supabase/operations/watchdog.sql").read_text(encoding="utf-8"))
         store.db.execute("insert into scheduler_config(experiment_id,repository,enabled) values(%s,'test/repository',true)", (eid,))
@@ -48,17 +51,21 @@ def test_watchdog_dispatch_missing_secret_lock_and_http_result():
             assert not any(r.get("experiment_id") == target for r in second.db.execute("select survival_watchdog_tick()").fetchone()[0])
         result = store.db.execute("select survival_watchdog_tick()").fetchone()[0]
         request = next(r for r in result if r["experiment_id"] == target)
-        row = store.db.execute("select url,body from net.test_requests where id=%s", (request["request_id"],)).fetchone()
+        assert request["status"] == "HTTP_RESULT" and request["http_status"] == 204
+        row = store.db.execute("select url,body from extensions.test_requests order by id desc limit 1").fetchone()
         assert row[0] == "https://api.github.com/repos/test/repository/actions/workflows/cycle.yml/dispatches"
         assert row[1]["inputs"] == {"action": "cycle", "source": "supabase-watchdog"}
         assert not store.db.execute("select survival_watchdog_tick()").fetchone()[0]
-        store.db.execute("insert into net._http_response values(%s,204)", (request["request_id"],))
         store.db.execute("select survival_watchdog_tick()")
         store.db.execute("select survival_watchdog_tick()")
         assert store.db.execute("select count(*) from scheduler_dispatches where experiment_id=%s and status='HTTP_RESULT' and http_status=204", (target,)).fetchone()[0] == 1
+        store.db.execute("update experiments set status='FINISHED' where id=%s", (target,))
+        assert not store.db.execute("select survival_watchdog_due(%s,%s)", (target, utcnow()+timedelta(hours=2))).fetchone()[0]
         store.db.execute("set role anon")
         with pytest.raises(psycopg.errors.InsufficientPrivilege):
             store.db.execute("select survival_watchdog_tick()")
+        with pytest.raises(psycopg.errors.InsufficientPrivilege):
+            store.db.execute("select * from extensions.test_requests")
         store.db.execute("reset role")
     finally:
         store.close(); second.close()

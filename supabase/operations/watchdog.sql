@@ -1,16 +1,11 @@
--- Supabase only: CLI installs pg_cron and pg_net before loading this file.
+-- Supabase only: CLI installs pg_cron and http before loading this file.
 -- Called by cron as postgres. No service, Azure or wallet key is needed here.
+-- Synchronous HTTPS avoids persisting Authorization in pg_net's public queue.
 create or replace function public.survival_watchdog_tick()
 returns jsonb language plpgsql security definer
 set search_path = pg_catalog,public as $$
-declare c record; token text; rid bigint; result jsonb := '[]'::jsonb;
+declare c record; token text; rid bigint; code integer; result jsonb := '[]'::jsonb;
 begin
- -- Preserve HTTP outcomes before pg_net expires its transient response rows.
- insert into public.scheduler_dispatches(experiment_id,status,request_id,http_status)
- select d.experiment_id,'HTTP_RESULT',d.request_id,r.status_code
- from public.scheduler_dispatches d join net._http_response r on r.id=d.request_id
- where d.status='REQUESTED'
- on conflict(request_id,status) do nothing;
  for c in select * from public.scheduler_config where enabled loop
   if not pg_try_advisory_xact_lock(hashtextextended(c.experiment_id,2)) then continue; end if;
   if not public.survival_watchdog_due(c.experiment_id) then continue; end if;
@@ -23,15 +18,27 @@ begin
    result := result || jsonb_build_array(jsonb_build_object('experiment_id',c.experiment_id,'status','MISSING_TOKEN'));
    continue;
   end if;
-  select net.http_post(
-   url := 'https://api.github.com/repos/' || c.repository || '/actions/workflows/cycle.yml/dispatches',
-   headers := jsonb_build_object('Authorization','Bearer ' || token,'Accept','application/vnd.github+json',
-     'User-Agent','ProjectSurvivalWatchdog','Content-Type','application/json'),
-   body := jsonb_build_object('ref',c.branch,'inputs',jsonb_build_object('action','cycle','source','supabase-watchdog')),
-   timeout_milliseconds := 15000
-  ) into rid;
-  insert into public.scheduler_dispatches(experiment_id,status,request_id) values(c.experiment_id,'REQUESTED',rid);
-  result := result || jsonb_build_array(jsonb_build_object('experiment_id',c.experiment_id,'status','REQUESTED','request_id',rid));
+  insert into public.scheduler_dispatches(experiment_id,status) values(c.experiment_id,'REQUESTED') returning id into rid;
+  code := null;
+  begin
+   perform extensions.http_set_curlopt('CURLOPT_CONNECTTIMEOUT_MS','5000');
+   perform extensions.http_set_curlopt('CURLOPT_TIMEOUT_MS','15000');
+   perform extensions.http_set_curlopt('CURLOPT_FOLLOWLOCATION','0');
+   select status into code from extensions.http(row(
+    'POST'::extensions.http_method,
+    'https://api.github.com/repos/' || c.repository || '/actions/workflows/cycle.yml/dispatches',
+    array[row('Authorization','Bearer ' || token)::extensions.http_header,
+      row('Accept','application/vnd.github+json')::extensions.http_header,
+      row('User-Agent','ProjectSurvivalWatchdog')::extensions.http_header],
+    'application/json',
+    jsonb_build_object('ref',c.branch,'inputs',jsonb_build_object('action','cycle','source','supabase-watchdog'))::text
+   )::extensions.http_request);
+  exception when others then
+   -- Do not persist provider exception text, request bodies or headers.
+   code := null;
+  end;
+  insert into public.scheduler_dispatches(experiment_id,status,request_id,http_status) values(c.experiment_id,'HTTP_RESULT',rid,code);
+  result := result || jsonb_build_array(jsonb_build_object('experiment_id',c.experiment_id,'status','HTTP_RESULT','request_id',rid,'http_status',code));
  end loop;
  return result;
 end;

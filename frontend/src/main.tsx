@@ -443,6 +443,8 @@ function Overview({
       </div>
       <section className="panel padded">
         <h2>État du moteur et preuves de fonctionnement</h2>
+          {state.agents.some(a => (a.last_analysis || a.runtime)?.status === "TECHNICAL_ERROR") &&
+            <p className="negative" role="alert">Une ou plusieurs dernières analyses ont échoué. Une actualisation sans nouvelle analyse ne résout pas cette panne ; consultez les diagnostics des agents.</p>}
           {state.status !== "FINISHED" && Date.now() - new Date(state.health?.completed_at || state.updated_at).getTime() > 20 * 60000 &&
             <p className="negative" role="alert"><strong>Cycle en retard : aucune mise à jour enregistrée depuis {Math.floor((Date.now() - new Date(state.health?.completed_at || state.updated_at).getTime()) / 60000)} minutes.</strong> Une ancienne exécution automatique réussie ne garantit pas la cadence actuelle.</p>}
         {state.health ? <>
@@ -453,7 +455,7 @@ function Overview({
           {state.health.logs_url && <a href={state.health.logs_url} target="_blank" rel="noreferrer">Voir les logs GitHub du cycle <External size={12}/></a>}
         </> : <p>En attente d'un cycle avec diagnostic. Aucun état technique n'est inventé.</p>}
         <div className="table-scroll"><table><thead><tr><th>AGENT</th><th>ÉTAT</th><th>DERNIÈRE ANALYSE</th><th>REQUÊTES AZURE MESURÉES</th><th>TOKENS ENTRÉE / SORTIE</th></tr></thead><tbody>
-          {state.agents.map(a => <tr key={a.id}><td>{a.id} {a.name}</td><td>{a.runtime?.status || "Non mesuré"}</td><td>{a.memory.last_call ? new Date(a.memory.last_call).toLocaleString("fr-FR") : "Aucune"}</td><td>{a.stats.llm_usage?.requests ?? "Non mesuré"}</td><td>{a.stats.llm_usage ? `${a.stats.llm_usage.prompt_tokens} / ${a.stats.llm_usage.completion_tokens}` : "Non mesuré"}</td></tr>)}
+          {state.agents.map(a => <tr key={a.id}><td>{a.id} {a.name}</td><td>{a.runtime?.status || "Non mesuré"}{a.last_analysis && <small className="subtle"> · dernière analyse : {a.last_analysis.status}</small>}</td><td>{a.memory.last_call ? new Date(a.memory.last_call).toLocaleString("fr-FR") : "Aucune"}</td><td>{a.stats.llm_usage?.requests ?? "Non mesuré"}</td><td>{a.stats.llm_usage ? `${a.stats.llm_usage.prompt_tokens} / ${a.stats.llm_usage.completion_tokens}` : "Non mesuré"}</td></tr>)}
         </tbody></table></div>
         <p className="subtle">WAIT / HOLD = choix de l'agent · NOT_DUE = prochaine session pas encore due · EXECUTION_REJECTED = ordre non exécuté · TECHNICAL_ERROR / PROVIDER_ERROR = panne. Tokens comptés depuis l'activation de la mesure ; l'historique antérieur est inconnu.</p>
       </section>

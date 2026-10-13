@@ -20,6 +20,9 @@ def test_current_cycle_distinguishes_technical_failure_from_wait():
     assert assess(state, now)["status"] == "HEALTHY"
     state["agents"][0]["runtime"] = {"status": "TECHNICAL_ERROR"}
     assert assess(state, now)["status"] == "DEGRADED"
+    state["agents"][0]["last_analysis"] = {"status": "TECHNICAL_ERROR"}
+    state["agents"][0]["runtime"] = {"status": "NOT_DUE"}
+    assert assess(state, now)["status"] == "DEGRADED"
 
 
 def test_closure_due_and_finished_are_not_conflated_with_normal_health():

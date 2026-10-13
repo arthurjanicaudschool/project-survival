@@ -222,8 +222,14 @@ class Store:
                     "agent_memories",
                     "dashboard_states",
                     "llm_attempts",
+                    "scheduler_config",
+                    "scheduler_dispatches",
                 }:
                     from psycopg import sql
+                    if table in ("scheduler_config", "scheduler_dispatches") and not self.db.execute(
+                        "select to_regclass(%s) is not null", ("public." + table,)
+                    ).fetchone()[0]:
+                        continue
 
                     # Fills carry the experiment through their parent order.
                     query = (

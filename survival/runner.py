@@ -467,6 +467,9 @@ def cycle(store, eid, provider, reasoner, cycle_id=None, now=None):
                     )
                     a["runtime"] = {"status": "TECHNICAL_ERROR", "at": utcnow().isoformat(), "reason": type(exc).__name__}
                 finally:
+                    # Preserve the last actual analysis independently of a
+                    # subsequent valuation-only cycle's NOT_DUE status.
+                    a["last_analysis"] = a.get("runtime", {}).copy()
                     audit = getattr(reasoner, "last_audit", {})
                     if audit:
                         metrics = {k: v for k, v in audit.items() if k != "research"}
