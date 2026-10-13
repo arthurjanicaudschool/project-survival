@@ -88,9 +88,9 @@ def test_pending_agent_is_reprompted_if_it_waits_despite_executable_own_market(m
     def create(**kwargs):
         calls.append(kwargs)
         return NS(model="test",usage=None,status="completed",output=[Call()] if len(calls)==1 else [],
-                  output_text=(buy if len(calls)==4 else wait).model_dump_json())
+                  output_text=(buy if sum('text' in c for c in calls)==2 else wait).model_dump_json())
     azure.responses_client=NS(responses=NS(create=create))
     monkeypatch.setenv("AZURE_OPENAI_DEPLOYMENT","test")
     decision=azure.decide(agent,wallet,{}, {"participation":{"pending":True}})
     assert decision.action=="BUY" and decision.decision_kind=="EXPLORATION"
-    assert azure.last_audit["participation"]["correction_calls"]==1 and len(calls)==4
+    assert azure.last_audit["participation"]["correction_calls"]==1 and sum('text' in c for c in calls)==2

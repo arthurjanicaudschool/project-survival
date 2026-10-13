@@ -1,0 +1,10 @@
+name = "project-survival-watchdog"
+main = "worker.js"
+compatibility_date = "2026-10-14"
+[triggers]
+crons = ["*/5 * * * *"]
+[vars]
+EXPERIMENT_ID = "survival-001"
+GITHUB_REPOSITORY = "arthurjanicaudschool/project-survival"
+# SUPABASE_URL, SUPABASE_ANON_KEY and GITHUB_SCHEDULER_TOKEN are deployed
+# separately by operations/deploy_watchdog.py; no credentials in source.

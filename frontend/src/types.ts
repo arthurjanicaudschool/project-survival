@@ -1,12 +1,15 @@
 export type Snapshot = {
   at: string;
-  nav: string;
-  nav_eur: string;
+  nav: string | null;
+  nav_eur: string | null;
   cash: string;
   invested_cost: string;
   realized: string;
-  unrealized: string;
-  roi: string;
+  unrealized: string | null;
+  roi: string | null;
+  complete?: boolean;
+  nav_lower_bound_eur?: string;
+  valuation_details?: {position: string; reason: string; observed_at: string | null}[];
   stranded: string[];
   valuation: string;
 };
@@ -32,6 +35,9 @@ export type Decision = {
   risk_factors: string[];
   rejection: string;
   decision_status?: string;
+  thesis_type?: string;
+  edge_basis?: string;
+  target_price?: string | null;
 };
 export type Order = {
   id: string;
@@ -82,7 +88,10 @@ export type Agent = {
     wins: number;
     closed: number;
     categories: Record<string, string>;
+    exposure?: {economic_factor_cost: Record<string,string>; method: string};
+    performance?: {valid_samples: number; incomplete_samples: number; return_change_volatility: number | null; method: string};
     llm_usage?: {requests: number; prompt_tokens: number; completion_tokens: number; model?: string; metering_started_at?: string};
+    last_research_quality?:{at:string; inspected_candidates:number; candidate_target:number; readable_pages:number; failed_tools:number; structured_sources:number};
   };
   snapshot?: Snapshot;
   decisions: Decision[];
@@ -104,6 +113,7 @@ export type Market = {
   description: string;
   slug: string;
   category: string;
+  category_source?: string;
   liquidity: string;
   volume: string;
   end_at: string;
@@ -124,12 +134,14 @@ export type Activity = {
 export type State = {
   id: string;
   mode: "live" | "demo";
-  status: "RUNNING" | "FINISHED";
+  status: "RUNNING" | "CLOSING" | "FINISHED";
+  inflight?: {id: string; started_at: string; current_agent?: string; completed_agents: string[]};
   started_at: string;
   end_at: string;
   updated_at: string;
   last_market_sync?: string;
-  health?: {cycle_count: number; completed_at: string; duration_seconds: number; market_count: number; market_provider_ok: boolean; policy_version: string; trigger?: string; trigger_source?: string; logs_url?: string; last_scheduled_cycle?: string; last_watchdog_cycle?: string};
+  data_quality?: {complete: boolean; unknown_positions: number};
+  health?: {cycle_count: number; completed_at: string; duration_seconds: number; market_count: number; market_provider_ok: boolean; partial_data?:boolean; provider_error_count?:number; financial_invariants?:string; azure_budget?:{estimated_eur:string; today_estimated_eur:string; total_limit_eur:string; daily_limit_eur:string; uncertain_requests_reserved:number}; policy_version: string; trigger?: string; trigger_source?: string; logs_url?: string; last_scheduled_cycle?: string; last_watchdog_cycle?: string; last_cloudflare_cycle?:string};
   agents: Agent[];
   markets: Record<string, Market>;
   events: Activity[];
@@ -141,10 +153,13 @@ export type State = {
     method: string;
   };
   report: null | {
-    roi_winner: string;
-    absolute_winner: string;
+    roi_winner: string | null;
+    roi_winners?: string[];
+    absolute_winner: string | null;
+    absolute_winners?: string[];
     incomplete_valuation: boolean;
     close_delay_seconds: number;
+    valuation_method?: string;
     limitation: string;
     strategies: Record<string, unknown>;
     ranking: {

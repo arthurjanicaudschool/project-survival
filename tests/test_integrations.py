@@ -114,6 +114,26 @@ def test_postgresql_transaction_rls_and_concurrency():
         with pytest.raises(psycopg.errors.InsufficientPrivilege):
             store.db.execute("select * from ledger_entries")
         store.db.execute("reset role")
+        # Full JSON/CSV export can restore into a disposable separate database.
+        import tempfile
+        from psycopg import sql
+        from psycopg.conninfo import conninfo_to_dict,make_conninfo
+        from survival.restore import restore
+        database='restore_'+uuid4().hex
+        with psycopg.connect(url,autocommit=True) as admin:
+            admin.execute(sql.SQL('create database {}').format(sql.Identifier(database)))
+        config=conninfo_to_dict(url);config['dbname']=database
+        target=Store(make_conninfo(**config))
+        try:
+            target.db.execute('create publication supabase_realtime')
+            for migration in sorted((Path(__file__).resolve().parent.parent/'supabase/migrations').glob('*.sql')):target.db.execute(migration.read_text(encoding='utf-8'))
+            with tempfile.TemporaryDirectory() as directory:
+                store.export(eid,directory)
+                result=restore(target,directory)
+                assert result['agents']==10 and result['financial_invariants']=='verified'
+                assert target.load(eid)==state
+                assert not target.db.execute('select enabled from scheduler_config where experiment_id=%s',(eid,)).fetchone()[0]
+        finally:target.close()
     finally:
         store.close()
         second.close()

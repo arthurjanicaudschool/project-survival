@@ -1,10 +1,35 @@
+# Version courante : survival-v5
+
+Ce guide garde les étapes de création de comptes. Les règles et limites actuelles
+sont détaillées dans [REMEDIATION.md](REMEDIATION.md) et le README.
+Budget autorisé : 100 EUR total, 20 EUR/jour UTC de crédits Azure.
+Les workflows utilisent DATABASE_URL d'un compte limité. DATABASE_ADMIN_URL reste
+local pour migrations et opérations Vault. `operations/provision_runtime.py`
+provisionne ce compte et chiffre le secret GitHub avec PyNaCl (dépendance locale
+optionnelle : `pip install pynacl`). Ne jamais exposer ces variables au frontend.
+
+Le secours Cloudflare se déploie avec `python operations/deploy_watchdog.py`.
+Il nécessite CLOUDFLARE_ACCOUNT_ID et CLOUDFLARE_API_TOKEN limité à Workers Scripts
+Write sur le compte concerné. Il reprend le jeton GitHub Actions dédié depuis
+Vault sans l'afficher. Le cron s'exécute toutes les cinq minutes, lit la projection
+publique Supabase et déclenche un cycle si le moteur est en retard. Il reste soumis
+à la disponibilité de GitHub/Supabase. Aucun ordre réel n'est exécuté.
+
+Le workflow backup.yml sauvegarde quotidiennement à 03:43 UTC, artifact 14 jours.
+Pour une restauration de données dans une base séparée, vide et migrée : définir
+RESTORE_DATABASE_URL puis `python operations/restore_export.py --directory exports/week-01`.
+Le scheduler restauré est désactivé ; Vault et secrets fournisseurs se réactivent
+séparément. Les vérifications de restauration s'exécutent sur PostgreSQL jetable.
+
+---
+
 # Déploiement gratuit et exploitation
 
-Mise à jour autonomie v2 : lire [AUTONOMY.md](AUTONOMY.md) pour les règles et coûts actuels. Les sessions utilisent Azure Responses v1, les recherches couvrent l'univers public et les tokens sont mesurés. Le timeout GitHub est désormais de 25 minutes. Le tableau de bord n'annonce une planification confirmée qu'après un événement schedule réellement constaté. Avant une augmentation de fréquence, vérifier les crédits Azure et les minutes Actions restantes.
+Historique v2 (voir REMEDIATION.md pour les règles v5 actuelles) : lire [AUTONOMY.md](AUTONOMY.md) pour les règles et coûts actuels. Les sessions utilisent Azure Responses v1, les recherches couvrent l'univers public et les tokens sont mesurés. Le timeout GitHub est désormais de 25 minutes. Le tableau de bord n'annonce une planification confirmée qu'après un événement schedule réellement constaté. Avant une augmentation de fréquence, vérifier les crédits Azure et les minutes Actions restantes.
 
 ## 1. Supabase Free
 
-Créer un projet gratuit. Dans SQL Editor, exécuter `supabase/migrations/001_initial.sql`. Sinon renseigner `DATABASE_URL` en local puis `python -m survival.cli migrate`.
+Créer un projet gratuit. Dans SQL Editor, exécuter les migrations 001, 002 et 003 dans cet ordre. Sinon renseigner `DATABASE_URL` en local puis `python -m survival.cli migrate`.
 
 Copier la connexion **session pooler** (port 5432) avec mot de passe URL-encodé, et ajouter `sslmode=require`. Éviter le transaction pooler pour conserver un comportement prévisible des connexions de cycle et de quota. Le pooler est utile depuis les runners sans IPv6. Vérifier la migration avant START.
 
@@ -23,7 +48,7 @@ Ajouter dans Settings → Secrets and variables → Actions :
 | AZURE_OPENAI_API_KEY | Clé de cette ressource |
 | AZURE_OPENAI_DEPLOYMENT | Nom de déploiement, pas simplement le nom commercial du modèle |
 
-Variables : `EXPERIMENT_ID=survival-001`, éventuellement `AZURE_OPENAI_API_VERSION=2024-10-21`. Choisir un déploiement compatible Chat Completions, `response_format=json_object` et `max_completion_tokens`. Aucun outil d'exécution n'est fourni au modèle. L'endpoint Azure est réglé par l'utilisateur ; un appel réel ne peut être validé sans ces paramètres.
+Variables : `EXPERIMENT_ID=survival-001`, éventuellement `AZURE_OPENAI_API_VERSION=2024-10-21`. Choisir un déploiement compatible Responses v1, outils de fonction et Structured Outputs stricts (`json_schema`). Aucun outil d'exécution n'est fourni au modèle. L'endpoint Azure est réglé par l'utilisateur ; un appel réel ne peut être validé sans ces paramètres.
 
 Pousser sur la branche par défaut. Autoriser les workflows GitHub Actions. Le workflow `Checks` exécute les tests unitaires, les tests PostgreSQL sur un service jetable, et le build TypeScript/Vite. Attendre son succès avant START. Les tests API publics sont opt-in pour ne pas dépendre de Polymarket à chaque push.
 
@@ -63,7 +88,7 @@ Références consultées le 12 octobre 2026 :
 - [Supabase Free](https://supabase.com/pricing) : 500 MB de base, 5 GB d'egress, 200 connexions Realtime simultanées, 2 millions de messages/mois, taille maximale de message 256 KB. Pas de sauvegardes automatiques gratuites. Pause après une semaine d'inactivité.
 - [Cloudflare Pages](https://developers.cloudflare.com/pages/platform/limits/) : 500 builds/mois, un build simultané, fichier individuel limité à 25 MiB. Les cycles ne reconstruisent pas le site.
 
-Un maximum de 504 raisonnements est prévu pour sept jours. Avec quatre marchés et profondeur bornée, le coût dépend du déploiement Azure et des tokens réels ; aucune estimation monétaire inventée. Réduire les fréquences, `markets_per_agent`, `max_llm_tokens` ou la profondeur si nécessaire. Les reprises de SDK et Azure sont bornées ; le job est limité à neuf minutes.
+Un maximum de 504 raisonnements est prévu pour sept jours. Avec quatre marchés et profondeur bornée, le coût dépend du déploiement Azure et des tokens réels ; aucune estimation monétaire inventée. Réduire les fréquences, `markets_per_agent`, `max_llm_tokens` ou la profondeur si nécessaire. Les reprises de SDK et Azure sont bornées ; le job est limité à 25 minutes.
 
 `python -m survival.cli quota-check` affiche la taille PostgreSQL et la projection courante. Le moteur refuse de continuer au-delà de `max_database_bytes`, avant le quota gratuit, pour éviter un dépassement non maîtrisé. La taille inclut le reste du projet Supabase ; privilégier une base dédiée. Consulter également Usage dans Supabase et Azure et Actions Usage dans GitHub. Les quotas d'egress dépendent du nombre de visiteurs ; le budget nul ne peut pas garantir un trafic illimité.
 
@@ -72,7 +97,7 @@ Un maximum de 504 raisonnements est prévu pour sept jours. Avec quatre marchés
 - Données publiques indisponibles : alertes, décisions suspendues, aucun prix de substitution. Les dernières valeurs affichées portent une date ; après vingt minutes le dashboard avertit de leur ancienneté.
 - Frais inconnus ou protocole inconnu : marché ignoré avec erreur explicite.
 - Azure indisponible ou JSON invalide : aucune transaction de cet agent ; mémoire et réservation de quota conservées.
-- Base indisponible ou panne au milieu du cycle : pas de commit financier partiel. Relancer le même workflow.
+- Base indisponible ou panne au milieu du cycle : les transactions déjà validées restent conservées ; la tâche READY et le cycle en cours sont repris sans double fill. Relancer le workflow.
 - Job bloqué : attendre le timeout et relancer ; le verrou est libéré avec la connexion.
 - Clôture : le premier cycle après `end_at` bloque l'IA, règle les payouts attestés, valorise les autres positions et sauvegarde `final_reports`. Le délai du scheduler est affiché. Les positions non liquidables rendent le classement incomplet et leur borne basse est indiquée.
 

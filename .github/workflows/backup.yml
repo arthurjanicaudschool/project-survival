@@ -1,0 +1,27 @@
+name: Daily paper competition backup
+on:
+  schedule:
+    - cron: '43 3 * * *'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      EXPERIMENT_ID: ${{ vars.EXPERIMENT_ID || 'survival-001' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - run: pip install -e .
+      - run: python -m survival.cli export --output exports/backup
+      - uses: actions/upload-artifact@v4
+        with:
+          name: survival-backup-${{ github.run_id }}
+          path: exports/backup/
+          retention-days: 14

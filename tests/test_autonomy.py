@@ -100,6 +100,6 @@ def test_azure_tool_loop_retrieves_market_and_accounts_for_tokens(monkeypatch):
     result = azure.decide(agent, wallet, watched, {})
     assert result.agent_id == "A1" and market.id in watched
     assert calls[0]["tool_choice"] == "required"
-    assert azure.last_audit["requests"] == 3
-    assert azure.last_audit["prompt_tokens"] == 300
+    assert azure.last_audit["requests"] == 5
+    assert azure.last_audit["prompt_tokens"] == 500
     assert azure.last_audit["research"][0]["ok"]

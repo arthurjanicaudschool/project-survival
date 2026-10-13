@@ -9,17 +9,21 @@ export const supabase =
 export function useCompetition(demo: boolean) {
   const [state, setState] = useState<State | null>(null),
     [error, setError] = useState(""),
-    [loading, setLoading] = useState(true);
+    [loading, setLoading] = useState(true),
+    [realtime,setRealtime]=useState("CONNECTING");
   useEffect(() => {
     let active = true,
       lastVersion = "",
-      running = false;
+      running = false,
+      lastRefresh=0;
+    let pending: ReturnType<typeof setTimeout> | undefined;
     setState(null);
     setError("");
     setLoading(true);
     const refresh = async () => {
       if (running) return;
       running = true;
+      lastRefresh=Date.now();
       try {
         let result: State | null;
         if (demo) {
@@ -86,15 +90,16 @@ export function useCompetition(demo: boolean) {
                 table: "dashboard_updates",
                 filter: `experiment_id=eq.${env.VITE_EXPERIMENT_ID || "survival-001"}`,
               },
-              () => void refresh(),
+              () => {if(pending)return;pending=setTimeout(()=>{pending=undefined;void refresh();},Math.max(0,60000-(Date.now()-lastRefresh)));},
             )
-            .subscribe()
+            .subscribe(status => {if(active)setRealtime(status);})
         : null;
     return () => {
       active = false;
       clearInterval(interval);
+      if(pending)clearTimeout(pending);
       if (channel && supabase) void supabase.removeChannel(channel);
     };
   }, [demo]);
-  return { state, error, loading };
+  return { state, error, loading, realtime };
 }

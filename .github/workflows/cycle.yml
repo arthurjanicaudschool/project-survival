@@ -12,7 +12,7 @@ on:
       source:
         description: 'Dispatch origin for operational diagnosis; never a trading instruction.'
         type: choice
-        options: [manual, supabase-watchdog]
+        options: [manual, supabase-watchdog, cloudflare-watchdog]
         default: manual
 permissions:
   contents: read

@@ -54,13 +54,13 @@ const colors = [
   "#e78672",
 ];
 const euro = (n: unknown) =>
-  new Intl.NumberFormat("fr-FR", {
+  n === null || n === undefined || !Number.isFinite(Number(n)) ? "Non valorisable" : new Intl.NumberFormat("fr-FR", {
     style: "currency",
     currency: "EUR",
     maximumFractionDigits: 2,
   }).format(Number(n || 0));
 const pct = (n: unknown) =>
-  `${Number(n || 0) >= 0 ? "+" : ""}${(Number(n || 0) * 100).toFixed(2)} %`;
+  n === null || n === undefined || !Number.isFinite(Number(n)) ? "Indéterminé" : `${Number(n || 0) >= 0 ? "+" : ""}${(Number(n || 0) * 100).toFixed(2)} %`;
 const num = (n: unknown) =>
   Number(n || 0).toLocaleString("fr-FR", { maximumFractionDigits: 2 });
 const time = (s: string) =>
@@ -69,11 +69,13 @@ const time = (s: string) =>
     minute: "2-digit",
     second: "2-digit",
   });
-const nav = (a: Agent) => Number(a.snapshot?.nav_eur ?? a.initial_eur);
-const roi = (a: Agent) => Number(a.snapshot?.roi || 0);
+const known = (a: Agent) => a.snapshot?.complete !== false && !a.snapshot?.stranded.length && a.snapshot?.nav_eur !== null;
+const nav = (a: Agent) => known(a) ? Number(a.snapshot?.nav_eur ?? a.initial_eur) : NaN;
+const roi = (a: Agent) => known(a) ? Number(a.snapshot?.roi || 0) : NaN;
+const placement = (a: Agent, agents: Agent[]) => known(a) ? String(1 + agents.filter(x => known(x) && roi(x) > roi(a) + 1e-8).length).padStart(2,"0") : "—";
 const rank = (agents: Agent[]) =>
   [...agents].sort(
-    (a, b) => roi(b) - roi(a) || Number(a.id.slice(1)) - Number(b.id.slice(1)),
+    (a, b) => Number(known(b)) - Number(known(a)) || roi(b) - roi(a) || Number(a.id.slice(1)) - Number(b.id.slice(1)),
   );
 const navItems = [
   { label: "Overview", icon: LayoutDashboard },
@@ -100,7 +102,7 @@ function EquityChart({
         const s = p[a.id] as Snapshot | undefined;
         return [
           a.id,
-          s ? (normalized ? Number(s.roi) * 100 : Number(s.nav_eur)) : null,
+          s && s.roi !== null && s.nav_eur !== null ? (normalized ? Number(s.roi) * 100 : Number(s.nav_eur)) : null,
         ];
       }),
     ]),
@@ -278,7 +280,7 @@ function Leaderboard({
               {!compact && (
                 <>
                   <th>MAX. DRAWDOWN</th>
-                  <th>WIN RATE</th>
+                  <th>SORTIES POSITIVES</th>
                   <th>IMMOBILISÉ</th>
                 </>
               )}
@@ -295,10 +297,7 @@ function Leaderboard({
                       rank(state.agents)[0].id === a.id ? "rank-first" : "rank"
                     }
                   >
-                    {rank(state.agents).findIndex((x) => x.id === a.id) + 1 < 10
-                      ? "0"
-                      : ""}
-                    {rank(state.agents).findIndex((x) => x.id === a.id) + 1}
+                    {placement(a,state.agents)}
                   </span>
                 </td>
                 <td>
@@ -307,7 +306,7 @@ function Leaderboard({
                 <td className="mono">
                   {euro(nav(a))}
                   {!!a.snapshot?.stranded.length && (
-                    <small className="warning">Borne basse</small>
+                    <small className="warning">Non classé · borne basse {euro(a.snapshot?.nav_lower_bound_eur)}</small>
                   )}
                 </td>
                 <td
@@ -399,10 +398,10 @@ function Overview({
 }) {
   const total = state.agents.reduce((s, a) => s + nav(a), 0),
     initial = state.agents.reduce((s, a) => s + Number(a.initial_eur), 0),
-    ranked = rank(state.agents);
+    ranked = rank(state.agents).filter(known);
   const consolidated = state.history.map((p) => ({
     at: p.at,
-    value: state.agents.reduce(
+    value: state.agents.some(a => (p[a.id] as Snapshot)?.nav_eur === null) ? null : state.agents.reduce(
       (sum, a) => sum + Number((p[a.id] as Snapshot)?.nav_eur || a.initial_eur),
       0,
     ),
@@ -443,6 +442,9 @@ function Overview({
       </div>
       <section className="panel padded">
         <h2>État du moteur et preuves de fonctionnement</h2>
+        {state.inflight && <p className="warning">Cycle en cours · {state.inflight.completed_agents.length}/10 agents terminés · {state.inflight.current_agent || "préparation"}. Les opérations déjà sauvegardées sont récupérables après interruption.</p>}
+        {state.agents.some(a => !known(a)) && <p className="warning" role="alert">Valorisation incomplète : les agents concernés ne sont pas classés et le résultat consolidé est indéterminé. Une borne basse n'est pas une perte constatée.</p>}
+        <p className="subtle">Référence cash : ROI 0 %. Les achats d'exploration restent séparés des achats stratégiques. Les règles ont évolué pendant cette expérience ; toute comparaison de stratégies reste exploratoire.</p>
           {state.agents.some(a => a.participation?.required) && <div>
             <h3>Participation HUNTER / SPRINTER</h3>
             <p className="subtle">Premier investissement sous 24 h : opportunité stratégique ou petite exploration choisie par l’IA. Exploration : cible 10 % du capital initial, maximum 20 % frais inclus selon les minimums réels. Aucun rendement positif présumé.</p>
@@ -457,13 +459,17 @@ function Overview({
             <p className="negative" role="alert"><strong>Cycle en retard : aucune mise à jour enregistrée depuis {Math.floor((Date.now() - new Date(state.health?.completed_at || state.updated_at).getTime()) / 60000)} minutes.</strong> Une ancienne exécution automatique réussie ne garantit pas la cadence actuelle.</p>}
         {state.health ? <>
           <p>Dernier cycle terminé : {new Date(state.health.completed_at).toLocaleString("fr-FR")} · {state.health.duration_seconds}s · {state.health.market_count} marchés · {state.health.cycle_count} cycles enregistrés.</p>
-          <p className={state.health.market_provider_ok ? "positive" : "negative"}>Polymarket : {state.health.market_provider_ok ? "données reçues" : "indisponible"} · politique {state.health.policy_version}</p>
+          <p className={state.health.market_provider_ok && state.agents.every(known) ? "positive" : "warning"}>Polymarket : {state.health.market_provider_ok ? state.agents.every(known) ? "données reçues" : "données partielles · vérifier les positions" : "indisponible"} · politique {state.health.policy_version}</p>
           <p>Dernier cycle du cron GitHub : {state.health.last_scheduled_cycle ? new Date(state.health.last_scheduled_cycle).toLocaleString("fr-FR") : "aucun confirmé"} · dernier déclencheur : {state.health.trigger_source || state.health.trigger || "inconnu"}</p>
           <p>Dernier cycle du secours Supabase : {state.health.last_watchdog_cycle ? new Date(state.health.last_watchdog_cycle).toLocaleString("fr-FR") : "aucun confirmé — activation et vérification nécessaires"}.</p>
+          <p>Dernier cycle du secours Cloudflare : {state.health.last_cloudflare_cycle ? new Date(state.health.last_cloudflare_cycle).toLocaleString("fr-FR") : "aucun cycle de secours nécessaire ou confirmé"}.</p>
+          {state.health.azure_budget && <p>Crédits Azure — estimation prudente : {euro(state.health.azure_budget.estimated_eur)} / {euro(state.health.azure_budget.total_limit_eur)} au total · {euro(state.health.azure_budget.today_estimated_eur)} / {euro(state.health.azure_budget.daily_limit_eur)} aujourd'hui UTC. {state.health.azure_budget.uncertain_requests_reserved} requête(s) au coût incertain réservée(s). La facturation Azure fait foi.</p>}
+          {state.health.financial_invariants && <p className="positive">Comptabilité vérifiée : les dix soldes correspondent au journal financier.</p>}
+          {!!state.health.provider_error_count && <p className="warning">{state.health.provider_error_count} erreur(s) de collecte : le fournisseur fonctionne partiellement. Consultez le journal.</p>}
           {state.health.logs_url && <a href={state.health.logs_url} target="_blank" rel="noreferrer">Voir les logs GitHub du cycle <External size={12}/></a>}
         </> : <p>En attente d'un cycle avec diagnostic. Aucun état technique n'est inventé.</p>}
-        <div className="table-scroll"><table><thead><tr><th>AGENT</th><th>ÉTAT</th><th>DERNIÈRE ANALYSE</th><th>REQUÊTES AZURE MESURÉES</th><th>TOKENS ENTRÉE / SORTIE</th></tr></thead><tbody>
-          {state.agents.map(a => <tr key={a.id}><td>{a.id} {a.name}</td><td>{a.runtime?.status || "Non mesuré"}{a.last_analysis && <small className="subtle"> · dernière analyse : {a.last_analysis.status}</small>}</td><td>{a.memory.last_call ? new Date(a.memory.last_call).toLocaleString("fr-FR") : "Aucune"}</td><td>{a.stats.llm_usage?.requests ?? "Non mesuré"}</td><td>{a.stats.llm_usage ? `${a.stats.llm_usage.prompt_tokens} / ${a.stats.llm_usage.completion_tokens}` : "Non mesuré"}</td></tr>)}
+        <div className="table-scroll"><table><thead><tr><th>AGENT</th><th>ÉTAT</th><th>DERNIÈRE ANALYSE</th><th>REQUÊTES AZURE MESURÉES</th><th>TOKENS ENTRÉE / SORTIE</th><th>RECHERCHE RÉCENTE</th></tr></thead><tbody>
+          {state.agents.map(a => <tr key={a.id}><td>{a.id} {a.name}</td><td>{a.runtime?.status || "Non mesuré"}{a.last_analysis && <small className="subtle"> · dernière analyse : {a.last_analysis.status}</small>}</td><td>{a.memory.last_call ? new Date(a.memory.last_call).toLocaleString("fr-FR") : "Aucune"}</td><td>{a.stats.llm_usage?.requests ?? "Non mesuré"}</td><td>{a.stats.llm_usage ? `${a.stats.llm_usage.prompt_tokens} / ${a.stats.llm_usage.completion_tokens}` : "Non mesuré"}</td><td>{a.stats.last_research_quality ? `${a.stats.last_research_quality.inspected_candidates} marchés · ${a.stats.last_research_quality.readable_pages} pages lisibles · ${a.stats.last_research_quality.structured_sources} sources structurées · ${a.stats.last_research_quality.failed_tools} erreurs` : "Non mesurée"}</td></tr>)}
         </tbody></table></div>
         <p className="subtle">WAIT / HOLD = choix de l'agent · NOT_DUE = prochaine session pas encore due · EXECUTION_REJECTED = ordre non exécuté · TECHNICAL_ERROR / PROVIDER_ERROR = panne. Tokens comptés depuis l'activation de la mesure ; l'historique antérieur est inconnu.</p>
       </section>
@@ -552,19 +558,19 @@ function Overview({
             <Terminal size={36} />
             <span>01</span>
           </div>
-          <AgentName agent={ranked[0]} onClick={() => onSelect(ranked[0])} />
+          {ranked[0] ? <><AgentName agent={ranked[0]} onClick={() => onSelect(ranked[0])} />
           <strong
             className={`leader-roi ${roi(ranked[0]) >= 0 ? "positive" : "negative"}`}
           >
             {pct(roi(ranked[0]))}
           </strong>
-          <p>ROI NET · {euro(nav(ranked[0]))}</p>
+          <p>ROI NET · {euro(nav(ranked[0]))} · classements à égalité possibles</p></> : <p>Classement en attente de cotations exploitables.</p>}
           <div className="spotlight-bottom">
             <span>Dernier du classement</span>
             <strong>
               {ranked.at(-1)?.id} {ranked.at(-1)?.name}
             </strong>
-            <span className="negative">{pct(roi(ranked.at(-1)!))}</span>
+            <span className="negative">{ranked.length ? pct(roi(ranked.at(-1)!)) : "Indéterminé"}</span>
           </div>
         </section>
       </div>
@@ -615,10 +621,10 @@ function Performance({ state }: { state: State }) {
   const bars = state.agents.map((a) => ({
     name: a.id,
     cash: Number(a.wallet.cash) / Number(state.fx.usd_per_eur),
-    invested: Math.max(
+    invested: known(a) ? Math.max(
       0,
       nav(a) - Number(a.wallet.cash) / Number(state.fx.usd_per_eur),
-    ),
+    ) : null,
   }));
   return (
     <>
@@ -731,7 +737,7 @@ function Performance({ state }: { state: State }) {
                   </td>
                   <td>
                     {euro(
-                      Number(a.snapshot?.unrealized || 0) /
+                      a.snapshot?.unrealized == null ? NaN : Number(a.snapshot.unrealized) /
                         Number(state.fx.usd_per_eur),
                     )}
                   </td>
@@ -809,6 +815,8 @@ function AgentDetail({ a, state }: { a: Agent; state: State }) {
           </p>
           <h3>Plan de sortie</h3>
           <p>{a.memory.exit_plan || "En attente de décision."}</p>
+          {a.stats.exposure && <><h3>Expositions économiques</h3><p>{Object.entries(a.stats.exposure.economic_factor_cost).map(([k,v]) => `${k} : ${Number(v).toFixed(2)}`).join(" · ") || "Aucune exposition"}</p><p className="subtle">Risques communs par sujet ; aucune indépendance statistique présumée entre événements.</p></>}
+          {a.snapshot?.valuation_details?.map(v => <p key={v.position} className="warning">{v.position} : {v.reason}. Cette valeur reste inconnue.</p>)}
           <h3>Apprentissage par les résultats</h3>
           {a.memory.learning ? <>
             <p>{a.memory.learning.closed_events} sorties observées · {a.memory.learning.wins} positives · {a.memory.learning.losses} négatives · {a.memory.learning.open_position_count} positions suivies</p>
@@ -964,7 +972,7 @@ function Markets({ state }: { state: State }) {
           .map((m) => (
             <section key={m.id} className="panel market-card">
               <div className="market-top">
-                <span className="pill">{m.category}</span>
+                <span className="pill">{m.category}{m.category_source?.startsWith("inferred") ? " · estimée" : ""}</span>
                 <span>
                   {m.version} ·{" "}
                   {m.resolved ? "RÉSOLU" : m.active ? "ACTIF" : "FERMÉ"}
@@ -1072,7 +1080,7 @@ function App() {
     [selected, setSelected] = useState("A1"),
     [clock, setClock] = useState(Date.now()),
     [start, setStart] = useState(false);
-  const { state, error, loading } = useCompetition(demo);
+  const { state, error, loading, realtime } = useCompetition(demo);
   useEffect(() => {
     const id = setInterval(() => setClock(Date.now()), 1000);
     return () => clearInterval(id);
@@ -1167,8 +1175,9 @@ function App() {
             <strong>{page}</strong>
           </div>
           <div className="header-right">
+            {!demo && !loading && <span className="subtle" title="Le contrôle de secours interroge Supabase chaque minute.">{realtime==="SUBSCRIBED" ? "LIVE" : "SYNC · 60 s"}</span>}
             <span
-              className={`connection ${demo ? "warning" : error || stale ? "negative" : "positive"}`}
+              className={`connection ${demo || state?.agents.some(a => !known(a)) ? "warning" : error || stale ? "negative" : "positive"}`}
             >
               <span className="live-dot" />
               {demo
@@ -1180,7 +1189,7 @@ function App() {
                     : state
                       ? stale
                         ? "DONNÉES PÉRIMÉES"
-                        : "POLYMARKET DATA"
+                        : state.agents.some(a => !known(a)) ? "DONNÉES PARTIELLES" : "POLYMARKET DATA"
                       : "PRÊT À CONFIGURER"}
             </span>
             <button
@@ -1253,13 +1262,13 @@ function App() {
               <Trophy size={22} />
               <div>
                 <strong>
-                  Compétition terminée · vainqueur ROI :{" "}
-                  {state.report.roi_winner}
+                  {state.status === "CLOSING" ? "Clôture en attente de données · " : "Compétition terminée · "} résultat ROI :{" "}
+                  {state.report.roi_winner || state.report.roi_winners?.join(" / ") || "indéterminé"}
                 </strong>
                 <p>
-                  Vainqueur bénéfice absolu : {state.report.absolute_winner}.{" "}
+                  Vainqueur bénéfice absolu : {state.report.absolute_winner || state.report.absolute_winners?.join(" / ") || "indéterminé"}.{" "}
                   {state.report.incomplete_valuation
-                    ? "Valorisation incomplète : classement par borne basse."
+                    ? "Valorisation incomplète : aucun gagnant définitif. Les valeurs manquantes ne sont pas des pertes mesurées."
                     : ""}{" "}
                   Retard de clôture :{" "}
                   {Math.round(state.report.close_delay_seconds)} s.

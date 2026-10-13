@@ -8,10 +8,111 @@ from datetime import timedelta
 from decimal import Decimal as D
 import httpx
 from polymarket import PublicClient
-from .models import Book, Level, Market, Decision, utcnow
+from .models import Book, Level, Market, Decision, DecisionPlan, utcnow
 from .agents import SETTINGS
 
 log = logging.getLogger(__name__)
+
+
+def decode_plan(text):
+    raw = json.loads(text)
+    return (
+        DecisionPlan.model_validate(raw)
+        if "actions" in raw
+        else DecisionPlan(
+            agent_id=raw["agent_id"], actions=[Decision.model_validate(raw)]
+        )
+    )
+
+
+def strict_schema():
+    schema = DecisionPlan.model_json_schema()
+
+    def visit(node):
+        if isinstance(node, dict):
+            node.pop("default", None)
+            if node.get("type") == "object":
+                node["additionalProperties"] = False
+                node["required"] = list(node.get("properties", {}))
+            for v in node.values():
+                visit(v)
+        elif isinstance(node, list):
+            for v in node:
+                visit(v)
+
+    visit(schema)
+    return {
+        "type": "json_schema",
+        "name": "decision_plan",
+        "strict": True,
+        "schema": schema,
+    }
+
+
+def compact_tool(result):
+    result = __import__("copy").deepcopy(result)
+    if result.get("market"):
+        m = result["market"]
+        for b in m.get("books", {}).values():
+            b["asks"] = b["asks"][:5]
+            b["bids"] = b["bids"][:5]
+        m["history"] = {o: rows[-24:] for o, rows in m.get("history", {}).items()}
+    return result
+
+
+def compact_transcript(messages, limit):
+    """Preserve valid JSON, IDs, pagination and citation provenance when compacting."""
+
+    def size():
+        return len(json.dumps(messages, default=str))
+
+    for old in messages:
+        if size() <= limit:
+            return
+        if (
+            old.get("type") == "function_call_output"
+            and len(old.get("output", "")) > 1500
+        ):
+            value = json.loads(old["output"])
+            if value.get("market"):
+                m = value["market"]
+                value = {
+                    "compacted": True,
+                    "market": {
+                        k: m.get(k)
+                        for k in (
+                            "id",
+                            "url",
+                            "question",
+                            "active",
+                            "resolved",
+                            "features",
+                            "end_at",
+                        )
+                    },
+                }
+            elif "excerpt" in value:
+                value = {k: v for k, v in value.items() if k != "excerpt"} | {
+                    "excerpt": value["excerpt"][:1200],
+                    "compacted": True,
+                }
+            elif value.get("markets"):
+                value = value | {
+                    "markets": [
+                        {"id": m["id"], "question": m["question"]}
+                        for m in value["markets"]
+                    ],
+                    "compacted": True,
+                }
+            elif value.get("candles"):
+                value = {k: v for k, v in value.items() if k != "candles"} | {
+                    "compacted": True
+                }
+            old["output"] = json.dumps(value, default=str)
+    if size() > limit:
+        raise ValueError(
+            "RESEARCH_CONTEXT_BUDGET_REACHED: retained evidence exceeds configured context"
+        )
 
 
 def retry(fn):
@@ -32,55 +133,64 @@ class Polymarket:
     def close(self):
         self.client.close()
 
-    def refresh(self, market, outcome):
-        old = market.books[outcome]
-        b = retry(lambda: self.client.get_order_book(asset_id=old.asset_id))
-        if not b.timestamp:
-            raise ValueError("Missing book timestamp")
-        market.books[outcome] = Book(
-            asset_id=old.asset_id,
-            observed_at=b.timestamp,
-            bids=[
-                Level(price=l.price, size=l.size)
-                for l in sorted(b.bids, key=lambda l: l.price, reverse=True)[
-                    : SETTINGS["book_depth_levels"]
-                ]
-                if 0 < l.price < 1 and l.size > 0
-            ],
-            asks=[
-                Level(price=l.price, size=l.size)
-                for l in sorted(b.asks, key=lambda l: l.price)[
-                    : SETTINGS["book_depth_levels"]
-                ]
-                if 0 < l.price < 1 and l.size > 0
-            ],
-            minimum=b.min_order_size,
-            tick=b.tick_size,
-            fee_rate=old.fee_rate,
-            fee_exponent=old.fee_exponent,
-            evidence=b.hash,
+    def refresh(self, market, outcome, for_execution=False):
+        # Re-read metadata as well as depth: fees, delay and status can change.
+        if for_execution and market.seconds_delay:
+            if market.seconds_delay > 30:
+                raise ValueError("Unsupported matching delay over 30 seconds")
+            time.sleep(market.seconds_delay)
+        updated = self.normalize(
+            retry(lambda: self.client.get_market(id=market.id)), include_history=False
         )
+        updated.history = market.history
+        from .analytics import features
+
+        updated.features = features(updated)
+        market.__dict__.update(updated.__dict__)
+        if market.resolved:
+            return
+        if market.active and outcome not in market.books:
+            raise ValueError("Execution book unavailable")
 
     def collect(self, held_ids=()):
         self.errors = []
         now = utcnow()
-        discovered = retry(
-            lambda: self.client.list_markets(
-                closed=False,
-                order="volume24hr",
-                ascending=False,
-                liquidity_num_min=float(SETTINGS["min_liquidity"]),
-                page_size=SETTINGS["discovery_limit"],
-            ).first_page()
-        ).items
+        discovered = []
+        for order in ("volume24hr", "liquidity", "endDate", "startDate"):
+            try:
+                discovered.extend(
+                    retry(
+                        lambda: self.client.list_markets(
+                            closed=False,
+                            order=order,
+                            ascending=order == "endDate",
+                            liquidity_num_min=float(SETTINGS["min_liquidity"]),
+                            page_size=SETTINGS["discovery_limit"],
+                        ).first_page()
+                    ).items
+                )
+            except Exception as exc:
+                self.errors.append(f"Discovery {order}: {type(exc).__name__}")
+        unique = {str(m.id): m for m in discovered}
         candidates = [
             m
-            for m in discovered
+            for m in unique.values()
             if m.state.active
             and m.state.accepting_orders
             and m.state.end_date
             and now < m.state.end_date < now + timedelta(days=8)
-        ][: SETTINGS["max_markets"]]
+        ]
+        # Round-robin categories; data discovery remains separate from decisions.
+        from .analytics import classify
+
+        buckets = {}
+        for m in candidates:
+            buckets.setdefault(classify(m.question or "", m.category)[0], []).append(m)
+        candidates = []
+        while any(buckets.values()) and len(candidates) < SETTINGS["max_markets"]:
+            for values in buckets.values():
+                if values and len(candidates) < SETTINGS["max_markets"]:
+                    candidates.append(values.pop(0))
         raw = {str(m.id): m for m in candidates}
         for mid in held_ids:
             if mid not in raw:
@@ -98,7 +208,7 @@ class Polymarket:
                 )
         return markets
 
-    def normalize(self, m):
+    def normalize(self, m, include_history=True):
         version = m.version
         if version not in ("v1", "v2"):
             raise ValueError(f"Unsupported protocol {version}")
@@ -129,6 +239,11 @@ class Polymarket:
             volume=m.metrics.volume_24hr or D(0),
             assets=assets,
         )
+        from .analytics import classify, features
+
+        market.category, market.category_source = classify(
+            market.question, market.category
+        )
         if m.state.closed or str(m.resolution.uma_resolution_status) == "resolved":
             rows = (
                 retry(
@@ -151,6 +266,7 @@ class Polymarket:
                     if sum(row.payouts) == 1 and all(0 <= p <= 1 for p in row.payouts):
                         market.resolved = True
                         market.payouts = {"YES": row.payouts[0], "NO": row.payouts[1]}
+                        market.resolved_at = row.resolved_at
                         return market
         trading = m.trading
         if trading.fees_enabled is False:
@@ -162,9 +278,9 @@ class Polymarket:
             )
         else:
             raise ValueError("Unknown fee configuration; trading suspended")
-        # Delayed sports orders require a second observation at matching time.
-        # Excluded until a delayed-order observer is provided.
-        if trading.seconds_delay:
+        # Delayed orders are re-observed after their delay before paper execution.
+        market.seconds_delay = trading.seconds_delay or 0
+        if market.seconds_delay > 30:
             market.active = False
         for outcome, aid in assets.items():
             try:
@@ -195,13 +311,15 @@ class Polymarket:
                     evidence=b.hash,
                 )
                 time.sleep(0.12)
+                if not include_history:
+                    continue
                 history = retry(
                     lambda: self.client.list_price_history(
                         asset_id=aid,
-                        start=utcnow() - timedelta(days=2),
+                        start=utcnow() - timedelta(hours=8),
                         end=utcnow(),
-                        bucket_seconds=14400,
-                        page_size=16,
+                        bucket_seconds=300,
+                        page_size=100,
                     ).first_page()
                 )
                 market.history[outcome] = [
@@ -209,6 +327,7 @@ class Polymarket:
                 ]
             except Exception as exc:
                 self.errors.append(f"Outcome {aid}: {type(exc).__name__}")
+        market.features = features(market)
         return market
 
 
@@ -248,16 +367,22 @@ class AzureReasoner:
             api_key=os.environ["AZURE_OPENAI_API_KEY"],
             api_version=os.getenv("AZURE_OPENAI_API_VERSION", "2024-10-21"),
             timeout=45,
-            max_retries=2,
+            max_retries=0,
         )
         self.provider = provider
         self.last_audit = {}
         if provider is not None:
             from .research import ResearchTools
             from openai import OpenAI
+
             self.research = ResearchTools(provider)
-            self.responses_client = OpenAI(api_key=os.environ["AZURE_OPENAI_API_KEY"],
-                base_url=os.environ["AZURE_OPENAI_ENDPOINT"].rstrip("/") + "/openai/v1/", timeout=45, max_retries=2)
+            self.responses_client = OpenAI(
+                api_key=os.environ["AZURE_OPENAI_API_KEY"],
+                base_url=os.environ["AZURE_OPENAI_ENDPOINT"].rstrip("/")
+                + "/openai/v1/",
+                timeout=45,
+                max_retries=0,
+            )
 
     def decide(self, agent, wallet, markets, memory):
         if getattr(self, "provider", None) is not None:
@@ -267,18 +392,32 @@ class AzureReasoner:
     def _autonomous(self, agent, wallet, markets, memory):
         from .research import TOOLS
         import copy
+
         started = time.monotonic()
         trace_start = len(self.research.trace)
-        audit = {"requests": 0, "prompt_tokens": 0, "completion_tokens": 0,
-                 "cached_prompt_tokens": 0, "research": [], "model": None}
+        audit = {
+            "requests": 0,
+            "prompt_tokens": 0,
+            "completion_tokens": 0,
+            "cached_prompt_tokens": 0,
+            "cache_write_prompt_tokens": 0,
+            "research": [],
+            "model": None,
+        }
         self.last_audit = audit
         feedback = memory.get("learning", {})
-        audit["learning_context"] = {"version": feedback.get("version"),
+        audit["learning_context"] = {
+            "version": feedback.get("version"),
             "closed_events": feedback.get("closed_events", 0),
             "open_positions": feedback.get("open_position_count", 0),
-            "prior_reviews": len(feedback.get("reviews", []))}
+            "prior_reviews": len(feedback.get("reviews", [])),
+        }
         allowed = {m.url for m in markets.values() if m.url}
-        allowed.update(m.resolution_source for m in markets.values() if m.resolution_source.startswith("https://"))
+        allowed.update(
+            m.resolution_source
+            for m in markets.values()
+            if m.resolution_source.startswith("https://")
+        )
         contract = (
             f'Your exact agent_id is "{agent["id"]}". '
             "Use research tools to choose your own markets anywhere in the public universe, including subjects absent from the initial list. "
@@ -289,109 +428,330 @@ class AzureReasoner:
             "Timing semantics: memory.last_call is the PREVIOUS analysis, while session_started_at is this session. "
             "cooldown_hours applies ONLY to a drawdown-triggered pause recorded in memory.paused_until; "
             "it is NOT a mandatory cooldown after every analysis or trade. If paused_until is absent or expired, there is no drawdown pause. "
-            "All numeric decision fields must be finite numbers, never prose or null. If you cannot estimate a probability, WAIT with probability=0.5, confidence=0, stake=0, edge=0. "
+            "All required numeric decision fields must be finite numbers. If settlement probability is unknown, use probability_basis=UNESTIMATED, probability=0.5, confidence=0, edge=0. "
+            "A strategic PRICE_MOVE BUY is allowed without a settlement estimate when you provide target_price, horizon_hours, max_buy_price and an explicit exit thesis. "
+            "Return a DecisionPlan with up to four ordered actions, not a single-decision wrapper. Keep reasoning concise (about 900 characters per action), and use at most one learning review per action. "
             "Exception: if the participation rule is pending, an executable first investment is required. "
             "When no thesis is convincing, choose a small EXPLORATION BUY, not a fabricated strategic edge. "
             "You may use probability_basis=UNESTIMATED with the neutral numeric placeholder 0.5, confidence=0 and expected_edge=0; it will not be displayed as an estimated probability or edge. "
             "sources must be exact URLs retrieved in THIS session or provided initially. No invented facts, identities or URLs. "
             "Research is bounded by time and credits; use the available tool budget efficiently. "
-            "Finish with exactly one JSON object matching the supplied Decision schema, no wrapper."
+            "Before WAIT, compare several affordable candidates using features and structured primary data where relevant. If a source is empty, change source or thesis within the research budget. "
+            "Use memory.learning.relevant_outcomes as well as recent_outcomes; cite applied_lesson_ids only from memory.learning.reviews[].id. Explicitly compare your thesis with the cash-preservation benchmark, and distinguish conditional price-move scenarios from calibrated forecasts. "
+            "The target price is your scenario, not a guaranteed forecast. Finish with exactly one JSON object matching DecisionPlan."
         )
-        overview = [{"id": m.id, "question": m.question, "end_at": m.end_at.isoformat() if m.end_at else None,
-                     "liquidity": str(m.liquidity), "category": m.category} for m in markets.values()]
-        messages = [{"role": "system", "content": agent["prompt"] + "\n" + contract},
-                    {"role": "user", "content": json.dumps({"agent_id": agent["id"],
-                        "portfolio": wallet.model_dump(mode="json"), "risk": agent["risk"],
-                        "memory": memory, "initial_watchlist_not_a_whitelist": overview,
-                        "allowed_sources": sorted(allowed), "decision_schema": Decision.model_json_schema(),
-                        "research_round_budget": SETTINGS["research_rounds"], "now_utc": utcnow().isoformat()}, default=str)}]
+        overview = [
+            {
+                "id": m.id,
+                "question": m.question,
+                "end_at": m.end_at.isoformat() if m.end_at else None,
+                "liquidity": str(m.liquidity),
+                "category": m.category,
+                "features": {
+                    o: {
+                        k: v
+                        for k, v in f.items()
+                        if k
+                        in (
+                            "bid",
+                            "ask",
+                            "spread",
+                            "minimum_entry_cost",
+                            "momentum_absolute",
+                            "recent_change",
+                            "log_return_volatility_per_observation",
+                            "observed_at",
+                        )
+                    }
+                    for o, f in m.features.items()
+                },
+            }
+            for m in markets.values()
+        ]
+        messages = [
+            {"role": "system", "content": agent["prompt"] + "\n" + contract},
+            {
+                "role": "user",
+                "content": json.dumps(
+                    {
+                        "agent_id": agent["id"],
+                        "portfolio": wallet.model_dump(mode="json"),
+                        "risk": agent["risk"],
+                        "memory": memory,
+                        "initial_watchlist_not_a_whitelist": overview,
+                        "allowed_sources": sorted(allowed),
+                        "research_round_budget": SETTINGS["research_rounds"],
+                        "now_utc": utcnow().isoformat(),
+                    },
+                    default=str,
+                ),
+            },
+        ]
 
         def request(**kwargs):
             # Compact old tool bodies, preserving tool-call pairing and source
             # provenance, before they can grow the bill without bound.
-            for old in messages:
-                if sum(len(str(m.get("content", m.get("output", "")))) for m in messages) <= SETTINGS["max_context_characters"]:
-                    break
-                if old.get("type") == "function_call_output" and len(old.get("output", "")) > 2000:
-                    old["output"] = json.dumps({"compacted": True, "retrieved_excerpt": old["output"][:1800]})
-            response = self.responses_client.responses.create(model=os.environ["AZURE_OPENAI_DEPLOYMENT"],
-                input=messages, max_output_tokens=SETTINGS["max_llm_tokens"], store=False,
-                include=["reasoning.encrypted_content"], **kwargs)
+            compact_transcript(messages, SETTINGS["max_context_characters"])
+            token_limit = kwargs.pop("token_limit", SETTINGS["max_llm_tokens"])
+            persistent = getattr(self.provider, "store", None)
+            estimated_input = len(
+                json.dumps({"input": messages, **kwargs}, default=str).encode()
+            )
+            reserve = (
+                persistent.meter_reserve(
+                    memory["experiment_id"],
+                    agent["id"],
+                    (D(estimated_input) * D("5.28") + D(token_limit) * D("15.84"))
+                    / D(1000000),
+                )
+                if persistent and memory.get("experiment_id")
+                else None
+            )
+            response = self.responses_client.responses.create(
+                model=os.environ["AZURE_OPENAI_DEPLOYMENT"],
+                input=messages,
+                max_output_tokens=token_limit,
+                store=False,
+                include=["reasoning.encrypted_content"],
+                **kwargs,
+            )
             audit["requests"] += 1
             audit["model"] = response.model
             usage = response.usage
             if usage:
                 audit["prompt_tokens"] += usage.input_tokens
                 audit["completion_tokens"] += usage.output_tokens
-                audit["cached_prompt_tokens"] += getattr(usage.input_tokens_details, "cached_tokens", 0) or 0
+                audit["cached_prompt_tokens"] += (
+                    getattr(usage.input_tokens_details, "cached_tokens", 0) or 0
+                )
+                audit["cache_write_prompt_tokens"] += (
+                    getattr(usage.input_tokens_details, "cache_write_tokens", 0) or 0
+                )
+                if persistent and reserve:
+                    persistent.meter_finish(
+                        reserve,
+                        {
+                            "model": response.model,
+                            "input_tokens": usage.input_tokens,
+                            "output_tokens": usage.output_tokens,
+                            "cached_tokens": getattr(
+                                usage.input_tokens_details, "cached_tokens", 0
+                            )
+                            or 0,
+                            "cache_write_tokens": getattr(
+                                usage.input_tokens_details, "cache_write_tokens", 0
+                            )
+                            or 0,
+                            "offer": "conservative long_data_zone; conditional estimate",
+                        },
+                        (
+                            D(usage.input_tokens) * D("5.28")
+                            + D(usage.output_tokens) * D("15.84")
+                        )
+                        / D(1000000),
+                    )
             return response
 
         try:
             for round_index in range(SETTINGS["research_rounds"]):
                 if time.monotonic() - started > SETTINGS["research_timeout_seconds"]:
                     break
-                response = request(tools=[{"type": "function", **t["function"]} for t in TOOLS],
-                                   tool_choice="required" if round_index == 0 else "auto")
+                response = request(
+                    tools=[{"type": "function", **t["function"]} for t in TOOLS],
+                    tool_choice="required" if round_index == 0 else "auto",
+                )
                 # Preserve reasoning and all function calls in the stateless
                 # Responses transcript, including encrypted reasoning content.
-                messages.extend(item.model_dump(exclude_none=True) for item in response.output)
-                calls = [item for item in response.output if item.type == "function_call"]
+                messages.extend(
+                    item.model_dump(exclude_none=True) for item in response.output
+                )
+                calls = [
+                    item for item in response.output if item.type == "function_call"
+                ]
                 if not calls:
+                    target = SETTINGS["min_inspected_candidates"][
+                        "dynamic" if agent["dynamic"] else "standard"
+                    ]
+                    seen = {
+                        t["result"]["market"]["id"]
+                        for t in self.research.trace[trace_start:]
+                        if t["tool"] == "get_market"
+                        and t["ok"]
+                        and t["result"].get("market")
+                    }
+                    if (
+                        len(seen) < target
+                        and round_index + 1 < SETTINGS["research_rounds"]
+                    ):
+                        messages.append(
+                            {
+                                "role": "user",
+                                "content": f"You inspected {len(seen)} candidate(s). Use remaining research to inspect up to {target} diverse affordable candidates before declaring the whole set uninvestable. Failed sources: change source or topic; never fabricate unavailable evidence.",
+                            }
+                        )
+                        continue
                     break
                 for index, call in enumerate(calls):
-                    if index >= SETTINGS["research_tools_per_round"] or time.monotonic() - started > SETTINGS["research_timeout_seconds"]:
-                        result = {"error": "RESEARCH_BUDGET_REACHED", "instruction": "Decide using retrieved evidence; do not invent missing information"}
+                    if (
+                        index >= SETTINGS["research_tools_per_round"]
+                        or time.monotonic() - started
+                        > SETTINGS["research_timeout_seconds"]
+                    ):
+                        result = {
+                            "error": "RESEARCH_BUDGET_REACHED",
+                            "instruction": "Decide using retrieved evidence; do not invent missing information",
+                        }
                     else:
                         result = self.research.call(call.name, call.arguments, markets)
+
                     def urls(value):
                         if isinstance(value, dict):
                             for key, item in value.items():
-                                if key in ("url", "resolution_source") and isinstance(item, str) and item.startswith("https://"):
+                                if (
+                                    key in ("url", "resolution_source")
+                                    and isinstance(item, str)
+                                    and item.startswith("https://")
+                                ):
                                     allowed.add(item)
                                 urls(item)
                         elif isinstance(value, list):
                             for item in value:
                                 urls(item)
+
                     urls(result)
-                    content = json.dumps(result, default=str)
+                    content = json.dumps(compact_tool(result), default=str)
                     if len(content) > 22000:
-                        content = json.dumps({"truncated": True, "retrieved_excerpt": content[:21000],
-                                              "instruction": "Refine query or inspect a market for complete data"})
-                    messages.append({"type": "function_call_output", "call_id": call.call_id, "output": content})
+                        content = json.dumps(
+                            {
+                                "truncated": True,
+                                "retrieved_excerpt": content[:21000],
+                                "instruction": "Refine query or inspect a market for complete data",
+                            }
+                        )
+                    messages.append(
+                        {
+                            "type": "function_call_output",
+                            "call_id": call.call_id,
+                            "output": content,
+                        }
+                    )
             from .participation import candidates, ParticipationContractError
+
             pending = memory.get("participation", {}).get("pending", False)
-            inspected = {trace["result"]["market"]["id"] for trace in self.research.trace[trace_start:]
-                         if trace["tool"] == "get_market" and trace["ok"] and trace.get("result", {}).get("market")}
-            options = candidates(agent, wallet, markets, inspected, utcnow(), memory) if pending else []
-            audit["participation"] = {"pending": pending, "executable_researched_options": len(options), "correction_calls": 0}
-            messages.append({"role": "user", "content": json.dumps({"instruction": "Research finished. Make your investment decision now as a valid Decision JSON. WAIT is not an execution rejection. Use exact agent_id and numeric fields. "
-                + ("Your participation obligation is pending and executable options exist. Choose BUY now: either STRATEGIC if independently justified or a small EXPLORATION investment. You choose the market and outcome. Uncertainty alone is not a reason to avoid a disclosed exploration. Use the preview budget including fees for exploration. No claimed positive edge is required." if pending and options else "WAIT is allowed; never invent executable options."),
-                "agent_id": agent["id"], "allowed_sources": sorted(allowed), "participation": memory.get("participation"),
-                "executable_previews_for_markets_you_researched": options}, default=str)})
-            response = request(text={"format": {"type": "json_object"}})
-            if response.status != "completed":
-                raise ValueError("Decision truncated by token budget")
-            decision = Decision.model_validate_json(response.output_text or "")
-            if pending and options and decision.action != "BUY":
+            inspected = {
+                trace["result"]["market"]["id"]
+                for trace in self.research.trace[trace_start:]
+                if trace["tool"] == "get_market"
+                and trace["ok"]
+                and trace.get("result", {}).get("market")
+            }
+            options = (
+                candidates(agent, wallet, markets, inspected, utcnow(), memory)
+                if pending
+                else []
+            )
+            audit["participation"] = {
+                "pending": pending,
+                "executable_researched_options": len(options),
+                "correction_calls": 0,
+            }
+            messages.append(
+                {
+                    "role": "user",
+                    "content": json.dumps(
+                        {
+                            "instruction": "Research finished. Make your investment decision now as a valid Decision JSON. WAIT is not an execution rejection. Use exact agent_id and numeric fields. "
+                            + (
+                                "Your participation obligation is pending and executable options exist. Choose BUY now: either STRATEGIC if independently justified or a small EXPLORATION investment. You choose the market and outcome. Uncertainty alone is not a reason to avoid a disclosed exploration. Use the preview budget including fees for exploration. No claimed positive edge is required."
+                                if pending and options
+                                else "WAIT is allowed; never invent executable options."
+                            ),
+                            "agent_id": agent["id"],
+                            "allowed_sources": sorted(allowed),
+                            "participation": memory.get("participation"),
+                            "executable_previews_for_markets_you_researched": options,
+                        },
+                        default=str,
+                    ),
+                }
+            )
+            response = request(text={"format": strict_schema()})
+            from .evidence import verify_claims
+
+            for attempt in range(2):
+                try:
+                    if response.status != "completed":
+                        raise ValueError("Decision truncated; shorten plan")
+                    plan = decode_plan(response.output_text or "")
+                    claims = verify_claims(
+                        plan.actions, self.research.trace[trace_start:]
+                    )
+                    if any(not c["quote_verified"] for c in claims):
+                        raise ValueError(
+                            "Evidence quote not present in retrieved readable source"
+                        )
+                    audit["claims"] = claims
+                    break
+                except ValueError:
+                    if attempt:
+                        raise
+                    messages.extend(
+                        item.model_dump(exclude_none=True) for item in response.output
+                    )
+                    messages.append(
+                        {
+                            "role": "user",
+                            "content": "Repair the DecisionPlan JSON. Use one or two concise actions; include only exact evidence quotes present in readable retrieved sources, or omit unverified claims. No invented prices or probability. Return complete valid JSON.",
+                        }
+                    )
+                    response = request(
+                        text={"format": strict_schema()},
+                        token_limit=SETTINGS["max_llm_tokens"] * 2,
+                    )
+                    audit["repair_calls"] = audit.get("repair_calls", 0) + 1
+            if pending and options and not any(d.action == "BUY" for d in plan.actions):
                 for _ in range(SETTINGS["participation"]["retry_calls"]):
-                    messages.append({"role": "assistant", "content": decision.model_dump_json()})
-                    messages.append({"role": "user", "content": "This does not satisfy your active participation rule. Choose a BUY on an executable researched market. If you do not claim a strategic edge, label EXPLORATION and use an observed preview budget. An unestimated probability must remain the neutral placeholder with zero confidence. Never invent evidence."})
-                    response = request(text={"format": {"type": "json_object"}})
+                    messages.append(
+                        {"role": "assistant", "content": plan.model_dump_json()}
+                    )
+                    messages.append(
+                        {
+                            "role": "user",
+                            "content": "This does not satisfy your active participation rule. Choose a BUY on an executable researched market. If you do not claim a strategic edge, label EXPLORATION and use an observed preview budget. An unestimated probability must remain the neutral placeholder with zero confidence. Never invent evidence.",
+                        }
+                    )
+                    response = request(text={"format": strict_schema()})
                     audit["participation"]["correction_calls"] += 1
                     if response.status != "completed":
                         raise ValueError("Participation decision truncated")
-                    decision = Decision.model_validate_json(response.output_text or "")
-                    if decision.action == "BUY":
+                    plan = decode_plan(response.output_text or "")
+                    if any(d.action == "BUY" for d in plan.actions):
                         break
-                if decision.action != "BUY":
-                    raise ParticipationContractError("Participation BUY omitted despite executable researched options")
-            if decision.agent_id != agent["id"] or any(url not in allowed for url in decision.sources):
+                if not any(d.action == "BUY" for d in plan.actions):
+                    raise ParticipationContractError(
+                        "Participation BUY omitted despite executable researched options"
+                    )
+            if plan.agent_id != agent["id"] or any(
+                url not in allowed for d in plan.actions for url in d.sources
+            ):
                 raise ValueError("Invalid agent identity or unsupported source")
-            if decision.action in ("BUY", "SELL") and decision.market_id not in markets:
-                result = self.research.call("get_market", {"reference": decision.market_id}, markets)
-                if "error" in result:
-                    raise ValueError("Chosen market could not be inspected")
-            return decision
+            claims = verify_claims(plan.actions, self.research.trace[trace_start:])
+            if any(not c["quote_verified"] for c in claims):
+                raise ValueError("Evidence quote not present in readable source")
+            audit["claims"] = claims
+            audit["inspected_candidates"] = len(inspected)
+            audit["candidate_target"] = SETTINGS["min_inspected_candidates"][
+                "dynamic" if agent["dynamic"] else "standard"
+            ]
+            for d in plan.actions:
+                if d.action in ("BUY", "SELL") and d.market_id not in markets:
+                    result = self.research.call(
+                        "get_market", {"reference": d.market_id}, markets
+                    )
+                    if "error" in result:
+                        raise ValueError("Chosen market could not be inspected")
+            # Legacy one-action callers remain supported; multi-action plans keep their order.
+            return plan.actions[0] if len(plan.actions) == 1 else plan
         finally:
             audit["duration_seconds"] = round(time.monotonic() - started, 2)
             audit["research"] = copy.deepcopy(self.research.trace[trace_start:])
@@ -440,7 +800,8 @@ class AzureReasoner:
             messages=[
                 {
                     "role": "system",
-                    "content": agent["prompt"] + "\nOUTPUT CONTRACT: "
+                    "content": agent["prompt"]
+                    + "\nOUTPUT CONTRACT: "
                     + f'agent_id must be exactly "{agent["id"]}", without the strategy name. '
                     + "Return every field in the supplied schema and no additional fields. "
                     "estimated_probability, confidence, proposed_stake and expected_edge must be finite JSON numbers, "

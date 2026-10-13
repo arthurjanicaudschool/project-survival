@@ -62,7 +62,8 @@ def test_atomic_rollback_and_resume(setup):
     state = cycle(
         store, "test", FixtureProvider(now), FixtureReasoner(), "recover", now
     )
-    assert state["cycles"] == ["recover"]
+    # Resume the original task identity; a new workflow ID must not repeat fills.
+    assert state["cycles"] == ["crash"]
 
 
 def test_no_start_reset(setup):

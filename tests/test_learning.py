@@ -83,7 +83,7 @@ def test_full_audit_backfill_and_independent_memory_reaches_reasoner(tmp_path):
         def decide(self, agent, wallet, markets, memory):
             assert "learning" in memory
             for thesis in memory["learning"]["open_theses"]:
-                assert all(e["decision_id"].endswith(":" + agent["id"]) for e in thesis["entries"])
+                assert all(e["decision_id"].split(':')[2] == agent['id'] for e in thesis["entries"])
             return super().decide(agent, wallet, markets, memory)
     later = now + timedelta(hours=7)
     second = cycle(store, "test", FixtureProvider(later), InspectReasoner(), "second", later)

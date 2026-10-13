@@ -2,144 +2,154 @@
 
 **10 AI Agents. 7 Days. One Winner.**
 
-Version autonomie v2 : recherche libre de marchés et du web, profils A1/A6 sans prudence imposée, limites assouplies pour les autres, diagnostics et mesure de tokens. Voir [les règles et le tableau de consommation](docs/AUTONOMY.md). Les quotas de sessions restent 12/j et 4/j ; une session peut comporter plusieurs requêtes Azure Responses.
+Dix portefeuilles indépendants de paper trading, données publiques Polymarket,
+Azure OpenAI, PostgreSQL/Supabase, dashboard React. Aucun wallet ni ordre réel.
+Le PC peut être éteint : GitHub exécute les cycles. Politique **survival-v5**.
+[Traitement des 40 constats](docs/REMEDIATION.md) et [audit initial](docs/AUDIT-2026-10-13.md).
 
-Compétition de paper trading : 10 portefeuilles fictifs indépendants, 300 EUR de capital initial total, données publiques Polymarket, analyses Azure OpenAI, comptabilité Decimal et dashboard React. Aucun wallet, clé privée, signature ou appel d'exécution d'ordre réel dans le code opérationnel.
+## Installation et commandes
 
-## Démarrage local
-
-Python 3.11+ (vérifié ici avec 3.12), Node 22.12+ (vérifié ici avec 24), PowerShell :
+Python 3.11+, Node 22.12+, PowerShell depuis la racine :
 
 ```powershell
 python -m venv .venv
 .venv/Scripts/python -m pip install -e '.[test]'
 Copy-Item .env.example .env
+.venv/Scripts/python -m pytest -q
 .venv/Scripts/python -m survival.cli demo
 Set-Location frontend
 npm ci
 npm run dev
 ```
 
-Ouvrir http://127.0.0.1:5173/?mode=demo. Les chiffres de démonstration proviennent d'un vrai cycle déterministe du simulateur, stocké dans `data/demo.sqlite`. Aucun LLM n'est appelé. Un bandeau identifie les données synthétiques ; elles ne sont jamais utilisées comme solution de repli dans la vue réelle.
-
-Commandes depuis la racine, après activation du venv (ou avec `.venv/Scripts/python` sous Windows) :
-
-```bash
-python -m pytest -q
-python -m survival.cli api-check
-python -m survival.cli demo --cycle-id fixture-001
-python -m survival.cli migrate
-python -m survival.cli start
-python -m survival.cli cycle --cycle-id manual-001
-python -m survival.cli quota-check
-python -m survival.cli export --output exports/week-01
-```
-
-`migrate`, `start`, `cycle`, `quota-check`, `export` utilisent `DATABASE_URL`. `start` récupère un taux de référence EUR/USD et commence **explicitement** l'expérience. Ni l'installation ni le déploiement ne la démarrent. Un second START avec le même identifiant est refusé. Pour une autre compétition, choisir un nouvel `EXPERIMENT_ID`, également côté frontend.
-
-## Déploiement autonome à budget nul
-
-Voir [le guide de déploiement](docs/DEPLOYMENT.md) pour Supabase Free, un dépôt GitHub public et Cloudflare Pages Free. Les comptes et les secrets sont à fournir par leur propriétaire. L'exécution s'effectue chez GitHub et les données chez Supabase : le PC peut être éteint. Les cycles sont programmés aux minutes 07/17/27/37/47/57.
-
-Le dashboard expose la procédure START et peut ouvrir le workflow GitHub via `VITE_GITHUB_START_URL`. Il ne reçoit aucun secret d'administration. L'action START se fait dans GitHub Actions ou dans le CLI, jamais depuis un endpoint public non authentifié.
-
-GitHub Actions n'offre pas de garantie de ponctualité des cron : un cycle peut être retardé ou omis. La date limite reste fixe ; chaque exécution bloque les nouvelles analyses après cette date. Le premier cycle après l'échéance produit le rapport avec le délai de clôture et l'heure effective des carnets. Une valorisation exactement à la seconde 168 h ne peut pas être garantie avec cette infrastructure gratuite. Le rapport ne dissimule pas cette limite.
-
-## Architecture et fichiers
-
-```text
-PROJECT SURVIVAL/
-├── survival/
-│   ├── agents.py       # Dix identités, cinq prompts stratégiques, signaux et fréquences
-│   ├── models.py       # Modèles Pydantic, Decimal, carnets et portefeuilles
-│   ├── providers.py    # SDK unifié public, frais, historiques, résolutions, FX, Azure
-│   ├── engine.py       # IOC, profondeur, frais, risques, ventes, règlements et P&L
-│   ├── store.py        # PostgreSQL atomique et SQLite isolé pour les fixtures
-│   ├── runner.py       # START, cycle, journal, mémoires, valorisation, classement final
-│   ├── fixtures.py    # Données explicitement synthétiques
-│   └── cli.py          # Commandes d'exploitation
-├── config/settings.json
-├── supabase/migrations/001_initial.sql
-├── frontend/
-│   ├── src/{main.tsx,data.ts,types.ts,style.css}
-│   ├── public/{demo.json,_redirects}
-│   ├── package.json
-│   └── package-lock.json
-├── tests/{test_engine.py,test_runner.py,test_providers.py,test_integrations.py}
-├── .github/workflows/{cycle.yml,test.yml}
-├── docs/{DEPLOYMENT.md,DESIGN.md,VALIDATION.md}
-├── .env.example
-└── pyproject.toml
-```
-
-Le plan technique et les choix de conception sont dans [DESIGN.md](docs/DESIGN.md). La stack demandée est conservée. Seule addition : SQLite pour développer et tester sans compte ; la production utilise exclusivement PostgreSQL Supabase. Les appels SQL transactionnels passent directement par psycopg pour garantir un verrou PostgreSQL et une seule transaction, plutôt que plusieurs requêtes REST indépendantes.
-
-## Agents et configuration
-
-| Stratégie | 10 EUR | 50 EUR | Profil | Appels IA maximum / jour UTC |
-|---|---|---|---|---|
-| HUNTER | A1 | A6 | Dynamique / momentum | 12 |
-| SPRINTER | A2 | A7 | Dynamique / événements courts | 12 |
-| ANALYST | A3 | A8 | Prudent / fondamental | 4 |
-| VALUE | A4 | A9 | Standard / écart de probabilités | 4 |
-| CONTRARIAN | A5 | A10 | Standard / sur-réactions documentées | 4 |
-
-Modifier `config/settings.json` pour les fréquences, concentration, réserve liquide, seuil d'edge, confiance, slippage et cooldown. Le plafond global est 72 raisonnements/jour, soit 504 sur sept jours, avant les filtres de signal. Les tentatives Azure échouées comptent aussi. Un journal de réservation séparément validé empêche de dépasser le quota en cas de crash puis de reprise. Chaque agent a son portefeuille, mémoire et décision distincts.
-
-`estimated_probability` signifie toujours P(YES). Pour NO, Python utilise son complément. `proposed_stake` est un budget total frais compris pour BUY et un objectif de produit brut pour SELL. L'edge effectif est recalculé sur les fills exécutables après frais ; la valeur annoncée par le modèle est conservée seulement pour audit. Aucun achat n'est forcé. Le minimum peut légitimement empêcher un compte de 10 EUR de diversifier ses positions.
-
-## Données et simulation
-
-Le SDK officiel `polymarket-client==0.13.0` est figé. Le collecteur utilise `PublicClient`, Gamma, les carnets CLOB, l'historique Data API v2 et les règlements officiels. Il choisit token IDs pour v1 et position IDs pour v2, refuse les versions inconnues et les frais non documentés. Aucun prix synthétique en cas de panne.
-
-Le marché présélectionné est actif, accepte des ordres, dépasse la liquidité configurée et a une échéance dans les huit jours. Les positions déjà détenues sont toujours recherchées, même sur un marché fermé. Les règles et sources de résolution viennent des métadonnées publiques. Les résolutions ne sont jamais déduites d'un prix proche de 0/1 : elles exigent les payouts et une résolution effective du fournisseur.
-
-Le moteur simule des ordres immédiats IOC contre les niveaux observés. Spread, slippage de profondeur, frais, tailles minimales, tick et soldes sont vérifiés. Les quantités sont arrondies vers le bas à six décimales et les frais à cinq décimales. Les carnets sont rafraîchis après chaque raisonnement réel avant une éventuelle exécution. Les marchés imposant un délai d'appariement sont exclus des nouveaux ordres : leur simulation demanderait une observation différée supplémentaire.
-
-Par défaut, seuls les 12 meilleurs niveaux de chaque côté sont conservés pour limiter le stockage. Il s'agit d'une profondeur observée bornée ; une quantité dépassant cette profondeur est partiellement exécutée ou marquée non liquidable. La valeur nette est la somme du cash et du produit net liquidable au bid. La fraction non liquidable est signalée et vaut zéro dans une **borne basse**, sans prétendre qu'elle n'a aucune valeur économique. La valorisation sous les minimums d'ordre est indicative ; elle ne crée aucun fill de vente.
-
-L'exécution papier observe un carnet mais ne mesure pas une latence réelle, une file d'attente ou l'impact qu'aurait eu un ordre réel. Les dix portefeuilles sont des simulations indépendantes du même marché. Les catégories manquantes sont indiquées comme non classées.
-
-Aucun moteur de recherche commercial n'est nécessaire. La version livrée transmet les règles, historique et sources officielles des marchés. Elle n'intègre pas de flux d'actualités externe ; les agents sont explicitement avertis de cette absence. Les URLs citées doivent appartenir aux preuves fournies ; aucune source inventée n'est acceptée.
-
-## Monnaie et évaluation finale
-
-La comptabilité est en unités de cotation fictives compatibles avec les marchés, avec convention explicite 1 pUSD = 1 USD de référence. Cette convention n'est pas une promesse de peg ou une conversion réelle. Le taux EUR/USD BCE via Frankfurter est horodaté, vérifié et figé au START. Les valeurs EUR sont divisées par ce même taux pendant toute la semaine : aucun gain de change n'est attribué au trading.
-
-À la clôture, les règlements observés sont comptabilisés et les autres positions valorisées au carnet disponible. Le rapport stocke le classement ROI, le gagnant au bénéfice absolu, la survie (`ROI > survival_roi`), les valeurs non liquidables, le rendement / drawdown maximum et la comparaison chiffrée des cinq paires. Les égalités au ROI sont départagées par identifiant. Un classement comportant des positions non liquidables est explicitement incomplet. Cette compétition ne démontre pas une rentabilité future.
-
-## Sauvegardes, export et reprise
-
-`export` écrit `state.json` et les tables d'audit en CSV, y compris ordres, fills, décisions, positions, mémoires, snapshots et rapport final. Le bouton du dashboard exporte uniquement la projection affichée, volontairement limitée aux données récentes. L'export CLI conserve l'historique complet.
-
-Pour une sauvegarde restaurable complète, utiliser le `pg_dump` fourni avec PostgreSQL contre la connexion Supabase appropriée, sans publier le mot de passe :
-
-```bash
-pg_dump --dbname="$DATABASE_URL" --format=custom --file=survival.dump
-# Restaurer dans une NOUVELLE base dédiée, jamais écraser la compétition active :
-pg_restore --dbname="$RESTORE_DATABASE_URL" --no-owner --no-acl survival.dump
-```
-
-Sous PowerShell : utiliser `--dbname=$env:DATABASE_URL`. Stocker les exports hors du dépôt public. La reprise d'un cycle utilise l'état transactionnel persistant. Dans GitHub, un rerun conserve le même `run_id`, donc aucune transaction ne peut être appliquée deux fois. Une panne avant commit annule toutes les écritures financières ; les réservations de quota IA restent consommées par prudence.
-
-Les tables financières d'audit refusent UPDATE et DELETE. Ne pas corriger manuellement des soldes : conserver les traces et créer une nouvelle expérience si le protocole d'expérimentation change.
-
-## Vérification
-
-Voir [VALIDATION.md](docs/VALIDATION.md) pour les résultats effectivement obtenus et les contrôles restant à exécuter avec les services configurés. Les tests réseau et PostgreSQL sont opt-in :
+Ouvrir http://127.0.0.1:5173/?mode=demo. Les fixtures utilisent une base SQLite
+isolée ; elles ne servent jamais de secours aux données réelles.
 
 ```powershell
-$env:RUN_NETWORK_TESTS='1'
-.venv/Scripts/python -m pytest tests/test_integrations.py -k live_public -q
-# Base PostgreSQL dédiée aux tests, jamais la base de compétition :
-$env:TEST_DATABASE_URL='postgresql://...'
-.venv/Scripts/python -m pytest tests/test_integrations.py -k postgresql -q
+# Depuis la racine ; DATABASE_URL désigne le compte opérationnel limité.
+.venv/Scripts/python -m survival.cli api-check
+.venv/Scripts/python -m survival.cli research-check
+.venv/Scripts/python -m survival.cli migrate
+.venv/Scripts/python -m survival.cli start
+.venv/Scripts/python -m survival.cli cycle --cycle-id manual-unique-id
+.venv/Scripts/python -m survival.cli health
+.venv/Scripts/python -m survival.cli cost-report
+.venv/Scripts/python -m survival.cli quota-check
+.venv/Scripts/python -m survival.cli export --output exports/week-01
 ```
-# Fiabilité de la planification
 
-Le secours indépendant de GitHub Cron, son activation et ses preuves sont décrits dans [docs/RELIABILITY.md](docs/RELIABILITY.md).
+`migrate` utilise DATABASE_ADMIN_URL quand présent. START est explicite, fixe
+end_at à START + 168 heures et refuse de réinitialiser un identifiant existant.
+Les mises à jour conservent portefeuilles et journal financier.
 
-# Participation des agents dynamiques
+## Agents et liberté
 
-La règle du premier investissement pour HUNTER/SPRINTER et la distinction des explorations sont décrites dans [docs/PARTICIPATION.md](docs/PARTICIPATION.md).
+| Stratégie | 10 EUR | 50 EUR | Réflexions maximum/jour UTC |
+|---|---|---|---:|
+| HUNTER | A1 | A6 | 12 |
+| SPRINTER | A2 | A7 | 12 |
+| ANALYST | A3 | A8 | 4 |
+| VALUE | A4 | A9 | 4 |
+| CONTRARIAN | A5 | A10 | 4 |
 
+Prompts, portefeuilles et mémoires distincts. A1/A6 n'ont pas de prudence imposée.
+Les autres limites sont configurables dans config/settings.json. Cash négatif,
+emprunt et suppression des contraintes réelles sont interdits. Les quatre agents
+dynamiques ont une obligation initiale de participation précédemment autorisée :
+[règles d'exploration](docs/PARTICIPATION.md). Après le premier fill, aucun nouvel
+investissement n'est forcé. WAIT reste une décision légitime.
+
+Un agent peut rechercher n'importe quel marché public ; les 24 marchés initiaux
+ne sont pas une liste blanche. Quatre tours de recherche et quatre outils par tour,
+avec un budget de temps, permettent recherche/pagination/inspection, actualités,
+lecture de pages et données structurées gratuites. Les pannes restent visibles.
+
+Une réflexion produit un plan JSON de 1 à 4 actions validé par Pydantic : vendre
+puis acheter, choisir ses prix maximum/minimum et ses seuils de sortie surveillés
+chaque cycle. Une thèse PRICE_MOVE est distincte d'une probabilité de résolution.
+Les leçons sont des hypothèses contextualisées, reliées aux résultats observés ;
+le modèle n'est pas réentraîné.
+
+## Simulation et comptabilité
+
+SDK unifié officiel polymarket-client 0.13.0, PublicClient uniquement, identifiants
+v1/v2. Calculs Decimal. Convention conservatrice FAK limit : tailles à deux
+décimales, frais à cinq, minimums de soumission, tick et profondeur observée.
+Un fill partiel peut être inférieur au minimum de soumission. Quarante niveaux
+sont conservés pour l'exécution ; un portefeuille ne réutilise pas une profondeur
+déjà consommée par une action du même plan.
+
+Frais/métadonnées et carnets revalidés avant trade. Un délai de matching jusqu'à
+30 secondes impose une nouvelle observation après attente. Maker au repos exclu.
+Le simulateur ne confirme pas un matching réel et ne modélise pas toute la
+concurrence, les annulations et la latence.
+
+Valorisation au bid net immédiatement liquidable. Cotation manquante/périmée ou
+résidu non vendable : NAV/ROI inconnus, borne basse séparée, agent non classé.
+Aucun prix inventé. Les résolutions exigent les payouts officiels. Le taux BCE
+EUR/USD obtenu au START reste figé ; aucun gain de change attribué au trading.
+La convention fictive pUSD/USD est affichée.
+
+À la fin : arrêt des décisions, dernière observation antérieure ou égale à la
+limite, âge maximum 15 minutes. Sinon CLOSING, sans prix futur ni faux gagnant.
+Le rapport distingue égalités, ROI/bénéfice absolu, exploration, expositions,
+risque et changements de politique. Sept jours ne prouvent pas une rentabilité future.
+
+## Persistance, budget et autonomie
+
+Transactions financières courtes, journal append-only, cash réconcilié avec le
+ledger, verrou de session PostgreSQL. Une réponse READY persistante est réutilisée
+après interruption tant qu'elle reste valable. Quotas et réservations de coût
+survivent aux rollbacks.
+
+Plafond autorisé : **100 EUR de crédits Azure au total et 20 EUR/jour UTC**, estimés
+prudemment avec les tarifs du propriétaire. La facture Azure fait foi. Maximum
+72 sessions/jour, chacune pouvant contenir plusieurs requêtes. Les événements
+peuvent déclencher une réflexion après 10/30 minutes, dans les mêmes quotas 12/4.
+
+Cron GitHub 09/19/29/39/49/59, secours Supabase toutes les deux minutes, secours
+Cloudflare indépendant toutes les cinq minutes. Les trois utilisent encore GitHub
+et Supabase ; aucune disponibilité absolue n'est garantie. Le dashboard expose
+heures et sources des cycles, erreurs partielles, tokens et budget estimé.
+
+## Déploiement et sauvegarde
+
+[Guide gratuit](docs/DEPLOYMENT.md). Un dépôt privé avec GitHub Pro reste soumis au
+quota partagé du compte ; ne pas autoriser de dépassement payant. Les quotas
+d'egress, Realtime et builds dépendent aussi du trafic.
+
+Daily paper competition backup exporte chaque jour à 03:43 UTC, artifact conservé
+14 jours. JSON/CSV incluent les tables de compétition, mais pas les secrets Vault
+ni la configuration d'administration des fournisseurs. L'export utilise une vue
+transactionnelle cohérente et ne bloque pas une analyse IA en cours.
+
+Pour restaurer **dans une base séparée et vide**, appliquer les migrations à cette
+base, définir RESTORE_DATABASE_URL puis :
+
+```powershell
+.venv/Scripts/python operations/restore_export.py --directory exports/week-01
+```
+
+Le programme refuse une base contenant déjà une expérience, réconcilie les soldes
+et désactive le scheduler restauré. La CI teste la restauration dans PostgreSQL
+jetable. Un pg_dump reste adapté à une sauvegarde complète du serveur PostgreSQL.
+Ne jamais écraser l'expérience active. Exports et secrets restent hors Git.
+
+## Arborescence
+
+```text
+survival/       agents, modèles, providers, recherche, données primaires,
+                analytics, simulateur, tâches récupérables, DB, rapports, CLI
+config/         règles centrales et tarifs Azure du propriétaire
+supabase/       migrations 001–003 et secours Supabase
+frontend/       React/TypeScript/Vite, dashboard réel et démo isolée
+scheduler/      Worker Cloudflare de déclenchement indépendant
+operations/     déploiement Worker, compte DB limité, restauration
+tests/          unitaires, régressions, API opt-in, PostgreSQL jetable
+.github/        cycles, CI, sauvegarde quotidienne
+docs/           audit, traitement des 40 points, déploiement, validations
+```
+
+[Validations effectuées](docs/VALIDATION.md). Les documents v2/v3/v4 décrivent les
+phases historiques ; les règles courantes sont ce README, settings.json et
+REMEDIATION.md. Un contrôle non exécuté n'est jamais annoncé réussi.

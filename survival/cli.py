@@ -41,26 +41,96 @@ def main():
     args = p.parse_args()
     if args.command == "research-check":
         from .research import ResearchTools
+
         provider = Polymarket()
         try:
             tools = ResearchTools(provider)
             markets = {}
             search = tools.call("search_markets", {"query": "Bitcoin"}, markets)
             browse = tools.call("browse_markets", {"order": "liquidity"}, markets)
-            pagination = tools.call("browse_markets", {"order": "liquidity", "cursor": browse["next_cursor"]}, markets) if browse.get("next_cursor") else {"error": "No browsing cursor returned"}
+            pagination = (
+                tools.call(
+                    "browse_markets",
+                    {"order": "liquidity", "cursor": browse["next_cursor"]},
+                    markets,
+                )
+                if browse.get("next_cursor")
+                else {"error": "No browsing cursor returned"}
+            )
             results = search.get("markets", []) or browse.get("markets", [])
-            inspected = tools.call("get_market", {"reference": results[0]["id"]}, markets) if results else {"error": "No search result"}
+            inspected = (
+                tools.call("get_market", {"reference": results[0]["id"]}, markets)
+                if results
+                else {"error": "No search result"}
+            )
             news = tools.call("search_web", {"query": "Bitcoin"}, markets)
             # Verify at least one independent page read, not only a search index.
-            page = tools.call("read_web", {"url": "https://www.bbc.com/news"}, markets)
-            print(json.dumps({"search": {"ok": "error" not in search, "markets": len(search.get("markets", []))},
-                "browse": {"ok": "error" not in browse, "markets": len(browse.get("markets", []))},
-                "pagination": {"ok": "error" not in pagination, "markets": len(pagination.get("markets", [])), "error": pagination.get("error")},
-                "inspection": {"ok": "error" not in inspected, "error": inspected.get("error")},
-                "web_search": {"ok": "error" not in news, "articles": len(news.get("articles", [])), "provider": news.get("provider"), "errors": news.get("provider_errors")},
-                "web_read": {"ok": "error" not in page, "characters": len(page.get("excerpt", "")), "error": page.get("error")}}, indent=2))
-            if any("error" in result for result in (search, browse, pagination, inspected, news, page)):
-                raise RuntimeError("Research preflight incomplete; inspect provider/tool availability")
+            page = tools.call(
+                "read_web",
+                {"url": "https://www.federalreserve.gov/monetarypolicy/fomc.htm"},
+                markets,
+            )
+            primary = {
+                topic: tools.call(
+                    "get_public_data", {"topic": topic, "symbol": symbol}, markets
+                )
+                for topic, symbol in [
+                    ("crypto", "BTC-USD"),
+                    ("inflation", ""),
+                    ("weather", ""),
+                    ("social", "elonmusk"),
+                ]
+            }
+            print(
+                json.dumps(
+                    {
+                        "search": {
+                            "ok": "error" not in search,
+                            "markets": len(search.get("markets", [])),
+                        },
+                        "browse": {
+                            "ok": "error" not in browse,
+                            "markets": len(browse.get("markets", [])),
+                        },
+                        "pagination": {
+                            "ok": "error" not in pagination,
+                            "markets": len(pagination.get("markets", [])),
+                            "error": pagination.get("error"),
+                        },
+                        "inspection": {
+                            "ok": "error" not in inspected,
+                            "error": inspected.get("error"),
+                        },
+                        "web_search": {
+                            "ok": "error" not in news,
+                            "articles": len(news.get("articles", [])),
+                            "provider": news.get("provider"),
+                            "errors": news.get("provider_errors"),
+                        },
+                        "web_read": {
+                            "ok": "error" not in page,
+                            "characters": len(page.get("excerpt", "")),
+                            "error": page.get("error"),
+                        },
+                        "structured_primary_data": {
+                            topic: {
+                                "ok": "error" not in data,
+                                "error": data.get("error"),
+                                "url": data.get("url"),
+                            }
+                            for topic, data in primary.items()
+                        },
+                    },
+                    indent=2,
+                )
+            )
+            if any(
+                "error" in result
+                for result in (search, browse, pagination, inspected, news, page)
+            ):
+                raise RuntimeError(
+                    "Research preflight incomplete; inspect provider/tool availability"
+                )
         finally:
             provider.close()
         return
@@ -89,16 +159,30 @@ def main():
     store = Store(demo_path="data/demo.sqlite" if demo else None)
     try:
         if args.command == "migrate":
-            for migration in sorted((Path(__file__).resolve().parent.parent / "supabase/migrations").glob("*.sql")):
+            if os.getenv("DATABASE_ADMIN_URL"):
+                store.close()
+                store = Store(os.environ["DATABASE_ADMIN_URL"])
+            for migration in sorted(
+                (Path(__file__).resolve().parent.parent / "supabase/migrations").glob(
+                    "*.sql"
+                )
+            ):
                 store.db.execute(migration.read_text(encoding="utf-8"))
             print("Migration applied")
         elif args.command.startswith("watchdog-"):
+            if args.command != "watchdog-status" and os.getenv("DATABASE_ADMIN_URL"):
+                store.close()
+                store = Store(os.environ["DATABASE_ADMIN_URL"])
             from . import watchdog
+
             if args.command == "watchdog-install":
                 result = watchdog.install(store, args.experiment)
             elif args.command == "watchdog-activate":
                 import getpass
-                token = os.getenv("SURVIVAL_SCHEDULER_GITHUB_TOKEN") or getpass.getpass("Dedicated fine-grained GitHub token (hidden): ")
+
+                token = os.getenv("SURVIVAL_SCHEDULER_GITHUB_TOKEN") or getpass.getpass(
+                    "Dedicated fine-grained GitHub token (hidden): "
+                )
                 result = watchdog.activate(store, args.experiment, token.strip())
             else:
                 result = watchdog.status(store, args.experiment)
@@ -114,14 +198,35 @@ def main():
                 raise ValueError("No experiment; explicit START required")
             if args.command == "cost-report":
                 from .costs import report
+
                 print(json.dumps(report(state), indent=2))
             else:
                 from .health import assess
-                print(json.dumps({"current_health": assess(state), "status": state["status"], "now_utc": utcnow().isoformat(),
-                    "last_market_sync": state.get("last_market_sync"), "health": state.get("health"),
-                    "agents": [{"id": a["id"], "runtime": a.get("runtime"), "last_analysis": a["memory"].get("last_call"),
-                        "last_decision": a["decisions"][-1]["action"] if a["decisions"] else None,
-                        "usage": a["stats"].get("llm_usage")} for a in state["agents"]]}, indent=2))
+
+                print(
+                    json.dumps(
+                        {
+                            "current_health": assess(state),
+                            "status": state["status"],
+                            "now_utc": utcnow().isoformat(),
+                            "last_market_sync": state.get("last_market_sync"),
+                            "health": state.get("health"),
+                            "agents": [
+                                {
+                                    "id": a["id"],
+                                    "runtime": a.get("runtime"),
+                                    "last_analysis": a["memory"].get("last_call"),
+                                    "last_decision": a["decisions"][-1]["action"]
+                                    if a["decisions"]
+                                    else None,
+                                    "usage": a["stats"].get("llm_usage"),
+                                }
+                                for a in state["agents"]
+                            ],
+                        },
+                        indent=2,
+                    )
+                )
         elif args.command == "start":
             state = initialize(store, args.experiment, "live", reference_fx())
             print(f"START {state['started_at']} → {state['end_at']}")
@@ -153,6 +258,7 @@ def main():
             )
         else:
             provider = Polymarket()
+            provider.store = store
             try:
                 # Lazy initialization permits valuation even when Azure is down.
                 class LazyAzure:
@@ -177,7 +283,14 @@ def main():
                             "updated_at": state["updated_at"],
                             "cycles": len(state["cycles"]),
                             "health": state.get("health"),
-                            "agents": [{"id": a["id"], "runtime": a.get("runtime"), "usage": a["stats"].get("llm_usage")} for a in state["agents"]],
+                            "agents": [
+                                {
+                                    "id": a["id"],
+                                    "runtime": a.get("runtime"),
+                                    "usage": a["stats"].get("llm_usage"),
+                                }
+                                for a in state["agents"]
+                            ],
                         }
                     )
                 )
