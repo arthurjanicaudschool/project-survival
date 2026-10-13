@@ -180,6 +180,18 @@ def test_context_compaction_preserves_json_and_cursor():
     assert result["next_cursor"] == "opaque" and len(result["markets"]) == 60
 
 
+def test_opaque_reasoning_envelope_does_not_consume_visible_evidence_budget():
+    messages = [
+        {"role": "user", "content": "Evidence"},
+        {"type": "reasoning", "encrypted_content": "opaque" * 30000},
+        {"type": "function_call", "call_id": "one", "arguments": "{}"},
+        {"type": "function_call_output", "call_id": "one", "output": "{}"},
+    ]
+    compact_transcript(messages, 500)
+    assert len(messages[1]["encrypted_content"]) == 180000
+    assert messages[2]["call_id"] == messages[3]["call_id"]
+
+
 def test_event_trigger_and_technical_retry_respect_daily_quota():
     at = utcnow().replace(hour=12)
     risk = definitions()[0]["risk"]

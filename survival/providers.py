@@ -64,7 +64,17 @@ def compact_transcript(messages, limit):
     """Preserve valid JSON, IDs, pagination and citation provenance when compacting."""
 
     def size():
-        return len(json.dumps(messages, default=str))
+        # encrypted_content is an opaque continuation token, not readable
+        # evidence. Preserve it intact and meter it separately as an envelope.
+        return sum(
+            len(
+                json.dumps(
+                    m.get("content", m.get("output", m.get("arguments", ""))),
+                    default=str,
+                )
+            )
+            for m in messages
+        )
 
     for old in messages:
         if size() <= limit:
@@ -119,10 +129,27 @@ def retry(fn):
     for attempt in range(3):
         try:
             return fn()
-        except Exception:
+        except Exception as exc:
+            from polymarket.errors import RequestRejectedError, RateLimitError
+
+            if (
+                isinstance(exc, RequestRejectedError)
+                and exc.status < 500
+                and exc.status != 429
+            ):
+                raise
+            if isinstance(exc, ValueError):
+                raise
             if attempt == 2:
                 raise
-            time.sleep(2**attempt)
+            delay = (
+                getattr(exc, "retry_after", None)
+                if isinstance(exc, (RequestRejectedError, RateLimitError))
+                else None
+            )
+            if delay is not None and delay > 60:
+                raise
+            time.sleep(max(2**attempt, delay or 0))
 
 
 class Polymarket:
@@ -396,6 +423,7 @@ class AzureReasoner:
         started = time.monotonic()
         trace_start = len(self.research.trace)
         audit = {
+            "agent_id": agent["id"],
             "requests": 0,
             "prompt_tokens": 0,
             "completion_tokens": 0,

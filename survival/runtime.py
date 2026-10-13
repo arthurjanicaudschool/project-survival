@@ -842,13 +842,25 @@ def cycle(store, eid, provider, reasoner, cycle_id=None, now=None):
                         memory["calls"] = memory.get("calls", 0) + int(attempted)
                         a["runtime"] = {
                             "status": "BUDGET_LIMIT"
-                            if "BUDGET" in str(exc)
+                            if "AZURE_ESTIMATED_BUDGET_REACHED" in str(exc)
                             else "TECHNICAL_ERROR",
                             "at": at.isoformat(),
                             "reason": type(exc).__name__ + ": " + str(exc)[:160],
                         }
                         a["last_analysis"] = a["runtime"].copy()
                         event(store, state, "ERROR", a["runtime"]["reason"], a["id"])
+                        failed_audit = copy.deepcopy(
+                            getattr(reasoner, "last_audit", {})
+                        )
+                        if attempted and failed_audit.get("agent_id") == a["id"]:
+                            event(
+                                store,
+                                state,
+                                "LLM_USAGE_ERROR",
+                                "Analysis failed; independently metered requests and retrieved evidence retained",
+                                a["id"],
+                                failed_audit,
+                            )
                         store.save(state, projection(state))
             else:
                 a["runtime"] = {
