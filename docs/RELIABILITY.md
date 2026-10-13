@@ -1,5 +1,20 @@
 # Fiabilité et secours indépendant de GitHub Cron
 
+## Vérification du 13 octobre 2026 à 11:09 Paris
+
+Le secours est **installé, activé et vérifié de bout en bout**. Deux demandes issues du vrai cron Supabase ont été acceptées par GitHub avec HTTP 204, puis ont exécuté le moteur, sauvegardé Supabase et actualisé le dashboard public automatiquement :
+
+| Demande hébergée | Cycle terminé (Paris) | Preuve GitHub |
+|---|---|---|
+| 10:58:00 | 10:58:44 | [38372934284](https://github.com/arthurjanicaudschool/project-survival/actions/runs/38372934284) |
+| 11:08:00 | 11:08:41 | [38374131816](https://github.com/arthurjanicaudschool/project-survival/actions/runs/38374131816) |
+
+Ces deux cycles ont été déclenchés par Supabase sans dispatch manuel de l'assistant, avec trigger_source=supabase-watchdog. Le dashboard public affichait le second à 11:08:41, neuf cycles persistés et douze marchés reçus. Ils n'ont pas rappelé Azure : les dix agents avaient déjà été actualisés pendant le cycle de reprise [38371203285](https://github.com/arthurjanicaudschool/project-survival/actions/runs/38371203285) et leur prochaine session n'était pas due. Aucun désaccord entre les soldes et le journal financier n'a été trouvé.
+
+Tests de la version déployée : [44 réussis, un contrôle réseau optionnel ignoré](https://github.com/arthurjanicaudschool/project-survival/actions/runs/38372967247), incluant PostgreSQL, permissions, verrouillage, idempotence, échec HTTP et reprise. Frontend compilé. Un premier test de transport à 10:54 a échoué à cause d'une option CURL non disponible ; l'option a été retirée et la reprise testée, sans effacer son journal. Les échecs HTTP sont retentés après au moins 90 secondes, les demandes acceptées restent espacées d'environ dix minutes.
+
+La clé dédiée est chiffrée dans Vault et sa copie temporaire a été retirée du .env local. Son expiration rapportée par GitHub est le 12 novembre 2026, après la fin de cette expérience. Aucun secret n'est inclus dans les exports. START et l'échéance du 19 octobre à 22:36:07 Paris sont conservés. Cette preuve couvre deux intervalles réels ; elle ne garantit pas la disponibilité future des fournisseurs ni l'absence de défaut inconnu.
+
 Le 13 octobre à 10:33 Paris, un seul cycle GitHub `schedule` était observé depuis la nuit : fin à 05:13. Le dernier résultat réussi ne prouve pas une cadence de dix minutes. GitHub indique que ses événements planifiés peuvent être retardés ou supprimés sous charge : https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#schedule . La cause précise de ces longues absences n'est pas établie.
 
 ## Changement
