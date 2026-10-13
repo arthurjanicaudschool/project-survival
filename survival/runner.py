@@ -451,7 +451,8 @@ def cycle(store, eid, provider, reasoner, cycle_id=None, now=None):
                                 kind=decision.action,
                                 amount=str(delta),
                                 created_at=now.isoformat(),
-                                payload=order | {"realized_pnl": str(pnl), "category": markets[decision.market_id].category},
+                                payload=order | {"realized_pnl": str(pnl), "category": markets[decision.market_id].category,
+                                                 "position_quantity_after": str(wallet.positions[f"{decision.market_id}:{decision.outcome}"].quantity)},
                             )
                             a["stats"]["trades"] += 1
                             if decision.decision_kind == "EXPLORATION":

@@ -23,6 +23,7 @@ def build_feedback(ledger, decisions, markets, previous=None):
             quantity = D(payload["quantity"]) if "quantity" in payload else sum((D(e["remaining_quantity"]) for e in held), D(0))
             pnl = D(payload["pnl"])
             payout = D(payload["payout_per_share"]) if "payout_per_share" in payload else D(payload["amount"]) / quantity if quantity else None
+            net_proceeds, exit_fees = D(payload["amount"]), D(0)
             partial = False
         else:
             mid, outcome = payload["market_id"], payload["outcome"]
@@ -30,12 +31,16 @@ def build_feedback(ledger, decisions, markets, previous=None):
             fills = (payload.get("execution") or {}).get("fills", [])
             quantity = sum((D(f["quantity"]) for f in fills), D(0))
             paid_fees = sum((D(f["fee"]) for f in fills), D(0))
+            gross = sum((D(f["price"]) * D(f["quantity"]) for f in fills), D(0))
             fees += paid_fees
             if kind == "BUY":
                 decision = decisions.get(row["id"], {})
                 entries.setdefault(key, []).append({
                     "decision_id": row["id"], "at": str(row["created_at"]),
                     "remaining_quantity": str(quantity),
+                    "original_entry_quantity": str(quantity), "original_entry_fees": str(paid_fees),
+                    "original_entry_cost": str(gross + paid_fees),
+                    "average_entry_price": str(gross / quantity) if quantity else None,
                     "reasoning": decision.get("reasoning", "Historical reasoning unavailable")[:400],
                     "decision_kind": payload.get("decision_kind", "STRATEGIC"),
                     "probability_basis": decision.get("probability_basis", "UNAVAILABLE"),
@@ -46,15 +51,18 @@ def build_feedback(ledger, decisions, markets, previous=None):
                 continue
             held = entries.get(key, [])
             remaining = sum((D(e["remaining_quantity"]) for e in held), D(0))
-            partial = quantity < remaining
+            partial = D(payload["position_quantity_after"]) > 0 if "position_quantity_after" in payload else quantity < remaining
             pnl = D(payload["realized_pnl"])
             payout = None
+            net_proceeds, exit_fees = gross - paid_fees, paid_fees
         context = [e.copy() for e in held if D(e["remaining_quantity"]) > 0]
         category = payload.get("category", markets.get(mid, {}).get("category", "Unclassified"))
         episode = {
             "id": row["id"], "at": str(row["created_at"]), "market_id": mid,
             "outcome": outcome, "category": category, "event": kind,
             "partial_exit": partial, "quantity": str(quantity), "net_pnl": str(pnl),
+            "net_proceeds": str(net_proceeds), "closed_cost_basis": str(net_proceeds - pnl),
+            "exit_fees": str(exit_fees),
             "result": "GAIN" if pnl > 0 else "LOSS" if pnl < 0 else "FLAT",
             "entry_context": context[-SETTINGS["learning"]["entry_context"]:], "entry_count": len(context),
             "exit_reasoning": decisions.get(row["id"], {}).get("reasoning", "Market resolution" if kind == "RESOLUTION" else "Unavailable")[:800],

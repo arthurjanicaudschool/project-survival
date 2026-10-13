@@ -27,6 +27,8 @@ def test_partial_exit_net_results_calibration_and_replay():
     assert D(feedback["realized_net_pnl"]) == D("3.34")
     assert D(feedback["execution_fees"]) == D(".2")
     assert feedback["recent_outcomes"][0]["partial_exit"]
+    assert feedback["recent_outcomes"][0]["exit_fees"] == "0.1"
+    assert feedback["recent_outcomes"][0]["entry_context"][0]["original_entry_fees"] == "0.1"
     assert feedback["open_theses"] == []
     assert feedback["calibration"] == {"resolved_estimates": 1, "brier_score": "0.09"}
     assert feedback == build_feedback(rows, decisions, {}, feedback)

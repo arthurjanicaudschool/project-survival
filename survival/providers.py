@@ -272,6 +272,11 @@ class AzureReasoner:
         audit = {"requests": 0, "prompt_tokens": 0, "completion_tokens": 0,
                  "cached_prompt_tokens": 0, "research": [], "model": None}
         self.last_audit = audit
+        feedback = memory.get("learning", {})
+        audit["learning_context"] = {"version": feedback.get("version"),
+            "closed_events": feedback.get("closed_events", 0),
+            "open_positions": feedback.get("open_position_count", 0),
+            "prior_reviews": len(feedback.get("reviews", []))}
         allowed = {m.url for m in markets.values() if m.url}
         allowed.update(m.resolution_source for m in markets.values() if m.resolution_source.startswith("https://"))
         contract = (
