@@ -1,6 +1,6 @@
 name = "project-survival-watchdog"
 main = "worker.js"
-compatibility_date = "2026-10-14"
+compatibility_date = "2026-10-01"
 [triggers]
 crons = ["*/5 * * * *"]
 [vars]

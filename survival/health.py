@@ -23,6 +23,7 @@ def assess(state, now=None):
         status = "PROVIDER_ERROR"
     elif (
         health.get("partial_data")
+        or any(a.get('snapshot',{}).get('complete') is False or a.get('snapshot',{}).get('stranded') for a in state['agents'])
         or health.get("provider_error_count", 0)
         or any(
             a.get("last_analysis", a.get("runtime", {})).get("status")

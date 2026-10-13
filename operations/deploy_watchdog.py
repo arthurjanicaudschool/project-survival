@@ -43,7 +43,7 @@ def main():
     endpoint = f"https://api.cloudflare.com/client/v4/accounts/{account}/workers/scripts/project-survival-watchdog"
     metadata = {
         "main_module": "worker.js",
-        "compatibility_date": "2026-10-14",
+        "compatibility_date": "2026-10-01",
         "bindings": bindings,
     }
     with httpx.Client(headers={"Authorization": "Bearer " + token}, timeout=60) as api:
