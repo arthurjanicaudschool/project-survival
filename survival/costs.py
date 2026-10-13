@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 from decimal import Decimal as D
 from .agents import SETTINGS
+from .agents import definitions
 
 
 def report(state):
@@ -16,6 +17,7 @@ def report(state):
         # Conservative: do not assume a discount for cached input tokens.
         price = str((D(totals["prompt_tokens"]) * D(input_rate) + D(totals["completion_tokens"]) * D(output_rate)) / D(1000000))
     max_requests = SETTINGS["research_rounds"] + 1
+    extra = sum(a["risk"]["calls_per_day"] for a in definitions() if a["risk"].get("participation_required")) * 7 * SETTINGS["participation"]["retry_calls"]
     pricing = json.loads((Path(__file__).resolve().parent.parent / "config/azure_pricing_eur.json").read_text(encoding="utf-8"))
     sessions = sum(u.get("sessions", int(u.get("requests", 0) > 0)) for u in usage)
     cached = min(totals["prompt_tokens"], totals["cached_prompt_tokens"])
@@ -28,6 +30,10 @@ def report(state):
             "seven_day_extrapolation_current_504_sessions_eur": str(measured / sessions * 504) if sessions else None,
             "seven_day_extrapolation_optional_924_sessions_eur": str(measured / sessions * 924) if sessions else None}
     return {"measured_since_v2": totals, "models": sorted({u["model"] for u in usage if u.get("model")}),
+            "participation_correction_bounds": {"max_extra_completions_in_one_pending_session": SETTINGS["participation"]["retry_calls"],
+                "max_extra_completions_per_week_if_never_fulfilled": extra,
+                "max_extra_output_tokens_per_week": extra * SETTINGS["max_llm_tokens"],
+                "note": "Only the four participation agents, only before first investment, only if they omit BUY despite executable researched options. No increase to daily session quotas. Baseline scenarios below exclude this bounded correction."},
             "metered_sessions": sessions, "user_supplied_eur_rates": pricing,
             "eur_scenarios": euro,
             "eur_limitations": "Offer unknown; each row is conditional on that offer. Cached inputs use the supplied cache-read price. Cache-write tokens are not reported separately by the API: any separate cache-write charge is excluded and cannot be calculated. Seven-day figures extrapolate the measured sample at full session quotas, not a forecast or a ceiling. Historical and rolled-back cycles are excluded.",

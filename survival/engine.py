@@ -182,6 +182,12 @@ def authorize(agent, wallet, decision, markets, now, memory):
             ZERO,
         )
         budget = min(budget, wallet.cash)
+        if decision.decision_kind == "EXPLORATION":
+            if not risk.get("participation_required", False):
+                return None, "EXPLORATION_NOT_ENABLED", ZERO
+            if agent.get("stats", {}).get("trades", 0) > 0 or memory.get("participation_fulfilled_at"):
+                return None, "PARTICIPATION_ALREADY_FULFILLED", ZERO
+            budget = min(budget, wallet.initial * D(risk["exploration_max_fraction"]))
         if risk.get("prudence_enabled", True):
             budget = min(
             budget,

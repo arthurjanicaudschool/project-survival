@@ -25,7 +25,9 @@ export type Decision = {
   sources: string[];
   confidence: string;
   estimated_probability: string;
-  verified_edge: string;
+  verified_edge: string | null;
+  decision_kind?: "STRATEGIC" | "EXPLORATION";
+  probability_basis?: "ESTIMATED" | "UNESTIMATED";
   exit_plan: string;
   risk_factors: string[];
   rejection: string;
@@ -37,6 +39,7 @@ export type Order = {
   market_id: string;
   outcome: string;
   action: string;
+  decision_kind?: "STRATEGIC" | "EXPLORATION";
   status: string;
   reason: string;
   execution: {
@@ -52,6 +55,7 @@ export type Agent = {
   risk: Record<string, string | number | boolean>;
   runtime?: { status: string; at: string; reason: string };
   last_analysis?: { status: string; at: string; reason: string };
+  participation?: {required: boolean; pending: boolean; status: string; started_at: string | null; deadline: string | null; fulfilled_at: string | null};
   wallet: {
     initial: string;
     cash: string;

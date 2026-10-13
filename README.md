@@ -139,3 +139,7 @@ $env:TEST_DATABASE_URL='postgresql://...'
 
 Le secours indépendant de GitHub Cron, son activation et ses preuves sont décrits dans [docs/RELIABILITY.md](docs/RELIABILITY.md).
 
+# Participation des agents dynamiques
+
+La règle du premier investissement pour HUNTER/SPRINTER et la distinction des explorations sont décrites dans [docs/PARTICIPATION.md](docs/PARTICIPATION.md).
+

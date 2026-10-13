@@ -161,9 +161,12 @@ def cycle(store, eid, provider, reasoner, cycle_id=None, now=None):
             previous = state.get("settings", {})
             configs = {a["id"]: a for a in definitions()}
             for a in state["agents"]:
+                desired_risk = configs[a["id"]]["risk"] | {"autonomous_discovery": True}
+                changed_agent = a["prompt"] != configs[a["id"]]["prompt"] or a["risk"] != desired_risk
                 a.update({k: configs[a["id"]][k] for k in ("prompt", "risk", "dynamic")})
                 a["risk"]["autonomous_discovery"] = True
-                a["memory"]["needs_policy_review"] = True
+                if changed_agent:
+                    a["memory"]["needs_policy_review"] = True
                 if not a["risk"].get("prudence_enabled", True):
                     a["memory"].pop("paused_until", None)
                     a["memory"]["pause_triggered"] = False
@@ -171,9 +174,13 @@ def cycle(store, eid, provider, reasoner, cycle_id=None, now=None):
             state["policy_revision"] = revision
             state["policy_history"].append({"at": cycle_started.isoformat(), "revision": revision,
                                            "previous_policy": previous.get("policy_version", "v1"), "settings": SETTINGS})
-            event(store, state, "POLICY_CHANGE", "Autonomous market/web research enabled; A1/A6 unrestricted; other risk limits relaxed. Capital and deadline unchanged.", details={"previous_policy": previous.get("policy_version", "v1"), "new_policy": SETTINGS["policy_version"], "settings": SETTINGS})
+            event(store, state, "POLICY_CHANGE", f"Trading policy updated to {SETTINGS['policy_version']}; disclosed first-investment participation for HUNTER/SPRINTER. Capital and competition deadline unchanged.", details={"previous_policy": previous.get("policy_version", "v1"), "new_policy": SETTINGS["policy_version"], "settings": SETTINGS})
+        from .participation import status as participation_status
         for a in state["agents"]:
             a["risk"]["autonomous_discovery"] = True
+            if a["risk"].get("participation_required"):
+                a["memory"].setdefault("participation_started_at", now.isoformat())
+            a["participation"] = participation_status(a, now, state["end_at"])
         event(store, state, "CYCLE_START", "Cycle started", details={"cycle_id": cycle_id, "at": cycle_started.isoformat()})
         if store.quota_usage()["database_bytes"] >= SETTINGS["max_database_bytes"]:
             raise RuntimeError(
@@ -316,6 +323,7 @@ def cycle(store, eid, provider, reasoner, cycle_id=None, now=None):
                 memory["calls"] = memory.get("calls", 0) + 1
                 analysis_memory["calls"] = memory["calls"]
                 analysis_memory["session_started_at"] = now.isoformat()
+                analysis_memory["participation"] = a["participation"].copy()
                 memory.pop("needs_policy_review", None)
                 memory["last_call"] = now.isoformat()
                 memory["portfolio_changed"] = False
@@ -350,7 +358,7 @@ def cycle(store, eid, provider, reasoner, cycle_id=None, now=None):
                     )
                     did = f"{eid}:{cycle_id}:{a['id']}"
                     payload = decision.model_dump(mode="json") | {
-                        "verified_edge": str(edge),
+                        "verified_edge": None if decision.probability_basis == "UNESTIMATED" else str(edge),
                         "at": now.isoformat(),
                         "rejection": rejection,
                         "decision_status": "WAIT" if decision.action == "WAIT" else "HOLD" if decision.action == "HOLD" else "EXECUTION_REJECTED" if rejection else "EXECUTED",
@@ -378,6 +386,8 @@ def cycle(store, eid, provider, reasoner, cycle_id=None, now=None):
                             "market_id": decision.market_id,
                             "outcome": decision.outcome,
                             "action": decision.action,
+                            "decision_kind": decision.decision_kind,
+                            "probability_basis": decision.probability_basis,
                             "status": execution.status if execution else "REJECTED",
                             "reason": rejection,
                             "execution": execution.model_dump(mode="json")
@@ -430,6 +440,10 @@ def cycle(store, eid, provider, reasoner, cycle_id=None, now=None):
                                 payload=order | {"realized_pnl": str(pnl)},
                             )
                             a["stats"]["trades"] += 1
+                            if decision.decision_kind == "EXPLORATION":
+                                a["stats"]["exploration_trades"] = a["stats"].get("exploration_trades", 0) + 1
+                            if decision.action == "BUY" and a["risk"].get("participation_required"):
+                                memory.setdefault("participation_fulfilled_at", execution_time.isoformat())
                             if decision.action == "SELL":
                                 a["stats"]["closed"] += 1
                                 a["stats"]["wins"] += int(pnl > 0)
@@ -442,7 +456,7 @@ def cycle(store, eid, provider, reasoner, cycle_id=None, now=None):
                                 store,
                                 state,
                                 decision.action,
-                                f"Paper {decision.action} · {execution.quantity} {decision.outcome} · {execution.status}",
+                                f"Paper {decision.action} · {decision.decision_kind} · {execution.quantity} {decision.outcome} · {execution.status}",
                                 a["id"],
                                 order,
                             )
@@ -517,6 +531,7 @@ def cycle(store, eid, provider, reasoner, cycle_id=None, now=None):
                 else "observed bid depth after fees",
             }
             a["wallet"] = wallet.model_dump(mode="json")
+            a["participation"] = participation_status(a, valuation_time, state["end_at"])
             a["snapshot"] = snapshot
             point[a["id"]] = snapshot
             store.record(
@@ -571,6 +586,8 @@ def cycle(store, eid, provider, reasoner, cycle_id=None, now=None):
                 strategies.setdefault(a["name"], []).append(
                     {
                         "agent_id": a["id"],
+                        "exploration_trades": a["stats"].get("exploration_trades", 0),
+                        "participation": a.get("participation"),
                         "roi": a["snapshot"]["roi"],
                         "drawdown": a["stats"]["max_drawdown"],
                     }

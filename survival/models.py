@@ -67,11 +67,20 @@ class Decision(Model):
     expected_edge: Decimal
     exit_plan: str = Field(max_length=2000)
     risk_factors: list[str]
+    decision_kind: Literal["STRATEGIC", "EXPLORATION"] = "STRATEGIC"
+    probability_basis: Literal["ESTIMATED", "UNESTIMATED"] = "ESTIMATED"
 
     @model_validator(mode="after")
     def trade_outcome(self):
         if self.action in ("BUY", "SELL") and not self.outcome:
             raise ValueError("A trade needs an outcome")
+        if self.probability_basis == "UNESTIMATED":
+            if self.estimated_probability != Decimal("0.5") or self.confidence != 0 or self.expected_edge != 0:
+                raise ValueError("Unestimated probability must use the neutral placeholder and zero confidence")
+            if self.action == "BUY" and self.decision_kind != "EXPLORATION":
+                raise ValueError("Unestimated BUY is only permitted as disclosed exploration")
+        if self.decision_kind == "EXPLORATION" and self.action != "BUY":
+            raise ValueError("Exploration is a participation BUY")
         return self
 
 

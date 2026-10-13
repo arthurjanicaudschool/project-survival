@@ -178,3 +178,28 @@ def test_agents_receive_previous_analysis_time_not_current_reservation(setup):
     second = cycle(store, "test", FixtureProvider(later), InspectMemory(), "next-memory", later)
     assert len(seen) == 10 and all(previous == now.isoformat() and current == later.isoformat() for previous, current in seen)
     assert all(a["memory"]["last_call"] == later.isoformat() for a in second["agents"])
+
+
+def test_exploration_fills_are_labelled_and_unestimated_edge_is_not_published(setup):
+    from test_participation import affordable, exploration
+    store, now=setup
+    class Provider:
+        errors=[]
+        def collect(self,*args):
+            return affordable(now)[0]
+    class Reasoner:
+        def decide(self,agent,wallet,markets,memory):
+            if agent["risk"].get("participation_required"):
+                return exploration(agent,wallet,markets,wallet.initial*D(".1"))
+            return FixtureReasoner().decide(agent,wallet,markets,memory).model_copy(update={"action":"WAIT","outcome":None})
+    state=cycle(store,"test",Provider(),Reasoner(),"participation",now)
+    for a in state["agents"]:
+        if a["id"] in ("A1","A2","A6","A7"):
+            assert a["participation"]["status"]=="FULFILLED"
+            assert a["orders"][-1]["decision_kind"]=="EXPLORATION"
+            assert a["decisions"][-1]["verified_edge"] is None
+            assert a["stats"]["exploration_trades"]==1
+            assert D(a["wallet"]["cash"]) < D(a["wallet"]["initial"])
+        else:
+            assert not a["orders"] and a["participation"]["status"]=="DISCRETIONARY"
+    assert cycle(store,"test",Provider(),Reasoner(),"participation",now)==state

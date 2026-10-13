@@ -1,6 +1,7 @@
 {
   "duration_hours": 168,
-  "policy_version": "autonomy-v2",
+  "policy_version": "participation-v3",
+  "participation": {"agent_ids": ["A1", "A2", "A6", "A7"], "deadline_hours": 24, "target_fraction": "0.10", "max_fraction": "0.20", "retry_calls": 1},
   "research_rounds": 3,
   "research_api": "responses-v1",
   "research_tools_per_round": 3,

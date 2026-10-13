@@ -285,6 +285,9 @@ class AzureReasoner:
             "cooldown_hours applies ONLY to a drawdown-triggered pause recorded in memory.paused_until; "
             "it is NOT a mandatory cooldown after every analysis or trade. If paused_until is absent or expired, there is no drawdown pause. "
             "All numeric decision fields must be finite numbers, never prose or null. If you cannot estimate a probability, WAIT with probability=0.5, confidence=0, stake=0, edge=0. "
+            "Exception: if the participation rule is pending, an executable first investment is required. "
+            "When no thesis is convincing, choose a small EXPLORATION BUY, not a fabricated strategic edge. "
+            "You may use probability_basis=UNESTIMATED with the neutral numeric placeholder 0.5, confidence=0 and expected_edge=0; it will not be displayed as an estimated probability or edge. "
             "sources must be exact URLs retrieved in THIS session or provided initially. No invented facts, identities or URLs. "
             "Research is bounded by time and credits; use the available tool budget efficiently. "
             "Finish with exactly one JSON object matching the supplied Decision schema, no wrapper."
@@ -350,12 +353,33 @@ class AzureReasoner:
                         content = json.dumps({"truncated": True, "retrieved_excerpt": content[:21000],
                                               "instruction": "Refine query or inspect a market for complete data"})
                     messages.append({"type": "function_call_output", "call_id": call.call_id, "output": content})
-            messages.append({"role": "user", "content": json.dumps({"instruction": "Research finished. Make your investment decision now as a valid Decision JSON. WAIT is not an execution rejection. Use exact agent_id and numeric fields.",
-                "agent_id": agent["id"], "allowed_sources": sorted(allowed)})})
+            from .participation import candidates, ParticipationContractError
+            pending = memory.get("participation", {}).get("pending", False)
+            inspected = {trace["result"]["market"]["id"] for trace in self.research.trace[trace_start:]
+                         if trace["tool"] == "get_market" and trace["ok"] and trace.get("result", {}).get("market")}
+            options = candidates(agent, wallet, markets, inspected, utcnow(), memory) if pending else []
+            audit["participation"] = {"pending": pending, "executable_researched_options": len(options), "correction_calls": 0}
+            messages.append({"role": "user", "content": json.dumps({"instruction": "Research finished. Make your investment decision now as a valid Decision JSON. WAIT is not an execution rejection. Use exact agent_id and numeric fields. "
+                + ("Your participation obligation is pending and executable options exist. Choose BUY now: either STRATEGIC if independently justified or a small EXPLORATION investment. You choose the market and outcome. Uncertainty alone is not a reason to avoid a disclosed exploration. Use the preview budget including fees for exploration. No claimed positive edge is required." if pending and options else "WAIT is allowed; never invent executable options."),
+                "agent_id": agent["id"], "allowed_sources": sorted(allowed), "participation": memory.get("participation"),
+                "executable_previews_for_markets_you_researched": options}, default=str)})
             response = request(text={"format": {"type": "json_object"}})
             if response.status != "completed":
                 raise ValueError("Decision truncated by token budget")
             decision = Decision.model_validate_json(response.output_text or "")
+            if pending and options and decision.action != "BUY":
+                for _ in range(SETTINGS["participation"]["retry_calls"]):
+                    messages.append({"role": "assistant", "content": decision.model_dump_json()})
+                    messages.append({"role": "user", "content": "This does not satisfy your active participation rule. Choose a BUY on an executable researched market. If you do not claim a strategic edge, label EXPLORATION and use an observed preview budget. An unestimated probability must remain the neutral placeholder with zero confidence. Never invent evidence."})
+                    response = request(text={"format": {"type": "json_object"}})
+                    audit["participation"]["correction_calls"] += 1
+                    if response.status != "completed":
+                        raise ValueError("Participation decision truncated")
+                    decision = Decision.model_validate_json(response.output_text or "")
+                    if decision.action == "BUY":
+                        break
+                if decision.action != "BUY":
+                    raise ParticipationContractError("Participation BUY omitted despite executable researched options")
             if decision.agent_id != agent["id"] or any(url not in allowed for url in decision.sources):
                 raise ValueError("Invalid agent identity or unsupported source")
             if decision.action in ("BUY", "SELL") and decision.market_id not in markets:

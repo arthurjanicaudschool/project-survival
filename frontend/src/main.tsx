@@ -443,6 +443,14 @@ function Overview({
       </div>
       <section className="panel padded">
         <h2>État du moteur et preuves de fonctionnement</h2>
+          {state.agents.some(a => a.participation?.required) && <div>
+            <h3>Participation HUNTER / SPRINTER</h3>
+            <p className="subtle">Premier investissement sous 24 h : opportunité stratégique ou petite exploration choisie par l’IA. Exploration : cible 10 % du capital initial, maximum 20 % frais inclus selon les minimums réels. Aucun rendement positif présumé.</p>
+            {state.agents.filter(a => a.participation?.required).map(a => <p key={a.id} className={a.participation?.status === "OVERDUE" ? "negative" : a.participation?.status === "FULFILLED" ? "positive" : "subtle"}>
+              {a.id} {a.name} · {a.participation?.status === "FULFILLED" ? "Premier investissement effectué" : a.participation?.status === "OVERDUE" ? "Échéance dépassée — participation non remplie" : "Premier investissement en attente"}
+              {a.participation?.deadline && ` · échéance ${new Date(a.participation.deadline).toLocaleString("fr-FR")}`}
+            </p>)}
+          </div>}
           {state.agents.some(a => (a.last_analysis || a.runtime)?.status === "TECHNICAL_ERROR") &&
             <p className="negative" role="alert">Une ou plusieurs dernières analyses ont échoué. Une actualisation sans nouvelle analyse ne résout pas cette panne ; consultez les diagnostics des agents.</p>}
           {state.status !== "FINISHED" && Date.now() - new Date(state.health?.completed_at || state.updated_at).getTime() > 20 * 60000 &&
@@ -859,13 +867,14 @@ function AgentDetail({ a, state }: { a: Agent; state: State }) {
                 {d.action} {d.outcome}
               </span>
               <time>{new Date(d.at).toLocaleString("fr-FR")}</time>
-              <span>Edge vérifié {pct(d.verified_edge)}</span>
+                <span>Edge vérifié {d.verified_edge === null ? "non estimé" : pct(d.verified_edge)}</span>
+                {d.decision_kind === "EXPLORATION" && <span className="pill">Exploration · règle de participation</span>}
             </div>
             <h3>{state.markets[d.market_id]?.question || d.market_id}</h3>
             <p>{d.reasoning}</p>
             <p className="subtle">
               Confiance : {pct(d.confidence)} · P(YES) :{" "}
-               {pct(d.estimated_probability)} · {d.decision_status || d.action}{d.rejection && d.action !== "WAIT" && d.action !== "HOLD" ? ` · ${d.rejection}` : ""}
+                {d.probability_basis === "UNESTIMATED" ? "non estimée" : pct(d.estimated_probability)} · {d.decision_status || d.action}{d.rejection && d.action !== "WAIT" && d.action !== "HOLD" ? ` · ${d.rejection}` : ""}
             </p>
             <p>Sortie : {d.exit_plan}</p>
             <p>Risques : {d.risk_factors.join(" · ")}</p>
