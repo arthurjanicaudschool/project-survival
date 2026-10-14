@@ -325,6 +325,61 @@ def test_catalogue_features_compact_before_aborting_final_decision():
     assert reduced["portfolio"]["cash"] == "10"
 
 
+def test_noaa_compaction_preserves_every_storm_measurement_and_advisory():
+    from survival.providers import compact_tool
+
+    advisory = {
+        "url": "https://www.nhc.noaa.gov/text/advisory.shtml",
+        "issuance": "2026-10-14",
+    }
+    storm = {
+        "id": "ep212026",
+        "name": "Trudy",
+        "intensity": "35",
+        "lastUpdate": "2026-10-14",
+        "publicAdvisory": advisory,
+        "forecastDiscussion": advisory,
+        "trackCone": {"kmzFile": "x" * 5000},
+    }
+    raw = {
+        "url": "https://www.nhc.noaa.gov/CurrentStorms.json",
+        "data": {"activeStorms": [storm, storm | {"id": "ep222026"}]},
+    }
+    result = compact_tool(raw)
+    assert len(result["data"]["activeStorms"]) == 2
+    first = result["data"]["activeStorms"][0]
+    assert first["intensity"] == "35" and first["lastUpdate"] == "2026-10-14"
+    assert (
+        first["publicAdvisory"] == advisory and first["forecastDiscussion"] == advisory
+    )
+    assert "trackCone" not in first and "trackCone" in raw["data"]["activeStorms"][0]
+
+
+def test_large_discovery_page_keeps_ids_and_cursor_in_bounded_context():
+    messages = [
+        {"role": "system", "content": "instructions" * 1000},
+        {
+            "type": "function_call_output",
+            "call_id": "search",
+            "output": json.dumps(
+                {
+                    "markets": [
+                        {"id": str(i), "question": "Long market question " * 15}
+                        for i in range(135)
+                    ],
+                    "next_cursor": "continue-here",
+                }
+            ),
+        },
+    ]
+    compact_transcript(messages, 36000)
+    result = json.loads(messages[1]["output"])
+    assert [m["id"] for m in result["markets"]] == [str(i) for i in range(135)]
+    assert (
+        result["next_cursor"] == "continue-here" and messages[1]["call_id"] == "search"
+    )
+
+
 def test_valuation_bounds_only_include_remaining_unsellable_quantity():
     at = utcnow()
     m = next(iter(FixtureProvider(at).collect().values()))

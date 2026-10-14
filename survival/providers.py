@@ -70,6 +70,23 @@ def strict_schema():
 
 def compact_tool(result):
     result = __import__("copy").deepcopy(result)
+    data = result.get("data")
+    if isinstance(data, dict) and isinstance(data.get("activeStorms"), list):
+        # GIS download manifests repeat long URLs and timestamps; they are not
+        # observations of additional storms. Keep every storm, its measurements
+        # and readable primary advisories. The complete response stays in audit.
+        result["data"] = data | {
+            "activeStorms": [
+                {
+                    k: v
+                    for k, v in storm.items()
+                    if not isinstance(v, dict)
+                    or k in ("publicAdvisory", "forecastAdvisory", "forecastDiscussion")
+                }
+                for storm in data["activeStorms"]
+            ],
+            "history_sampling": "All active storms and scalar measurements retained; GIS download manifests omitted. This is not a seasonal storm count.",
+        }
     if isinstance(result.get("data"), list):
         for row in result["data"]:
             if not isinstance(row, dict) or not isinstance(row.get("tracking"), dict):
@@ -158,7 +175,7 @@ def compact_transcript(messages, limit):
             elif value.get("markets"):
                 value = value | {
                     "markets": [
-                        {"id": m["id"], "question": m["question"]}
+                        {"id": m["id"], "question": m["question"][:100]}
                         for m in value["markets"]
                     ],
                     "compacted": True,
