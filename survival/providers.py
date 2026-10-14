@@ -137,6 +137,7 @@ def compact_transcript(messages, limit):
                 json.dumps(
                     m.get("content", m.get("output", m.get("arguments", ""))),
                     default=str,
+                    ensure_ascii=False,
                 )
             )
             for m in messages
@@ -184,7 +185,7 @@ def compact_transcript(messages, limit):
                 value = {k: v for k, v in value.items() if k != "candles"} | {
                     "compacted": True
                 }
-            old["output"] = json.dumps(value, default=str)
+            old["output"] = json.dumps(value, default=str, ensure_ascii=False)
     # The catalogue is a starting point, not authoritative execution evidence.
     # Once inspected markets are present, its duplicated feature matrix may be
     # compressed without losing IDs, sources, exact quotes or chosen books.
@@ -214,7 +215,7 @@ def compact_transcript(messages, limit):
             body["catalogue_compacted"] = (
                 "Initial features summarized; inspect get_market for complete rules, indicators and executable books. All starting market IDs retained."
             )
-            old["content"] = json.dumps(body, default=str)
+            old["content"] = json.dumps(body, default=str, ensure_ascii=False)
     if size() > limit:
         for old in messages:
             if old.get("type") == "message" and old.get("role") == "assistant":
@@ -235,7 +236,7 @@ def compact_transcript(messages, limit):
 
 def tool_content(result):
     """Bound a tool body with valid structured summaries, never a JSON slice."""
-    content = json.dumps(compact_tool(result), default=str)
+    content = json.dumps(compact_tool(result), default=str, ensure_ascii=False)
     if len(content) > 22000:
         entry = {"type": "function_call_output", "output": content}
         try:

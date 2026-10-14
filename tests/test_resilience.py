@@ -404,6 +404,20 @@ def test_actual_tool_payload_keeps_large_discovery_page_structured():
     assert "retrieved_excerpt" not in result
 
 
+def test_unicode_evidence_is_preserved_without_escape_inflation():
+    from survival.providers import tool_content
+
+    excerpt = "Actualité météo 气象情報 " * 700
+    content = tool_content(
+        {"url": "https://example.org", "excerpt": excerpt, "quality": "READABLE"}
+    )
+    assert json.loads(content)["excerpt"] == excerpt
+    assert "\\u" not in content
+    messages = [{"type": "function_call_output", "output": content}]
+    compact_transcript(messages, 18000)
+    assert json.loads(messages[0]["output"])["excerpt"] == excerpt
+
+
 def test_exhausted_daily_sessions_remain_distinct_from_not_due(tmp_path):
     now = utcnow()
     store = Store(demo_path=tmp_path / "quota.sqlite")
