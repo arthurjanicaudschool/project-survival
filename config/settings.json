@@ -1,7 +1,10 @@
 {
   "duration_hours": 168,
-  "policy_version": "survival-v5.3",
-  "event_min_interval_minutes": {"dynamic": 10, "standard": 30},
+  "policy_version": "survival-v5.4",
+  "event_min_interval_minutes": {
+    "dynamic": 10,
+    "standard": 30
+  },
   "technical_retry_minutes": 15,
   "decision_valid_seconds": 600,
   "cycle_analysis_budget_seconds": 900,
@@ -10,9 +13,28 @@
   "analysis_budget_eur": "100",
   "analysis_daily_budget_eur": "20",
   "small_account_minimum_fraction": "0.45",
-  "min_inspected_candidates": {"dynamic": 3, "standard": 2},
-  "learning": {"recent_outcomes": 8, "open_theses": 10, "entry_context": 3, "reviews": 5},
-  "participation": {"agent_ids": ["A1", "A2", "A6", "A7"], "deadline_hours": 24, "target_fraction": "0.10", "max_fraction": "0.20", "retry_calls": 1},
+  "min_inspected_candidates": {
+    "dynamic": 3,
+    "standard": 2
+  },
+  "learning": {
+    "recent_outcomes": 8,
+    "open_theses": 10,
+    "entry_context": 3,
+    "reviews": 5
+  },
+  "participation": {
+    "agent_ids": [
+      "A1",
+      "A2",
+      "A6",
+      "A7"
+    ],
+    "deadline_hours": 24,
+    "target_fraction": "0.10",
+    "max_fraction": "0.20",
+    "retry_calls": 1
+  },
   "research_rounds": 4,
   "research_api": "responses-v1",
   "research_tools_per_round": 4,
@@ -33,7 +55,36 @@
   "max_slippage": "0.03",
   "survival_roi": "0",
   "max_llm_tokens": 2600,
-  "unrestricted": {"calls_per_day": 12, "prudence_enabled": false, "max_position_fraction": "1", "max_group_fraction": "1", "cash_reserve_fraction": "0", "pause_drawdown": "2", "cooldown_hours": 0, "max_slippage": "1"},
-  "dynamic": {"calls_per_day": 12, "prudence_enabled": true, "max_position_fraction": "0.75", "max_group_fraction": "0.85", "cash_reserve_fraction": "0.05", "pause_drawdown": "0.85", "cooldown_hours": 1, "max_slippage": "0.10"},
-  "standard": {"calls_per_day": 4, "prudence_enabled": true, "max_position_fraction": "0.35", "max_group_fraction": "0.55", "cash_reserve_fraction": "0.15", "pause_drawdown": "0.65", "cooldown_hours": 2, "max_slippage": "0.05"}
+  "unrestricted": {
+    "calls_per_day": 12,
+    "prudence_enabled": false,
+    "max_position_fraction": "1",
+    "max_group_fraction": "1",
+    "cash_reserve_fraction": "0",
+    "pause_drawdown": "2",
+    "cooldown_hours": 0,
+    "max_slippage": "1"
+  },
+  "dynamic": {
+    "calls_per_day": 12,
+    "prudence_enabled": true,
+    "max_position_fraction": "0.75",
+    "max_group_fraction": "0.85",
+    "cash_reserve_fraction": "0.05",
+    "pause_drawdown": "0.85",
+    "cooldown_hours": 1,
+    "max_slippage": "0.10"
+  },
+  "standard": {
+    "calls_per_day": 4,
+    "prudence_enabled": true,
+    "max_position_fraction": "0.35",
+    "max_group_fraction": "0.55",
+    "cash_reserve_fraction": "0.15",
+    "pause_drawdown": "0.65",
+    "cooldown_hours": 2,
+    "max_slippage": "0.05"
+  },
+  "session_quotas_enabled": false,
+  "estimated_budget_limits_enabled": false
 }

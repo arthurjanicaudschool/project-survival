@@ -30,7 +30,9 @@ def test_live_public_api():
 
 
 @pytest.mark.integration
-def test_postgresql_transaction_rls_and_concurrency():
+def test_postgresql_transaction_rls_and_concurrency(monkeypatch):
+    from survival.agents import SETTINGS
+
     url = os.getenv("TEST_DATABASE_URL")
     if not url:
         pytest.skip(
@@ -158,13 +160,24 @@ def test_postgresql_transaction_rls_and_concurrency():
             "select count(*) from llm_meter where experiment_id=%s", (eid,)
         ).fetchone()[0]
         with pytest.raises(ValueError, match="BUDGET"):
-            store.meter_reserve(eid, "A1", D(10000))
+            with monkeypatch.context() as caps:
+                caps.setitem(SETTINGS, "estimated_budget_limits_enabled", True)
+                store.meter_reserve(eid, "A1", D(10000))
         assert (
             store.db.execute(
                 "select count(*) from llm_meter where experiment_id=%s", (eid,)
             ).fetchone()[0]
             == before
         )
+        # Disabled monetary caps still retain measurement, even over the old ceiling.
+        with monkeypatch.context() as caps:
+            caps.setitem(SETTINGS, "estimated_budget_limits_enabled", False)
+            uncapped = store.meter_reserve(eid, "A1", D(10000))
+            assert uncapped and store.meter_summary(eid)["total_limit_eur"] is None
+            store.meter_finish(uncapped, {"input_tokens": 0}, D(0))
+        assert store.reserve_llm(eid, "A2", "uncapped-a", now, None)
+        assert not store.reserve_llm(eid, "A2", "uncapped-a", now, None)
+        assert store.reserve_llm(eid, "A2", "uncapped-b", now, None)
         # Full JSON/CSV export can restore into a disposable separate database.
         import tempfile
         from psycopg import sql

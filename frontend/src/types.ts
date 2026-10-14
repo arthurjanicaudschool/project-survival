@@ -148,7 +148,7 @@ export type State = {
   updated_at: string;
   last_market_sync?: string;
   data_quality?: {complete: boolean; unknown_positions: number};
-  health?: {cycle_count: number; completed_at: string; duration_seconds: number; market_count: number; market_provider_ok: boolean; partial_data?:boolean; provider_error_count?:number; financial_invariants?:string; azure_budget?:{estimated_eur:string; today_estimated_eur:string; total_limit_eur:string; daily_limit_eur:string; uncertain_requests_reserved:number}; policy_version: string; trigger?: string; trigger_source?: string; logs_url?: string; last_scheduled_cycle?: string; last_watchdog_cycle?: string; last_cloudflare_cycle?:string};
+  health?: {cycle_count: number; completed_at: string; duration_seconds: number; market_count: number; market_provider_ok: boolean; partial_data?:boolean; provider_error_count?:number; financial_invariants?:string; azure_budget?:{estimated_eur:string; today_estimated_eur:string; total_limit_eur:string|null; daily_limit_eur:string|null; limits_enabled?:boolean; uncertain_requests_reserved:number}; policy_version: string; trigger?: string; trigger_source?: string; logs_url?: string; last_scheduled_cycle?: string; last_watchdog_cycle?: string; last_cloudflare_cycle?:string};
   agents: Agent[];
   markets: Record<string, Market>;
   events: Activity[];

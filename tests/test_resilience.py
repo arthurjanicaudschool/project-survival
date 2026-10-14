@@ -460,7 +460,10 @@ def test_final_context_pressure_keeps_account_learning_and_inspected_evidence():
     assert json.loads(messages[1]["output"]) == evidence
 
 
-def test_exhausted_daily_sessions_remain_distinct_from_not_due(tmp_path):
+def test_exhausted_daily_sessions_remain_distinct_from_not_due(tmp_path, monkeypatch):
+    from survival.agents import SETTINGS
+
+    monkeypatch.setitem(SETTINGS, "session_quotas_enabled", True)
     now = utcnow()
     store = Store(demo_path=tmp_path / "quota.sqlite")
     try:
@@ -537,7 +540,10 @@ def test_opaque_reasoning_envelope_does_not_consume_visible_evidence_budget():
     assert messages[2]["call_id"] == messages[3]["call_id"]
 
 
-def test_event_trigger_and_technical_retry_respect_daily_quota():
+def test_event_trigger_and_technical_retry_respect_daily_quota(monkeypatch):
+    from survival.agents import SETTINGS
+
+    monkeypatch.setitem(SETTINGS, "session_quotas_enabled", True)
     at = utcnow().replace(hour=12)
     risk = definitions()[0]["risk"]
     markets = FixtureProvider(at).collect()
@@ -561,6 +567,25 @@ def test_event_trigger_and_technical_retry_respect_daily_quota():
     assert not should_reason(
         memory, list(markets.values()), at + timedelta(hours=3), risk
     )
+
+
+def test_disabled_daily_quota_does_not_block_saturated_agents(monkeypatch):
+    from survival.agents import SETTINGS
+
+    monkeypatch.setitem(SETTINGS, "session_quotas_enabled", False)
+    at = utcnow().replace(hour=12)
+    markets = list(FixtureProvider(at).collect().values())
+    for agent in definitions():
+        memory = {
+            "day": at.date().isoformat(),
+            "calls": 10000,
+            "last_call": (at - timedelta(hours=7)).isoformat(),
+        }
+        assert should_reason(memory, markets, at, agent["risk"])
+        memory["last_call"] = at.isoformat()
+        assert not should_reason(
+            memory, markets, at + timedelta(minutes=1), agent["risk"]
+        )
 
 
 def test_structured_exit_without_new_llm():

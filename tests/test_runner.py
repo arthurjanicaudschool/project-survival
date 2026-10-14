@@ -107,7 +107,9 @@ def test_provider_outage_has_no_fabricated_activity(setup):
     assert any(e["kind"] == "ERROR" for e in state["events"])
 
 
-def test_reasoning_quota_and_unchanged_signal():
+def test_reasoning_quota_and_unchanged_signal(monkeypatch):
+    from survival.agents import SETTINGS
+    monkeypatch.setitem(SETTINGS, "session_quotas_enabled", True)
     now = utcnow()
     m = FixtureProvider(now).collect()
     a = definitions()[0]

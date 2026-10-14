@@ -81,6 +81,13 @@ def definitions():
             result[-1]["risk"]["small_account_minimum_fraction"] = SETTINGS[
                 "small_account_minimum_fraction"
             ]
+        result[-1]["risk"]["session_quota_enabled"] = SETTINGS.get(
+            "session_quotas_enabled", True
+        )
+        if not result[-1]["risk"]["session_quota_enabled"]:
+            result[-1]["prompt"] += (
+                " Daily session caps are disabled. calls_per_day is an inactive historical cap used only for the periodic discovery cadence; it is not an investment or research restriction."
+            )
     return result
 
 
@@ -88,7 +95,10 @@ def should_reason(memory, markets, now, risk):
     day = now.date().isoformat()
     if memory.get("day") != day:
         memory["day"], memory["calls"] = day, 0
-    if memory.get("calls", 0) >= risk["calls_per_day"]:
+    if (
+        SETTINGS.get("session_quotas_enabled", True)
+        and memory.get("calls", 0) >= risk["calls_per_day"]
+    ):
         return False
     if memory.get("needs_policy_review"):
         return True

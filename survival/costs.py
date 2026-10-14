@@ -74,6 +74,13 @@ def report(state):
     return {
         "measured_since_v2": totals,
         "models": sorted({u["model"] for u in usage if u.get("model")}),
+        "active_policy": {
+            "session_quotas_enabled": SETTINGS.get("session_quotas_enabled", True),
+            "estimated_budget_limits_enabled": SETTINGS.get(
+                "estimated_budget_limits_enabled", True
+            ),
+            "note": "Token counts and price estimates are observational. With controls disabled, the old 504/924-session scenarios are historical comparisons, not active caps or a forecast.",
+        },
         "v5_budget": state.get("health", {}).get("azure_budget"),
         "v5_request_bounds": {
             "normal_requests_per_session": SETTINGS["research_rounds"] + 1,
@@ -87,8 +94,12 @@ def report(state):
                 + SETTINGS["participation"]["retry_calls"]
             )
             * SETTINGS["max_llm_tokens"],
-            "total_limit_eur": SETTINGS["analysis_budget_eur"],
-            "daily_limit_eur": SETTINGS["analysis_daily_budget_eur"],
+            "total_limit_eur": SETTINGS["analysis_budget_eur"]
+            if SETTINGS.get("estimated_budget_limits_enabled", True)
+            else None,
+            "daily_limit_eur": SETTINGS["analysis_daily_budget_eur"]
+            if SETTINGS.get("estimated_budget_limits_enabled", True)
+            else None,
             "sdk_automatic_retries": 0,
             "method": "Each request reserves conservative estimated input/output cost before sending; measured usage replaces the reservation. Failures retain the reservation.",
         },
@@ -96,9 +107,13 @@ def report(state):
             "max_extra_completions_in_one_pending_session": SETTINGS["participation"][
                 "retry_calls"
             ],
-            "max_extra_completions_per_week_if_never_fulfilled": extra,
-            "max_extra_output_tokens_per_week": extra * SETTINGS["max_llm_tokens"],
-            "note": "Only the four participation agents, only before first investment, only if they omit BUY despite executable researched options. No increase to daily session quotas. Baseline scenarios below exclude this bounded correction.",
+            "max_extra_completions_per_week_if_never_fulfilled": extra
+            if SETTINGS.get("session_quotas_enabled", True)
+            else None,
+            "max_extra_output_tokens_per_week": extra * SETTINGS["max_llm_tokens"]
+            if SETTINGS.get("session_quotas_enabled", True)
+            else None,
+            "note": "One correction per pending participation session, only before first investment and for the four dynamic agents. No weekly cap exists with daily quotas disabled. Historical scenarios exclude this correction.",
         },
         "metered_sessions": sessions,
         "user_supplied_eur_rates": pricing,
@@ -126,7 +141,7 @@ def report(state):
             }
             for name, dynamic, standard, rounds in [
                 ("v1", 12, 4, 1),
-                ("v2_current", 12, 4, max_requests),
+                ("historical_capped_12_4", 12, 4, max_requests),
                 ("v2_more_frequent_not_enabled", 24, 6, max_requests),
             ]
         ],

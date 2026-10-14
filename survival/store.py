@@ -150,9 +150,10 @@ class Store:
                 "select coalesce(sum(estimated_eur),0),coalesce(sum(estimated_eur) filter(where created_at >= date_trunc('day',now() at time zone 'UTC') at time zone 'UTC'),0) from llm_meter where experiment_id=%s",
                 (eid,),
             ).fetchone()
-            if total + estimate > D(
-                SETTINGS["analysis_budget_eur"]
-            ) or today + estimate > D(SETTINGS["analysis_daily_budget_eur"]):
+            if SETTINGS.get("estimated_budget_limits_enabled", True) and (
+                total + estimate > D(SETTINGS["analysis_budget_eur"])
+                or today + estimate > D(SETTINGS["analysis_daily_budget_eur"])
+            ):
                 raise ValueError("AZURE_ESTIMATED_BUDGET_REACHED")
             db.execute(
                 "insert into llm_meter(id,experiment_id,agent_id,status,estimated_eur,payload) values(%s,%s,%s,'RESERVED',%s,'{}')",
@@ -180,8 +181,13 @@ class Store:
         return {
             "estimated_eur": str(total),
             "today_estimated_eur": str(today),
-            "total_limit_eur": SETTINGS["analysis_budget_eur"],
-            "daily_limit_eur": SETTINGS["analysis_daily_budget_eur"],
+            "limits_enabled": SETTINGS.get("estimated_budget_limits_enabled", True),
+            "total_limit_eur": SETTINGS["analysis_budget_eur"]
+            if SETTINGS.get("estimated_budget_limits_enabled", True)
+            else None,
+            "daily_limit_eur": SETTINGS["analysis_daily_budget_eur"]
+            if SETTINGS.get("estimated_budget_limits_enabled", True)
+            else None,
             "uncertain_requests_reserved": uncertain,
             "method": "Conservative user-supplied long Data Zone rates incl. highest cache write. Reservations survive failures; historical baseline is estimated. Actual Azure billing is authoritative.",
         }
@@ -235,7 +241,7 @@ class Store:
                 "select count(*) from llm_attempts where experiment_id=%s and agent_id=%s and utc_day=%s",
                 (eid, aid, now.date()),
             ).fetchone()[0]
-            if count >= limit:
+            if limit is not None and count >= limit:
                 return False
             result = quota.execute(
                 "insert into llm_attempts(id,experiment_id,agent_id,utc_day,created_at) values(%s,%s,%s,%s,%s) on conflict(id) do nothing returning id",

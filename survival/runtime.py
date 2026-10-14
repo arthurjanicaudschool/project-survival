@@ -704,7 +704,13 @@ def cycle(store, eid, provider, reasoner, cycle_id=None, now=None):
                         plan = DecisionPlan.model_validate(task["plan"])
                         audit = task.get("audit", {})
                     elif store.reserve_llm(
-                        eid, a["id"], cid, at, a["risk"]["calls_per_day"]
+                        eid,
+                        a["id"],
+                        cid,
+                        at,
+                        a["risk"]["calls_per_day"]
+                        if SETTINGS.get("session_quotas_enabled", True)
+                        else None,
                     ):
                         attempted = True
                         result = reasoner.decide(a, wallet, eligible, analysis_memory)
@@ -726,7 +732,9 @@ def cycle(store, eid, provider, reasoner, cycle_id=None, now=None):
                         plan = None
                         audit = {}
                         a["runtime"] = {
-                            "status": "QUOTA_LIMIT",
+                            "status": "QUOTA_LIMIT"
+                            if SETTINGS.get("session_quotas_enabled", True)
+                            else "SESSION_ALREADY_RESERVED",
                             "at": at.isoformat(),
                             "reason": "Daily session quota or previously reserved session; no duplicate LLM call",
                         }
@@ -944,13 +952,15 @@ def cycle(store, eid, provider, reasoner, cycle_id=None, now=None):
                     if ending
                     else "QUOTA_LIMIT"
                     if provider_ok
+                    and SETTINGS.get("session_quotas_enabled", True)
                     and memory.get("calls", 0) >= a["risk"]["calls_per_day"]
                     else "NOT_DUE"
                     if provider_ok
                     else "PROVIDER_ERROR",
                     "at": at.isoformat(),
                     "reason": "Daily UTC session quota reached; valuation and exits continue"
-                    if memory.get("calls", 0) >= a["risk"]["calls_per_day"]
+                    if SETTINGS.get("session_quotas_enabled", True)
+                    and memory.get("calls", 0) >= a["risk"]["calls_per_day"]
                     else "Interval/event priority; no forced trade",
                 }
             refresh_positions(provider, wallet, local)

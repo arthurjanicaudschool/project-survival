@@ -1,5 +1,14 @@
 # PROJECT SURVIVAL
 
+Politique **survival-v5.4** : à la demande du propriétaire, les plafonds quotidiens
+de sessions et les blocages par estimation financière sont désactivés. Les anciens
+12/4 et 100/20 restent des réglages historiques inactifs ; ils ne bloquent aucun
+appel. Les intervalles de découverte (2 h dynamiques/6 h standards) et événements
+(10/30 min), la mesure des tokens, l'idempotence et les contraintes d'exécution
+réalistes restent actifs. Les crédits consommés peuvent dépasser les anciens
+montants ; les restrictions imposées par les fournisseurs restent applicables.
+Les sections suivantes conservent l'historique v5, à lire avec ce changement.
+
 **10 AI Agents. 7 Days. One Winner.**
 
 Dix portefeuilles indépendants de paper trading, données publiques Polymarket,
