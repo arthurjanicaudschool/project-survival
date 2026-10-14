@@ -77,6 +77,10 @@ def definitions():
                 "Never invent an edge or news to justify participation. Once a first investment fills, WAIT becomes fully discretionary again. "
                 "No fabricated fills, borrowing, unavailable markets or overriding real execution constraints."
             )
+        if i <= 5 and not dynamic:
+            result[-1]["risk"]["small_account_minimum_fraction"] = SETTINGS[
+                "small_account_minimum_fraction"
+            ]
     return result
 
 

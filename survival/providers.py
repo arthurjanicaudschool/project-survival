@@ -552,6 +552,7 @@ class AzureReasoner:
             "Timing semantics: memory.last_call is the PREVIOUS analysis, while session_started_at is this session. "
             "cooldown_hours applies ONLY to a drawdown-triggered pause recorded in memory.paused_until; "
             "it is NOT a mandatory cooldown after every analysis or trade. If paused_until is absent or expired, there is no drawdown pause. "
+            "For small prudent accounts, risk.small_account_minimum_fraction discloses an exception: one real market minimum may exceed the normal position cap up to that fraction. You choose the stake; cash reserve and event-group limits still apply. An observed input/minimum residue has zero immediately liquidatable cash, not necessarily zero economic value. Missing quotes remain unknown. "
             "All required numeric decision fields must be finite numbers. If settlement probability is unknown, use probability_basis=UNESTIMATED, probability=0.5, confidence=0, edge=0. "
             "A strategic PRICE_MOVE BUY is allowed without a settlement estimate when you provide target_price, horizon_hours, max_buy_price and an explicit exit thesis. "
             "Return a DecisionPlan with up to four ordered actions, not a single-decision wrapper. Keep reasoning concise (about 900 characters per action), and use at most one learning review per action. "

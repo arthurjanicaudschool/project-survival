@@ -1,6 +1,6 @@
 # Validation survival-v5 / v5.1 — 14 octobre 2026 (Paris)
 
-- Tests locaux : **79 réussis, 3 ignorés** (deux PostgreSQL opt-in et un réseau).
+- Tests locaux : **82 réussis, 3 ignorés** (deux PostgreSQL opt-in et un réseau).
 - CI du lot principal : **73 réussis, 1 ignoré**, PostgreSQL 17 inclus, avec restauration JSON/CSV dans une base différente : [38486527258](https://github.com/arthurjanicaudschool/project-survival/actions/runs/38486527258).
 - Build TypeScript/Vite local et Cloudflare Pages réussis ; [dashboard public](https://project-survival.pages.dev/).
 - Cinq tests Node du secours Cloudflare réussis, également ajoutés à la CI.

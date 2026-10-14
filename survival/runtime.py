@@ -31,6 +31,28 @@ def archived_market(m, held=False):
     return data
 
 
+def archive_held_observations(store, state, agent, wallet, markets, cid, at):
+    for mid in {p.market_id for p in wallet.positions.values() if p.quantity > 0}:
+        m = markets.get(mid)
+        if not m:
+            continue
+        data = archived_market(m, True)
+        digest = hashlib.sha256(json.dumps(data, sort_keys=True).encode()).hexdigest()[
+            :16
+        ]
+        sid = f"{state['id']}:{cid}:held:{agent['id']}:{mid}:{digest}"
+        if not store.audit_exists("market_snapshots", sid):
+            store.record(
+                "market_snapshots",
+                id=sid,
+                experiment_id=state["id"],
+                cycle_id=cid,
+                market_id=mid,
+                created_at=at.isoformat(),
+                payload=data,
+            )
+
+
 def snapshot(a, markets, at, fx, max_age=None, history=()):
     wallet = Wallet.model_validate(a["wallet"])
     v = valuation(wallet, markets, at, max_age or SETTINGS["max_age_seconds"])
@@ -536,6 +558,14 @@ def cycle(store, eid, provider, reasoner, cycle_id=None, now=None):
             state["agents"], key=lambda a: a["memory"].get("last_call", "")
         )
         for a in agent_order:
+            if (
+                a["initial_eur"] == "10"
+                and a["risk"].get("prudence_enabled", True)
+                and not a["dynamic"]
+            ):
+                a["risk"]["small_account_minimum_fraction"] = SETTINGS[
+                    "small_account_minimum_fraction"
+                ]
             if a["id"] in state["inflight"]["completed_agents"]:
                 continue
             at = clock(state, now)
@@ -569,6 +599,8 @@ def cycle(store, eid, provider, reasoner, cycle_id=None, now=None):
             if ending:
                 exits = []
             with store.locked(eid):
+                if hasattr(provider, "refresh"):
+                    archive_held_observations(store, state, a, wallet, local, cid, at)
                 if a["id"] not in state["inflight"].get("prepared_agents", []):
                     settlements(
                         store,
@@ -919,6 +951,10 @@ def cycle(store, eid, provider, reasoner, cycle_id=None, now=None):
             refresh_positions(provider, wallet, local)
             markets.update(local)
             with store.locked(eid):
+                if hasattr(provider, "refresh"):
+                    archive_held_observations(
+                        store, state, a, wallet, local, cid, clock(state, now)
+                    )
                 settlements(
                     store,
                     state,

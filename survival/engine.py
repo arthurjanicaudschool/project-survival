@@ -53,7 +53,7 @@ def execute(
         if requested_quantity is not None
         else min(quantity_cap, budget / best)
         if quantity_cap is not None
-        else budget
+        else (budget + D(".000005") if side == "BUY" else budget)
         / (
             best
             + (
@@ -87,7 +87,10 @@ def execute(
             if side == "BUY"
             else level.price
         )
-        q = min(level.size, remaining / unit)
+        q = min(
+            level.size,
+            (remaining + D(".000005") if side == "BUY" else remaining) / unit,
+        )
         if cap is not None:
             q = min(q, cap)
         q = q.quantize(quantum, rounding=ROUND_DOWN)

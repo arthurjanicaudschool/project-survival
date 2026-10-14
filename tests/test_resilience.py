@@ -59,6 +59,37 @@ def test_fak_can_partially_match_below_submitted_minimum():
     assert e.status == "PARTIAL" and e.quantity == 2 and e.quantity < b.minimum
 
 
+def test_exact_minimum_budget_uses_rounded_fee_not_false_rejection():
+    from survival.engine import fee
+
+    at = utcnow()
+    b = next(iter(FixtureProvider(at).collect().values())).books["YES"]
+    b.asks = [Level(price=".33", size=100)]
+    b.fee_rate = D(".049998")
+    budget = b.minimum * D(".33") + fee(b.minimum, D(".33"), b)
+    e = execute(b, "BUY", budget, at)
+    assert e.quantity == b.minimum and e.gross + e.fees == budget
+
+
+def test_small_prudent_minimum_exception_is_visible_and_not_a_forced_stake():
+    at = utcnow()
+    a = definitions()[2]
+    w = Wallet(initial=10, cash=10)
+    markets = FixtureProvider(at).collect()
+    m = next(iter(markets.values()))
+    m.books["YES"].asks = [Level(price=".8", size=100)]
+    d = FixtureReasoner().decide(a, w, markets, {})
+    d.proposed_stake = D("4.04")
+    e, reason, _ = authorize(a, w, d, markets, at, {})
+    assert (
+        not reason
+        and e.quantity == 5
+        and a["risk"]["small_account_minimum_fraction"] == "0.45"
+    )
+    d.proposed_stake = D(2)
+    assert authorize(a, w, d, markets, at, {})[1] == "BELOW_MARKET_MINIMUM"
+
+
 def test_agent_price_bound_and_quantity_close():
     at = utcnow()
     a = definitions()[0]
@@ -539,4 +570,28 @@ def test_deadline_crossed_between_plan_actions_stops_remaining_trades(
     state = cycle(s, "test", FixtureProvider(at), Plan(), "cutoff", at)
     assert sum(a["stats"]["trades"] for a in state["agents"]) == 1
     assert any(e["kind"] == "DEADLINE_CUTOFF" for e in state["events"])
+    s.close()
+
+
+def test_held_observation_is_archived_before_closing_valuation(tmp_path):
+    at = utcnow()
+    end = at + timedelta(hours=168)
+    s = Store(demo_path=tmp_path / "held-observation.sqlite")
+    state = initialize(s, "test", "demo", {"usd_per_eur": "1.1"}, at)
+    mid = "fixture-weather"
+    state["agents"][0]["wallet"]["positions"][mid + ":YES"] = Position(
+        market_id=mid, outcome="YES", quantity=6, cost=0
+    ).model_dump(mode="json")
+    s.save(state, projection(state))
+
+    class Provider(FixtureProvider):
+        def refresh(self, m, outcome):
+            m.books[outcome].observed_at = end - timedelta(seconds=30)
+
+    class NoLLM:
+        def decide(self, *args):
+            raise AssertionError("No decision after deadline")
+
+    state = cycle(s, "test", Provider(at), NoLLM(), "archive-held", end)
+    assert state["status"] == "FINISHED" and state["agents"][0]["snapshot"]["complete"]
     s.close()
