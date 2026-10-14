@@ -144,6 +144,30 @@ def test_pagination_keeps_all_markets_in_flattened_page():
     assert found == [str(i) for i in range(135)]
 
 
+def test_model_summary_preserves_search_cursor_and_all_ids():
+    from survival.providers import compact_tool
+
+    raw = {
+        "markets": [
+            {
+                "id": str(i),
+                "question": "q" * 900,
+                "slug": "s" * 200,
+                "end_at": None,
+                "liquidity": "1000",
+                "volume_24h": "2",
+            }
+            for i in range(60)
+        ],
+        "next_cursor": "opaque",
+    }
+    result = compact_tool(raw)
+    assert result["next_cursor"] == "opaque" and [
+        m["id"] for m in result["markets"]
+    ] == [str(i) for i in range(60)]
+    assert len(json.dumps(result)) < 22000
+
+
 def test_strict_schema_requires_nullable_fields_and_no_extra_properties():
     def walk(node):
         if isinstance(node, dict):

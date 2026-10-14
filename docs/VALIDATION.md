@@ -1,3 +1,26 @@
+# Validation survival-v5 / v5.1 — 14 octobre 2026 (Paris)
+
+- Tests locaux : **72 réussis, 3 ignorés** (deux PostgreSQL opt-in et un réseau).
+- CI du lot principal : **73 réussis, 1 ignoré**, PostgreSQL 17 inclus, avec restauration JSON/CSV dans une base différente : [38486527258](https://github.com/arthurjanicaudschool/project-survival/actions/runs/38486527258).
+- Build TypeScript/Vite local et Cloudflare Pages réussis ; [dashboard public](https://project-survival.pages.dev/).
+- Cinq tests Node du secours Cloudflare réussis, également ajoutés à la CI.
+- Requête réelle Azure Responses : modèle gpt-6.1-sol, schéma strict DecisionPlan accepté et validé ; 882 tokens en entrée, 224 en sortie. Aucun ordre issu de ce test.
+- Coinbase/BLS/NOAA : réponses structurées obtenues localement. XTracker : erreur TLS de nom d'hôte locale explicitement signalée. Aucune vérification TLS désactivée.
+- Migration 003 appliquée après sauvegarde ; compte de cycle survival_runner vérifié, sans UPDATE du ledger ni CREATE sur public ; secret GitHub remplacé par ce compte limité.
+- Export distant exécuté : [38486890643](https://github.com/arthurjanicaudschool/project-survival/actions/runs/38486890643), artifact disponible 14 jours. Export local complet également sauvegardé hors Git.
+- Worker project-survival-watchdog déployé, cron */5 confirmé. Véritable événement planifié du 13 octobre à 23:55 UTC observé en direct : outcome=ok, scheduler_checked/FRESH, moteur actualisé 26 secondes auparavant. Aucun déclenchement inutile.
+
+Le premier passage réel a révélé un contrôle de contexte trop strict : l'enveloppe
+chiffrée du raisonnement était comptée comme du texte de preuves. L'exécution a été
+interrompue, le contrôle corrigé et une régression ajoutée (v5.1). Les réservations
+de coût restent conservées ; aucun solde ou historique n'a été effacé. Les résultats
+des cycles réels après cette correction sont documentés dans les preuves de livraison.
+
+Les validations du 12 octobre ci-dessous restent des observations historiques,
+pas une description des accès ni des règles courantes.
+
+---
+
 # Vérifications effectuées
 
 Exécution locale le 12 octobre 2026, Python 3.12.10 et Node 24.19.0.

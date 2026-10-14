@@ -51,8 +51,21 @@ def strict_schema():
 
 def compact_tool(result):
     result = __import__("copy").deepcopy(result)
+    if result.get("markets"):
+        result["markets"] = [
+            {
+                "id": m["id"],
+                "question": m["question"][:180],
+                "end_at": m.get("end_at"),
+                "liquidity": m.get("liquidity"),
+            }
+            for m in result["markets"]
+        ]
     if result.get("market"):
         m = result["market"]
+        if len(m.get("description", "")) > 12000:
+            m["description"] = m["description"][:12000]
+            m["description_truncated"] = True
         for b in m.get("books", {}).values():
             b["asks"] = b["asks"][:5]
             b["bids"] = b["bids"][:5]
@@ -468,6 +481,10 @@ class AzureReasoner:
             "Use memory.learning.relevant_outcomes as well as recent_outcomes; cite applied_lesson_ids only from memory.learning.reviews[].id. Explicitly compare your thesis with the cash-preservation benchmark, and distinguish conditional price-move scenarios from calibrated forecasts. "
             "The target price is your scenario, not a guaranteed forecast. Finish with exactly one JSON object matching DecisionPlan."
         )
+        held_ids = {p.market_id for p in wallet.positions.values() if p.quantity > 0}
+        watched = sorted(markets.values(), key=lambda m: m.id not in held_ids)[
+            : SETTINGS["max_markets"]
+        ]
         overview = [
             {
                 "id": m.id,
@@ -494,7 +511,7 @@ class AzureReasoner:
                     for o, f in m.features.items()
                 },
             }
-            for m in markets.values()
+            for m in watched
         ]
         messages = [
             {"role": "system", "content": agent["prompt"] + "\n" + contract},
