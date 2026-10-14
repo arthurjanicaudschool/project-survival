@@ -8,6 +8,123 @@ from survival.fixtures import FixtureProvider, FixtureReasoner
 
 
 @pytest.mark.parametrize(
+    "price,yes,no",
+    [
+        ("0", "0", "1"),
+        ("500000000000000000", ".5", ".5"),
+        ("1000000000000000000", "1", "0"),
+    ],
+)
+def test_legacy_final_oracle_resolution_without_v2_payout_fields(price, yes, no):
+    from survival.models import Position
+    from survival.engine import settle
+
+    provider = Polymarket.__new__(Polymarket)
+    provider.errors = []
+    row = NS(
+        status="resolved",
+        condition_id="condition",
+        payouts=None,
+        resolved_at=None,
+        price=D(price),
+        transaction_hash="0xofficial-resolution",
+    )
+
+    def resolutions(**kwargs):
+        assert kwargs == {"condition_ids": "condition"}
+        return [row]
+
+    provider.client = NS(get_resolutions=resolutions)
+    m = NS(
+        id="legacy",
+        version="v1",
+        slug="legacy",
+        question="Q",
+        description="Rules",
+        condition_id="condition",
+        events=[],
+        category="Tech",
+        tags=[],
+        metrics=NS(liquidity=0, volume_24hr=0),
+        state=NS(active=True, closed=True, accepting_orders=False, end_date=utcnow()),
+        resolution=NS(
+            source="", question_id="question", uma_resolution_status="resolved"
+        ),
+        outcomes=NS(
+            yes=NS(token_id="yes", price=D(yes)), no=NS(token_id="no", price=D(no))
+        ),
+    )
+    before = utcnow()
+    market = provider.normalize(m, include_history=False)
+    assert market.resolved and not market.active
+    assert market.payouts == {"YES": D(yes), "NO": D(no)}
+    assert before <= market.resolved_at <= utcnow()
+    assert "observed" in market.resolution_evidence["timestamp_basis"]
+    wallet = Wallet(
+        initial=10,
+        cash=9,
+        positions={
+            "legacy:NO": Position(market_id="legacy", outcome="NO", quantity=2, cost=1)
+        },
+    )
+    settle(wallet, market)
+    assert wallet.cash == 9 + 2 * D(no)
+    previous = wallet.cash
+    settle(wallet, market)
+    assert wallet.cash == previous  # no duplicate settlement
+
+
+@pytest.mark.parametrize(
+    "status,condition,price,gamma_yes",
+    [
+        ("proposed", "condition", "1000000000000000000", "1"),
+        ("resolved", "wrong", "1000000000000000000", "1"),
+        ("resolved", "condition", "123", "1"),
+        ("resolved", "condition", "1000000000000000000", ".9"),
+    ],
+)
+def test_legacy_resolution_rejects_nonfinal_mismatched_or_uncorroborated_records(
+    status, condition, price, gamma_yes
+):
+    provider = Polymarket.__new__(Polymarket)
+    provider.errors = []
+    row = NS(
+        status=status,
+        condition_id=condition,
+        payouts=None,
+        resolved_at=None,
+        price=D(price),
+        transaction_hash="tx",
+    )
+
+    def missing_book(**kwargs):
+        raise ValueError("No book")
+
+    provider.client = NS(
+        get_resolutions=lambda **kwargs: [row], get_order_book=missing_book
+    )
+    m = NS(
+        id="legacy",
+        version="v1",
+        slug="legacy",
+        question="Q",
+        description="Rules",
+        condition_id="condition",
+        events=[],
+        category="Tech",
+        tags=[],
+        metrics=NS(liquidity=0, volume_24hr=0),
+        state=NS(active=True, closed=True, accepting_orders=False, end_date=utcnow()),
+        resolution=NS(source="", question_id="q", uma_resolution_status="resolved"),
+        outcomes=NS(
+            yes=NS(token_id="yes", price=D(gamma_yes)), no=NS(token_id="no", price=D(0))
+        ),
+        trading=NS(fees_enabled=False, seconds_delay=0),
+    )
+    assert not provider.normalize(m, include_history=False).resolved
+
+
+@pytest.mark.parametrize(
     "version,expected", [("v1", "token-yes"), ("v2", "position-yes")]
 )
 def test_protocol_identifiers_and_fee_metadata(version, expected, monkeypatch):

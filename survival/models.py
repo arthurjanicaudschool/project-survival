@@ -55,6 +55,7 @@ class Market(Model):
     features: dict = Field(default_factory=dict)
     category_source: str = "unknown"
     resolved_at: datetime | None = None
+    resolution_evidence: dict = Field(default_factory=dict)
     seconds_delay: int = 0
 
 

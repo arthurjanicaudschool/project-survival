@@ -400,6 +400,11 @@ function Overview({
   const total = state.agents.reduce((s, a) => s + nav(a), 0),
     initial = state.agents.reduce((s, a) => s + Number(a.initial_eur), 0),
     ranked = rank(state.agents).filter(known);
+  const incomplete = state.agents.filter(a => !known(a));
+  const cash = state.agents.reduce((sum, a) => sum + Number(a.wallet.cash), 0) / Number(state.fx.usd_per_eur);
+  const lower = state.agents.reduce((sum, a) => sum + (known(a) ? nav(a) : Number(a.snapshot?.nav_lower_bound_eur ?? Number(a.wallet.cash) / Number(state.fx.usd_per_eur))), 0);
+  const upper = state.agents.reduce((sum, a) => sum + (known(a) ? nav(a) : a.snapshot?.nav_upper_bound_eur == null ? NaN : Number(a.snapshot.nav_upper_bound_eur)), 0);
+  const partial = incomplete.length > 0;
   const consolidated = state.history.map((p) => ({
     at: p.at,
     value: state.agents.some(a => (p[a.id] as Snapshot)?.nav_eur === null) ? null : state.agents.reduce(
@@ -419,21 +424,21 @@ function Overview({
       </div>
       <div className="kpi-grid">
         <Kpi
-          label="VALEUR TOTALE"
-          value={euro(total)}
-          sub={`${euro(initial)} de capital initial fictif`}
+          label={partial ? "VALEUR CONNUE AU MINIMUM" : "VALEUR TOTALE"}
+          value={euro(partial ? lower : total)}
+          sub={partial ? `Total exact à confirmer${Number.isFinite(upper) ? ` · borne haute ${euro(upper)}` : ""}` : `${euro(initial)} de capital initial fictif`}
         />
         <Kpi
           label="BÉNÉFICE NET"
-          value={euro(total - initial)}
-          sub="Frais et spread inclus"
-          positive={total >= initial}
+          value={partial ? "À confirmer" : euro(total - initial)}
+          sub={partial ? Number.isFinite(upper) ? `Fourchette : ${euro(lower - initial)} à ${euro(upper - initial)}` : "Une position reste à valoriser" : "Frais et spread inclus"}
+          positive={partial ? undefined : total >= initial}
         />
         <Kpi
           label="ROI CONSOLIDÉ"
-          value={pct(total / initial - 1)}
-          sub="Conversion EUR figée au lancement"
-          positive={total >= initial}
+          value={partial ? "À confirmer" : pct(total / initial - 1)}
+          sub={partial ? Number.isFinite(upper) ? `Fourchette : ${pct(lower / initial - 1)} à ${pct(upper / initial - 1)}` : "ROI exact en attente de cotation" : "Conversion EUR figée au lancement"}
+          positive={partial ? undefined : total >= initial}
         />
         <Kpi
           label="AGENTS EN COMPÉTITION"
@@ -442,9 +447,14 @@ function Overview({
         />
       </div>
       <section className="panel padded">
+        <h2>Cash disponible : {euro(cash)}</h2>
+        <p>Solde liquide fictif des dix agents · capital initial {euro(initial)} · conversion EUR figée au lancement.</p>
+        {partial && <p className="warning">{incomplete.length} portefeuille(s) ont une position sans cotation ou résultat confirmé : {incomplete.map(a => `${a.id} ${a.name}`).join(", ")}. Le cash reste connu. La valeur minimale ci-dessus additionne le cash et les positions valorisables ; elle ne suppose pas que la position manquante vaut zéro.</p>}
+      </section>
+      <section className="panel padded">
         <h2>État du moteur et preuves de fonctionnement</h2>
         {state.inflight && <p className="warning">Cycle en cours · {state.inflight.completed_agents.length}/10 agents terminés · {state.inflight.current_agent || "préparation"}. Les opérations déjà sauvegardées sont récupérables après interruption.</p>}
-        {state.agents.some(a => !known(a)) && <p className="warning" role="alert">Valorisation incomplète : les agents concernés ne sont pas classés et le résultat consolidé est indéterminé. Une borne basse n'est pas une perte constatée.</p>}
+        {partial && <p className="warning" role="alert">Le total exact attend la valorisation de {incomplete.map(a => a.id).join(", ")}. Ces agents ne sont pas classés. Leur solde liquide et les bornes connues restent affichés.</p>}
         <p className="subtle">Référence cash : ROI 0 %. Les achats d'exploration restent séparés des achats stratégiques. Les règles ont évolué pendant cette expérience ; toute comparaison de stratégies reste exploratoire.</p>
           {state.agents.some(a => a.participation?.required) && <div>
             <h3>Participation HUNTER / SPRINTER</h3>
@@ -484,9 +494,9 @@ function Overview({
             <span className="chart-tag">7 JOURS</span>
           </div>
           <div className="aggregate-value">
-            {euro(total)}{" "}
-            <span className={total >= initial ? "positive" : "negative"}>
-              {pct(total / initial - 1)} <ArrowUpRight size={15} />
+            {euro(partial ? lower : total)}{" "}
+            <span className={partial ? "subtle" : total >= initial ? "positive" : "negative"}>
+              {partial ? "minimum connu · courbe exacte interrompue si cotation manquante" : pct(total / initial - 1)} {!partial && <ArrowUpRight size={15} />}
             </span>
           </div>
           <ResponsiveContainer width="100%" height={225}>

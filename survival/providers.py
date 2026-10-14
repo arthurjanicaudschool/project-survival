@@ -432,13 +432,21 @@ class Polymarket:
             rows = (
                 retry(
                     lambda: self.client.get_resolutions(
-                        question_id=m.resolution.question_id
+                        **(
+                            {"condition_ids": market.condition_id}
+                            if market.condition_id
+                            else {"question_id": m.resolution.question_id}
+                        )
                     )
                 )
-                if m.resolution.question_id
+                if market.condition_id or m.resolution.question_id
                 else ()
             )
             for row in rows:
+                if str(getattr(row, "status", "")) != "resolved":
+                    continue
+                if row.condition_id and str(row.condition_id) != market.condition_id:
+                    continue
                 if (
                     row.payouts
                     and row.resolved_at
@@ -451,6 +459,44 @@ class Polymarket:
                         market.resolved = True
                         market.payouts = {"YES": row.payouts[0], "NO": row.payouts[1]}
                         market.resolved_at = row.resolved_at
+                        market.active = False
+                        market.resolution_evidence = {
+                            "method": "official payout vector",
+                            "timestamp_basis": "official resolved_at",
+                        }
+                        return market
+                # Legacy UMA resolutions expose an 18-decimal settled oracle
+                # price, not the v2 payout vector or resolved_at. Confirm final
+                # status and corroborate both Gamma outcome prices. Never use
+                # last-trade prices or a merely closed/proposed market alone.
+                price = getattr(row, "price", None)
+                if (
+                    version == "v1"
+                    and price is not None
+                    and str(m.resolution.uma_resolution_status) == "resolved"
+                ):
+                    payouts = {
+                        D(0): (D(0), D(1)),
+                        D("500000000000000000"): (D(".5"), D(".5")),
+                        D("1000000000000000000"): (D(1), D(0)),
+                    }.get(D(str(price)))
+                    if (
+                        payouts
+                        and getattr(row, "transaction_hash", None)
+                        and (m.outcomes.yes.price, m.outcomes.no.price) == payouts
+                    ):
+                        market.resolved = True
+                        market.active = False
+                        market.payouts = dict(zip(("YES", "NO"), payouts))
+                        market.resolved_at = row.resolved_at or utcnow()
+                        market.resolution_evidence = {
+                            "method": "final UMA v1 oracle price corroborated by Gamma outcomes",
+                            "oracle_price": str(price),
+                            "transaction_hash": str(row.transaction_hash),
+                            "timestamp_basis": "official resolved_at"
+                            if row.resolved_at
+                            else "UTC when final resolution was observed; not the chain settlement timestamp",
+                        }
                         return market
         trading = m.trading
         if trading.fees_enabled is False:
