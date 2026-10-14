@@ -321,6 +321,14 @@ class Store:
                 (eid, json.dumps(state)),
             )
             return
+        # These writes have no intermediate result dependencies. Flush them as
+        # one protocol batch inside the caller's existing financial transaction,
+        # rather than paying a network round trip for every unchanged market.
+        with self.db.pipeline():
+            self._save_postgres(state, projection)
+
+    def _save_postgres(self, state, projection):
+        eid = state["id"]
         self.db.execute(
             """insert into experiments(id,mode,status,started_at,end_at,state,updated_at)
             values(%s,%s,%s,%s,%s,%s,%s) on conflict(id) do update set status=excluded.status,state=excluded.state,updated_at=excluded.updated_at""",
