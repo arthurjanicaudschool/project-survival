@@ -1,7 +1,7 @@
 # Validation survival-v5.3 — 14 octobre 2026 (Paris)
 
-- Tests locaux : **87 réussis, 3 ignorés** (deux PostgreSQL opt-in et un réseau).
-- Dernière CI du code : **89 réussis, 1 ignoré**, PostgreSQL 17 inclus, avec restauration JSON/CSV dans une base différente : [38496465359](https://github.com/arthurjanicaudschool/project-survival/actions/runs/38496465359), commit `d99ec53`.
+- Tests locaux : **88 réussis, 3 ignorés** (deux PostgreSQL opt-in et un réseau).
+- Dernière CI du code : **90 réussis, 1 ignoré**, PostgreSQL 17 inclus, avec restauration JSON/CSV dans une base différente : [38497875877](https://github.com/arthurjanicaudschool/project-survival/actions/runs/38497875877), commit `e6b5374`.
 - Build TypeScript/Vite local et Cloudflare Pages réussis ; [dashboard public](https://project-survival.pages.dev/).
 - Cinq tests Node du secours Cloudflare réussis, également ajoutés à la CI.
 - Requête réelle Azure Responses : modèle gpt-6.1-sol, schéma strict DecisionPlan accepté et validé ; 882 tokens en entrée, 224 en sortie. Aucun ordre issu de ce test.
@@ -29,6 +29,18 @@ respectivement 7/14/9 outils et des maxima de 59 639 / 59 267 / 59 019 caractèr
 L'encodage Unicode évite l'inflation des échappements tout en conservant les textes.
 Ces replays utilisent un modèle simulé, sans appels Azure ni écritures financières ;
 ils ne sont pas présentés comme de nouvelles décisions réelles.
+Une recherche A1 encore plus longue a été rejouée après ajout d'un dernier
+compactage des suggestions initiales et du cache de prix anciens : 10 outils,
+maximum 59 848 caractères. Portefeuille, risques, leçons et preuves des marchés
+inspectés conservés. Les deux autres replays passent également (14 et 9 outils).
+Nouvelle analyse réelle A7 réussie le 14 octobre à 01:44:23 UTC ; WAIT documenté,
+trois candidats inspectés. A5 avait atteint son quota quotidien lors de l'échec.
+Nouvelle analyse réelle A1 réussie à 01:51:05 UTC sur le correctif `e072ef2` : trois
+marchés inspectés, deux pages lisibles, une source structurée, WAIT justifié.
+Écritures PostgreSQL désormais en pipeline dans la transaction financière existante,
+validées par la CI PostgreSQL du commit `e6b5374`. Mesure en lecture seule de 80 SELECT :
+6,068 s séparément contre 0,127 s en pipeline ; pas de prétention de gain identique
+sur le temps d'un cycle complet.
 
 Les validations du 12 octobre ci-dessous restent des observations historiques,
 pas une description des accès ni des règles courantes.

@@ -26,9 +26,10 @@ les quatre dynamiques peuvent à nouveau choisir WAIT sans achat forcé.
 
 | Vérification | Observation |
 |---|---|
-| Tests locaux du dernier code | 87 réussis, 3 ignorés : PostgreSQL opt-in ×2, réseau public opt-in ×1 |
-| [CI d99ec53](https://github.com/arthurjanicaudschool/project-survival/actions/runs/38496465359) | 89 tests Python réussis, 1 réseau ignoré ; PostgreSQL 17 réel jetable ; 5 tests Node réussis |
+| Tests locaux du dernier code | 88 réussis, 3 ignorés : PostgreSQL opt-in ×2, réseau public opt-in ×1 |
+| [CI e6b5374](https://github.com/arthurjanicaudschool/project-survival/actions/runs/38497875877) | 90 tests Python réussis, 1 réseau ignoré ; PostgreSQL 17 réel jetable ; 5 tests Node réussis |
 | Persistance et récupération | Transactions courtes, verrou concurrent, idempotence et restauration JSON/CSV testés dans PostgreSQL |
+| Latence SQL | Contrôle en lecture seule : 80 SELECT, 6,068 s séparément contre 0,127 s en pipeline ; écritures d'état regroupées dans la transaction existante. Ce n'est pas un benchmark de cycle complet |
 | Base opérationnelle | Migration 003 appliquée ; rôle limité ; journal append-only ; dix cash réconciliés avec les écritures |
 | Accès public | Projection lisible ; ledger, sessions et compteur LLM refusés avec la clé publique |
 | Azure réel | Les dix agents ont terminé des analyses indépendantes avec les nouveaux outils ; réponses strictes validées |
@@ -55,6 +56,13 @@ replays A1/A5/A7 passent avec 7/14/9 outils. Leurs anciennes erreurs restent dan
 le journal. Une analyse réelle réussie est nécessaire pour effacer l'alerte de
 dernière analyse ; A5 avait déjà consommé ses quatre sessions UTC lors de l'échec.
 Les quotas ne sont pas effacés pour obtenir artificiellement un état vert.
+Un nouveau cas A1 (10 outils) passe après compactage ultime des suggestions
+initiales et anciens prix de signal, sans suppression des contraintes ou des
+preuves des marchés inspectés. A7 a ensuite terminé une nouvelle analyse réelle
+le 14 octobre à 01:44:23 UTC : WAIT justifié après trois candidats inspectés.
+A1 a également terminé sa reprise réelle à 01:51:05 UTC : trois marchés inspectés,
+deux pages lisibles, une source structurée, WAIT justifié. Seule l'ancienne erreur
+d'analyse A5 attend encore sa reprise après renouvellement de son quota quotidien.
 
 ## Crédits et fréquence
 
