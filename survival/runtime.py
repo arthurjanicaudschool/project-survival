@@ -47,6 +47,7 @@ def snapshot(a, markets, at, fx, max_age=None):
         realized=str(wallet.realized),
         nav_eur=str(nav / fx) if nav is not None else None,
         nav_lower_bound_eur=str(D(v["nav_lower_bound"]) / fx),
+        nav_upper_bound_eur=str(D(v["nav_upper_bound"]) / fx),
         unrealized=str(nav - wallet.cash - D(v["invested_cost"]))
         if nav is not None
         else None,
@@ -401,7 +402,11 @@ def cycle(store, eid, provider, reasoner, cycle_id=None, now=None):
             or isinstance(reasoner, FixtureReasoner)
         ):
             raise ValueError("Synthetic provider forbidden in live mode")
-        if state["status"] == "FINISHED" or requested_id in state["cycles"]:
+        if (
+            state["status"] == "FINISHED"
+            or requested_id in state["cycles"]
+            or requested_id in state.get("completed_request_ids", [])
+        ):
             return state
         cid = state.get("inflight", {}).get("id", requested_id)
         if store.quota_usage()["database_bytes"] >= SETTINGS["max_database_bytes"]:
@@ -456,6 +461,7 @@ def cycle(store, eid, provider, reasoner, cycle_id=None, now=None):
                     "id": cid,
                     "started_at": started.isoformat(),
                     "completed_agents": [],
+                    "request_ids": [requested_id],
                 }
                 store.record(
                     "cycles", experiment_id=eid, id=cid, created_at=now.isoformat()
@@ -467,6 +473,8 @@ def cycle(store, eid, provider, reasoner, cycle_id=None, now=None):
                     "Resumable cycle started",
                     details={"cycle_id": cid},
                 )
+            if requested_id not in state["inflight"].setdefault("request_ids", []):
+                state["inflight"]["request_ids"].append(requested_id)
             revision = hashlib.sha256(
                 json.dumps(SETTINGS, sort_keys=True).encode()
             ).hexdigest()[:12]
@@ -946,6 +954,11 @@ def cycle(store, eid, provider, reasoner, cycle_id=None, now=None):
                 k: v.model_dump(mode="json") for k, v in markets.items()
             }
             state["cycles"].append(cid)
+            state.setdefault("completed_request_ids", []).extend(
+                x
+                for x in state["inflight"].get("request_ids", [requested_id])
+                if x not in state.get("completed_request_ids", [])
+            )
             state.pop("inflight", None)
             state["updated_at"] = utcnow().isoformat()
             if provider_ok:

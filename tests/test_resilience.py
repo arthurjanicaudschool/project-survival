@@ -249,6 +249,62 @@ def test_context_compaction_preserves_json_and_cursor():
     assert result["next_cursor"] == "opaque" and len(result["markets"]) == 60
 
 
+def test_catalogue_features_compact_before_aborting_final_decision():
+    body = {
+        "initial_watchlist_not_a_whitelist": [
+            {
+                "id": str(i),
+                "question": "Q",
+                "features": {
+                    "YES": {
+                        "ask": ".4",
+                        "minimum_entry_cost": "2",
+                        "momentum_absolute": "x" * 700,
+                    }
+                },
+            }
+            for i in range(24)
+        ],
+        "portfolio": {"cash": "10"},
+    }
+    messages = [
+        {"role": "user", "content": json.dumps(body)},
+        {
+            "type": "function_call_output",
+            "output": json.dumps(
+                {
+                    "excerpt": "words " * 1000,
+                    "url": "https://example.org",
+                    "quality": "READABLE",
+                }
+            ),
+        },
+    ]
+    compact_transcript(messages, 7000)
+    reduced = json.loads(messages[0]["content"])
+    assert [m["id"] for m in reduced["initial_watchlist_not_a_whitelist"]] == [
+        str(i) for i in range(24)
+    ]
+    assert reduced["portfolio"]["cash"] == "10"
+
+
+def test_valuation_bounds_only_include_remaining_unsellable_quantity():
+    at = utcnow()
+    m = next(iter(FixtureProvider(at).collect().values()))
+    wallet = Wallet(
+        initial=10,
+        cash=7,
+        positions={
+            m.id + ":YES": Position(
+                market_id=m.id, outcome="YES", quantity=D("6.001"), cost=3
+            )
+        },
+    )
+    result = valuation(wallet, {m.id: m}, at)
+    assert D(result["nav_upper_bound"]) - D(result["nav_lower_bound"]) == D(".001")
+    assert result["valuation_details"][0]["reason"] == "INPUT_PRECISION_DUST"
+
+
 def test_opaque_reasoning_envelope_does_not_consume_visible_evidence_budget():
     messages = [
         {"role": "user", "content": "Evidence"},
@@ -336,6 +392,9 @@ def test_cached_decision_survives_financial_crash_without_second_llm(tmp_path):
     store.record = original
     state = cycle(store, "test", FixtureProvider(at), Count(), "retry", at)
     assert calls.count("A1") == 1 and state["cycles"] == ["first"]
+    count = store.db.execute("select count(*) from audit").fetchone()[0]
+    assert cycle(store, "test", FixtureProvider(at), Count(), "retry", at) == state
+    assert store.db.execute("select count(*) from audit").fetchone()[0] == count
     for a in state["agents"]:
         store.assert_wallet("test", a["id"], Wallet.model_validate(a["wallet"]))
     store.close()

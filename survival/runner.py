@@ -89,7 +89,9 @@ def event(store, state, kind, message, aid=None, details=None):
 
 
 def projection(state):
-    result = {k: v for k, v in state.items() if k not in ("cycles",)}
+    result = {
+        k: v for k, v in state.items() if k not in ("cycles", "completed_request_ids")
+    }
     # Full evidence remains in PostgreSQL and exports. A bounded public view
     # prevents each Realtime refresh from downloading all depth and history.
     from .providers import compact_tool

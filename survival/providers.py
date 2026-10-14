@@ -168,6 +168,48 @@ def compact_transcript(messages, limit):
                     "compacted": True
                 }
             old["output"] = json.dumps(value, default=str)
+    # The catalogue is a starting point, not authoritative execution evidence.
+    # Once inspected markets are present, its duplicated feature matrix may be
+    # compressed without losing IDs, sources, exact quotes or chosen books.
+    if size() > limit:
+        for old in messages:
+            if old.get("role") != "user" or not isinstance(old.get("content"), str):
+                continue
+            try:
+                body = json.loads(old["content"])
+            except (ValueError, TypeError):
+                continue
+            if (
+                not isinstance(body, dict)
+                or "initial_watchlist_not_a_whitelist" not in body
+            ):
+                continue
+            for m in body["initial_watchlist_not_a_whitelist"]:
+                if "features" in m:
+                    m["features"] = {
+                        o: {
+                            k: v
+                            for k, v in f.items()
+                            if k in ("ask", "minimum_entry_cost")
+                        }
+                        for o, f in m["features"].items()
+                    }
+            body["catalogue_compacted"] = (
+                "Initial features summarized; inspect get_market for complete rules, indicators and executable books. All starting market IDs retained."
+            )
+            old["content"] = json.dumps(body, default=str)
+    if size() > limit:
+        for old in messages:
+            if old.get("type") == "message" and old.get("role") == "assistant":
+                for content in old.get("content", []):
+                    if (
+                        isinstance(content, dict)
+                        and len(content.get("text", "")) > 1200
+                    ):
+                        content["text"] = (
+                            content["text"][:1200]
+                            + " [Earlier model commentary compacted; use retrieved evidence.]"
+                        )
     if size() > limit:
         raise ValueError(
             "RESEARCH_CONTEXT_BUDGET_REACHED: retained evidence exceeds configured context"
@@ -748,7 +790,7 @@ class AzureReasoner:
                                 else "WAIT is allowed; never invent executable options."
                             ),
                             "agent_id": agent["id"],
-                            "allowed_sources": sorted(allowed),
+                            "source_contract": "Use exact URLs already supplied initially or in successful tool outputs; no invented URLs.",
                             "participation": memory.get("participation"),
                             "executable_previews_for_markets_you_researched": options,
                         },

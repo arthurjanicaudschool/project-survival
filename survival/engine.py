@@ -212,10 +212,18 @@ def value(wallet, markets, now, max_age=180):
 def valuation(wallet, markets, now, max_age=180):
     lower, cost, stranded = value(wallet, markets, now, max_age)
     details = []
+    unknown_quantity = ZERO
     for key in stranded:
         p = wallet.positions[key]
         m = markets.get(p.market_id)
         b = m.books.get(p.outcome) if m else None
+        sold = (
+            execute(b, "SELL", D("1e30"), now, max_age, D(1), p.quantity, True).quantity
+            if b and m.active
+            else ZERO
+        )
+        remaining = p.quantity - sold
+        unknown_quantity += remaining
         reason = (
             "MISSING_BOOK"
             if not b
@@ -225,6 +233,8 @@ def valuation(wallet, markets, now, max_age=180):
             if (now - b.observed_at).total_seconds() > max_age
             else "BELOW_MARKET_MINIMUM"
             if p.quantity < b.minimum
+            else "INPUT_PRECISION_DUST"
+            if 0 < remaining < D(".01")
             else "INSUFFICIENT_DEPTH"
         )
         details.append(
@@ -232,6 +242,7 @@ def valuation(wallet, markets, now, max_age=180):
                 "position": key,
                 "reason": reason,
                 "quantity": str(p.quantity),
+                "unliquidated_quantity": str(remaining),
                 "cost": str(p.cost),
                 "observed_at": b.observed_at.isoformat() if b else None,
             }
@@ -240,9 +251,7 @@ def valuation(wallet, markets, now, max_age=180):
     return {
         "complete": complete,
         "nav_lower_bound": str(lower),
-        "nav_upper_bound": str(
-            lower + sum((wallet.positions[k].quantity for k in stranded), ZERO)
-        ),
+        "nav_upper_bound": str(lower + unknown_quantity),
         "nav": str(lower) if complete else None,
         "roi": str(lower / wallet.initial - 1) if complete else None,
         "invested_cost": str(cost),
