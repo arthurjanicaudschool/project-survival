@@ -1,5 +1,12 @@
 # Livraison survival-v5.3 — 14 octobre 2026
 
+**Politique v5.4** : sur demande explicite du propriétaire, les plafonds quotidiens
+de sessions et les blocages fondés sur les estimations financières sont désactivés.
+Les anciens 12/4 et 100/20 cités dans ce rapport ne s'appliquent plus. Les tokens
+et estimations restent mesurés à titre indicatif ; les journaux ne sont pas effacés.
+Les agents reprennent sur intervalle, événement ou reprise technique. Les limites
+de durée d'un workflow, l'idempotence et les contraintes réelles de trading restent.
+
 **Correctif à 12:23 (Paris)** : le problème de valorisation A2 était un défaut
 de lecture des résolutions UMA v1. Il est corrigé ; les dix portefeuilles sont
 valorisés et le total affiché est 302,10 EUR. Voir le

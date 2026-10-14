@@ -139,6 +139,7 @@ export type Activity = {
   details?: Record<string, unknown> | null;
 };
 export type State = {
+  settings?: {session_quotas_enabled?: boolean; estimated_budget_limits_enabled?: boolean; policy_version?:string};
   id: string;
   mode: "live" | "demo";
   status: "RUNNING" | "CLOSING" | "FINISHED";
