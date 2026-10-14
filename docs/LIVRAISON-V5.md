@@ -39,6 +39,13 @@ les quatre dynamiques peuvent à nouveau choisir WAIT sans achat forcé.
 | [Sauvegarde distante](https://github.com/arthurjanicaudschool/project-survival/actions/runs/38486890643) | Export réussi ; artifact conservé 14 jours ; sauvegarde quotidienne à 03:43 UTC |
 | [Dashboard public](https://project-survival.pages.dev/) | LIVE, progression de cycle, erreurs, budget, recherches par agent, classement et valorisations inconnues vérifiés dans le navigateur |
 
+Le [cycle final sur le dernier code](https://github.com/arthurjanicaudschool/project-survival/actions/runs/38497908881)
+a terminé avec succès à **02:00:02 UTC le 14 octobre**, en 98,01 secondes. Les dix
+soldes correspondent au journal financier. Ce cycle inclut les écritures en
+pipeline ; il n'implique pas dix nouvelles réflexions IA. Estimation prudente à
+cette date : **34,65 EUR au total, 19,09 EUR aujourd'hui UTC**, une réservation
+incertaine conservée. Plafonds 100/20 EUR inchangés.
+
 Les essais réels ont révélé des erreurs de taille de contexte que les premiers
 tests n'avaient pas découvertes. L'enveloppe de continuation chiffrée est conservée
 sans être comptée comme texte de preuve. Les données redondantes sont compactées,

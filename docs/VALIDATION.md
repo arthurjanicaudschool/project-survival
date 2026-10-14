@@ -41,6 +41,11 @@ marchés inspectés, deux pages lisibles, une source structurée, WAIT justifié
 validées par la CI PostgreSQL du commit `e6b5374`. Mesure en lecture seule de 80 SELECT :
 6,068 s séparément contre 0,127 s en pipeline ; pas de prétention de gain identique
 sur le temps d'un cycle complet.
+Cycle final réellement terminé avec succès sur ce code :
+[38497908881](https://github.com/arthurjanicaudschool/project-survival/actions/runs/38497908881),
+14 octobre à 02:00:02 UTC, 98,01 secondes. Réconciliation des dix soldes refaite
+indépendamment après le cycle. Les quotas et le cache évitent des analyses dues
+inutilement ; cette durée ne représente pas dix nouvelles analyses simultanées.
 
 Les validations du 12 octobre ci-dessous restent des observations historiques,
 pas une description des accès ni des règles courantes.
