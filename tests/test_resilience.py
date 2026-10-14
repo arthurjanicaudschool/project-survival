@@ -481,3 +481,33 @@ def test_cash_ties_do_not_select_agent_id_as_fake_winner(tmp_path):
         and len(state["report"]["roi_winners"]) == 10
     )
     s.close()
+
+
+def test_deadline_crossed_between_plan_actions_stops_remaining_trades(
+    tmp_path, monkeypatch
+):
+    import survival.runtime as runtime
+
+    at = utcnow()
+    s = Store(demo_path=tmp_path / "mid-plan.sqlite")
+    state = initialize(s, "test", "demo", {"usd_per_eur": "1.1"}, at)
+    clock = [at]
+    original = runtime.record_trade
+
+    def trade(*args, **kwargs):
+        result = original(*args, **kwargs)
+        clock[0] = at + timedelta(hours=168)
+        return result
+
+    monkeypatch.setattr(runtime, "clock", lambda *args: clock[0])
+    monkeypatch.setattr(runtime, "record_trade", trade)
+
+    class Plan:
+        def decide(self, a, w, markets, memory):
+            d = FixtureReasoner().decide(a, w, markets, memory)
+            return DecisionPlan(agent_id=a["id"], actions=[d, d.model_copy()])
+
+    state = cycle(s, "test", FixtureProvider(at), Plan(), "cutoff", at)
+    assert sum(a["stats"]["trades"] for a in state["agents"]) == 1
+    assert any(e["kind"] == "DEADLINE_CUTOFF" for e in state["events"])
+    s.close()

@@ -124,7 +124,7 @@ def record_trade(store, state, a, wallet, d, markets, cid, suffix, at):
         and d.action == "BUY"
         else None,
         "edge_basis": "target-price scenario, not expected return"
-        if d.thesis_type == "PRICE_MOVE"
+        if d.thesis_type == "PRICE_MOVE" and d.action == "BUY"
         else "net sale vs estimated payout"
         if d.action == "SELL"
         else "estimated payout vs all-in entry",
@@ -559,6 +559,10 @@ def cycle(store, eid, provider, reasoner, cycle_id=None, now=None):
                         provider.errors.append(
                             f"Exit refresh {d.market_id}: {type(exc).__name__}"
                         )
+            at = clock(state, now)
+            ending = at >= datetime.fromisoformat(state["end_at"])
+            if ending:
+                exits = []
             with store.locked(eid):
                 if a["id"] not in state["inflight"].get("prepared_agents", []):
                     settlements(
@@ -736,8 +740,27 @@ def cycle(store, eid, provider, reasoner, cycle_id=None, now=None):
                             )
                             store.save(state, projection(state))
                             for i, d in enumerate(plan.actions):
+                                action_at = clock(state, now)
+                                if action_at >= datetime.fromisoformat(state["end_at"]):
+                                    event(
+                                        store,
+                                        state,
+                                        "DEADLINE_CUTOFF",
+                                        "Remaining planned actions were not executed after the deadline",
+                                        a["id"],
+                                        {"remaining_actions": len(plan.actions) - i},
+                                    )
+                                    break
                                 record_trade(
-                                    store, state, a, wallet, d, local, cid, str(i), at
+                                    store,
+                                    state,
+                                    a,
+                                    wallet,
+                                    d,
+                                    local,
+                                    cid,
+                                    str(i),
+                                    action_at,
                                 )
                             memory["research_memory"] = (
                                 memory.get("research_memory", [])

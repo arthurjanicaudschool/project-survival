@@ -306,17 +306,17 @@ function Leaderboard({
                 <td className="mono">
                   {euro(nav(a))}
                   {!!a.snapshot?.stranded.length && (
-                    <small className="warning">Non classé · borne basse {euro(a.snapshot?.nav_lower_bound_eur)}</small>
+                    <small className="warning">Non classé · borne basse {euro(a.snapshot?.nav_lower_bound_eur)}{a.snapshot?.nav_upper_bound_eur && ` · haute ${euro(a.snapshot.nav_upper_bound_eur)}`}</small>
                   )}
                 </td>
                 <td
-                  className={`mono ${nav(a) >= Number(a.initial_eur) ? "positive" : "negative"}`}
+                  className={`mono ${!known(a) ? "warning" : nav(a) >= Number(a.initial_eur) ? "positive" : "negative"}`}
                 >
                   {euro(nav(a) - Number(a.initial_eur))}
                 </td>
                 <td>
                   <span
-                    className={`roi ${roi(a) >= 0 ? "positive" : "negative"}`}
+                    className={`roi ${!known(a) ? "warning" : roi(a) >= 0 ? "positive" : "negative"}`}
                   >
                     {pct(roi(a))}
                   </span>
@@ -828,7 +828,7 @@ function AgentDetail({ a, state }: { a: Agent; state: State }) {
             <p className="subtle">Leçons provisoires propres à cet agent, réexaminées lors de ses prochaines réflexions. Un petit échantillon ne prouve pas qu'une stratégie fonctionne.</p>
           </> : <p className="subtle">Mémoire d'apprentissage en attente de synchronisation.</p>}
           <p className="subtle">
-            {a.memory.calls || 0} sessions IA aujourd'hui{" "}
+            {a.memory.calls || 0} sessions IA sur la journée UTC {a.memory.day || "non renseignée"}{" "}
             {a.memory.paused_until &&
               `· suspension jusqu'au ${new Date(a.memory.paused_until).toLocaleString("fr-FR")}`}
           </p>
@@ -847,6 +847,7 @@ function AgentDetail({ a, state }: { a: Agent; state: State }) {
                 <th>QUANTITÉ</th>
                 <th>COÛT QUOTE</th>
                 <th>LIQUIDABILITÉ</th>
+                <th>SEUILS CHOISIS PAR L'AGENT</th>
               </tr>
             </thead>
             <tbody>
@@ -867,6 +868,7 @@ function AgentDetail({ a, state }: { a: Agent; state: State }) {
                         ? "Partielle / indisponible"
                         : "Carnet disponible"}
                     </td>
+                    <td>{p.exit_rules ? `Stop ${p.exit_rules.stop_bid ?? "—"} · objectif ${p.exit_rules.take_profit_bid ?? "—"}${p.exit_rules.exit_at ? ` · échéance ${new Date(p.exit_rules.exit_at).toLocaleString("fr-FR")}` : ""}` : "Aucune règle structurée"}</td>
                   </tr>
                 ))}
             </tbody>
@@ -885,7 +887,7 @@ function AgentDetail({ a, state }: { a: Agent; state: State }) {
                 {d.action} {d.outcome}
               </span>
               <time>{new Date(d.at).toLocaleString("fr-FR")}</time>
-                <span>Edge vérifié {d.verified_edge === null ? "non estimé" : pct(d.verified_edge)}</span>
+                <span>{d.thesis_type === "PRICE_MOVE" && d.action === "BUY" ? "Écart du scénario (non garanti)" : "Edge vérifié"} {d.verified_edge === null ? "non estimé" : pct(d.verified_edge)}</span>
                 {d.decision_kind === "EXPLORATION" && <span className="pill">Exploration · règle de participation</span>}
             </div>
             <h3>{state.markets[d.market_id]?.question || d.market_id}</h3>
@@ -895,7 +897,10 @@ function AgentDetail({ a, state }: { a: Agent; state: State }) {
                 {d.probability_basis === "UNESTIMATED" ? "non estimée" : pct(d.estimated_probability)} · {d.decision_status || d.action}{d.rejection && d.action !== "WAIT" && d.action !== "HOLD" ? ` · ${d.rejection}` : ""}
             </p>
             <p>Sortie : {d.exit_plan}</p>
+            {d.thesis_type === "PRICE_MOVE" && <p>Thèse de mouvement : cible {d.target_price ?? "—"} · horizon {d.horizon_hours ?? "—"} h. Un scénario de prix ne constitue pas une probabilité de résolution.</p>}
+            {(d.max_buy_price || d.min_sell_price) && <p>Prix choisi : achat maximum {d.max_buy_price ?? "—"} · vente minimum {d.min_sell_price ?? "—"}.</p>}
             <p>Risques : {d.risk_factors.join(" · ")}</p>
+            {d.claims?.map((c,i)=><blockquote key={i}><p>{c.claim}</p><p>« {c.quote} »</p><a href={c.url} target="_blank" rel="noreferrer">Extrait retrouvé dans la source</a><small className="subtle"> · présence vérifiée, portée de l'affirmation à apprécier</small></blockquote>)}
             {d.sources.map((s) => (
               <a key={s} href={s} target="_blank" rel="noreferrer">
                 {s} <External size={12} />

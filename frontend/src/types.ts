@@ -9,6 +9,7 @@ export type Snapshot = {
   roi: string | null;
   complete?: boolean;
   nav_lower_bound_eur?: string;
+  nav_upper_bound_eur?: string;
   valuation_details?: {position: string; reason: string; observed_at: string | null}[];
   stranded: string[];
   valuation: string;
@@ -18,6 +19,7 @@ export type Position = {
   outcome: string;
   quantity: string;
   cost: string;
+  exit_rules?:{stop_bid:string|null; take_profit_bid:string|null; exit_at:string|null}|null;
 };
 export type Decision = {
   at: string;
@@ -38,6 +40,10 @@ export type Decision = {
   thesis_type?: string;
   edge_basis?: string;
   target_price?: string | null;
+  max_buy_price?:string|null;
+  min_sell_price?:string|null;
+  horizon_hours?:number|null;
+  claims?:{url:string;quote:string;claim:string}[];
 };
 export type Order = {
   id: string;
@@ -72,6 +78,7 @@ export type Agent = {
     summary?: string;
     exit_plan?: string;
     calls?: number;
+    day?:string;
     last_call?: string;
     paused_until?: string;
     learning?: {
