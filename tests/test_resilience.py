@@ -380,6 +380,30 @@ def test_large_discovery_page_keeps_ids_and_cursor_in_bounded_context():
     )
 
 
+def test_actual_tool_payload_keeps_large_discovery_page_structured():
+    from survival.providers import tool_content
+
+    raw = {
+        "markets": [
+            {
+                "id": str(i),
+                "question": "A long question " * 30,
+                "liquidity": "1000",
+                "end_at": "2026-10-20",
+            }
+            for i in range(135)
+        ],
+        "next_cursor": "next-real-page",
+        "has_more": True,
+    }
+    content = tool_content(raw)
+    result = json.loads(content)
+    assert len(content) < 22000
+    assert [m["id"] for m in result["markets"]] == [str(i) for i in range(135)]
+    assert result["next_cursor"] == "next-real-page" and result["has_more"]
+    assert "retrieved_excerpt" not in result
+
+
 def test_valuation_bounds_only_include_remaining_unsellable_quantity():
     at = utcnow()
     m = next(iter(FixtureProvider(at).collect().values()))

@@ -233,6 +233,25 @@ def compact_transcript(messages, limit):
         )
 
 
+def tool_content(result):
+    """Bound a tool body with valid structured summaries, never a JSON slice."""
+    content = json.dumps(compact_tool(result), default=str)
+    if len(content) > 22000:
+        entry = {"type": "function_call_output", "output": content}
+        try:
+            compact_transcript([entry], 22000)
+            content = entry["output"]
+        except ValueError:
+            content = json.dumps(
+                {
+                    "error": "TOOL_RESULT_EXCEEDS_CONTEXT_BUDGET",
+                    "url": result.get("url"),
+                    "instruction": "Refine the query or inspect a specific market; complete raw response retained in audit. No partial prices or pagination may be inferred.",
+                }
+            )
+    return content
+
+
 def retry(fn):
     for attempt in range(3):
         try:
@@ -765,15 +784,7 @@ class AzureReasoner:
                                 urls(item)
 
                     urls(result)
-                    content = json.dumps(compact_tool(result), default=str)
-                    if len(content) > 22000:
-                        content = json.dumps(
-                            {
-                                "truncated": True,
-                                "retrieved_excerpt": content[:21000],
-                                "instruction": "Refine query or inspect a market for complete data",
-                            }
-                        )
+                    content = tool_content(result)
                     messages.append(
                         {
                             "type": "function_call_output",
