@@ -942,11 +942,16 @@ def cycle(store, eid, provider, reasoner, cycle_id=None, now=None):
                     if deferred
                     else "CLOSING"
                     if ending
+                    else "QUOTA_LIMIT"
+                    if provider_ok
+                    and memory.get("calls", 0) >= a["risk"]["calls_per_day"]
                     else "NOT_DUE"
                     if provider_ok
                     else "PROVIDER_ERROR",
                     "at": at.isoformat(),
-                    "reason": "Interval/event priority or quota; no forced trade",
+                    "reason": "Daily UTC session quota reached; valuation and exits continue"
+                    if memory.get("calls", 0) >= a["risk"]["calls_per_day"]
+                    else "Interval/event priority; no forced trade",
                 }
             refresh_positions(provider, wallet, local)
             markets.update(local)

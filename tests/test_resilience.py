@@ -404,6 +404,31 @@ def test_actual_tool_payload_keeps_large_discovery_page_structured():
     assert "retrieved_excerpt" not in result
 
 
+def test_exhausted_daily_sessions_remain_distinct_from_not_due(tmp_path):
+    now = utcnow()
+    store = Store(demo_path=tmp_path / "quota.sqlite")
+    try:
+        state = initialize(store, "quota", "demo", {"usd_per_eur": "1.1"}, now)
+        for a in state["agents"]:
+            a["memory"].update(
+                day=now.date().isoformat(), calls=a["risk"]["calls_per_day"]
+            )
+        store.save(state, {})
+
+        class NoCalls:
+            def decide(self, *args):
+                pytest.fail("An exhausted session quota must not call the model")
+
+        state = cycle(
+            store, "quota", FixtureProvider(now), NoCalls(), "quota-cycle", now
+        )
+        assert all(a["runtime"]["status"] == "QUOTA_LIMIT" for a in state["agents"])
+        assert all(a["snapshot"]["complete"] for a in state["agents"])
+        assert all(not a["orders"] for a in state["agents"])
+    finally:
+        store.close()
+
+
 def test_valuation_bounds_only_include_remaining_unsellable_quantity():
     at = utcnow()
     m = next(iter(FixtureProvider(at).collect().values()))
