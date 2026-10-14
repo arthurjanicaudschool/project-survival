@@ -23,6 +23,18 @@ ventes automatiques A6 sous le minimum réel du marché. Aucun achat proposé n'
 rejeté sur cette période. Le correctif vise les informations manquantes, sans
 forcer de transactions ni garantir l'apparition d'une opportunité rentable.
 
+Validation de production : [CI 38599246263](https://github.com/arthurjanicaudschool/project-survival/actions/runs/38599246263)
+réussie (100 tests Python, 1 réseau ignoré ; 5 tests Node ; build frontend).
+Le [cycle 38599259022](https://github.com/arthurjanicaudschool/project-survival/actions/runs/38599259022)
+du commit `cba8008` a terminé avec succès à 16:46:41 UTC : dix nouvelles analyses,
+aucune erreur technique de raisonnement, fournisseur marchés opérationnel,
+soldes des dix agents réconciliés au journal financier. A2 a répondu à 16:43:54 UTC,
+A7 à 16:46:34 UTC. Leur statut WAIT et la politique v5.5 sont confirmés dans la
+projection publique Supabase utilisée par le dashboard. Tous les agents ont
+choisi WAIT sur ce passage : aucun nouvel achat ni profit n'est attribué au correctif.
+Les indisponibilités ponctuelles de sources externes restent explicites et ne
+sont pas assimilées à une panne générale du raisonnement.
+
 ## Politique v5.4 sans plafonds de sessions ni blocages financiers
 
 96 tests locaux réussis, 3 ignorés ; [CI 38551219764](https://github.com/arthurjanicaudschool/project-survival/actions/runs/38551219764) :
