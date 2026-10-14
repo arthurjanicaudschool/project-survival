@@ -165,6 +165,15 @@ def compact_transcript(messages, limit):
                             "resolved",
                             "features",
                             "end_at",
+                            "description",
+                            "description_truncated",
+                            "resolution_source",
+                            "assets",
+                            "condition_id",
+                            "version",
+                            "group",
+                            "seconds_delay",
+                            "books",
                         )
                     },
                 }
@@ -275,6 +284,20 @@ def tool_content(result):
                 }
             )
     return content
+
+
+def analysis_memory(memory):
+    """Bound the model's working memory without changing the persisted record."""
+    result = __import__("copy").deepcopy(memory)
+    entries = result.get("research_memory", [])
+    keep = SETTINGS.get("analysis_research_memory_entries", 6)
+    result["research_memory"] = [
+        dict(row, reason=str(row.get("reason", ""))[:240]) for row in entries[-keep:]
+    ]
+    result["research_memory_sampling"] = (
+        f"Last {keep} research summaries; complete research/decision history retained in storage. Older WAITs are not evidence that today's opportunities are unprofitable."
+    )
+    return result
 
 
 def retry(fn):
@@ -623,6 +646,8 @@ class AzureReasoner:
         from .research import TOOLS
         import copy
 
+        memory = analysis_memory(memory)
+
         started = time.monotonic()
         trace_start = len(self.research.trace)
         audit = {
@@ -662,6 +687,7 @@ class AzureReasoner:
             "For small prudent accounts, risk.small_account_minimum_fraction discloses an exception: one real market minimum may exceed the normal position cap up to that fraction. You choose the stake; cash reserve and event-group limits still apply. An observed input/minimum residue has zero immediately liquidatable cash, not necessarily zero economic value. Missing quotes remain unknown. "
             "All required numeric decision fields must be finite numbers. If settlement probability is unknown, use probability_basis=UNESTIMATED, probability=0.5, confidence=0, edge=0. "
             "A strategic PRICE_MOVE BUY is allowed without a settlement estimate when you provide target_price, horizon_hours, max_buy_price and an explicit exit thesis. "
+            "For PRICE_MOVE, observed price history and executable depth can support your conditional thesis without an external-news catalyst. News verification is required only for news claims, not for every momentum trade. Do not confuse lack of a calibrated settlement probability with a prohibition on price-move investing. "
             "Return a DecisionPlan with up to four ordered actions, not a single-decision wrapper. Keep reasoning concise (about 900 characters per action), and use at most one learning review per action. "
             "Exception: if the participation rule is pending, an executable first investment is required. "
             "When no thesis is convincing, choose a small EXPLORATION BUY, not a fabricated strategic edge. "

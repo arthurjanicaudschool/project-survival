@@ -1,6 +1,6 @@
 {
   "duration_hours": 168,
-  "policy_version": "survival-v5.4",
+  "policy_version": "survival-v5.5",
   "event_min_interval_minutes": {
     "dynamic": 10,
     "standard": 30
@@ -41,7 +41,7 @@
   "research_timeout_seconds": 150,
   "search_page_size": 15,
   "news_cache_seconds": 900,
-  "max_context_characters": 60000,
+  "max_context_characters": 120000,
   "max_markets": 24,
   "markets_per_agent": 4,
   "book_depth_levels": 40,
@@ -86,5 +86,6 @@
     "max_slippage": "0.05"
   },
   "session_quotas_enabled": false,
-  "estimated_budget_limits_enabled": false
+  "estimated_budget_limits_enabled": false,
+  "analysis_research_memory_entries": 6
 }

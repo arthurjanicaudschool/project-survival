@@ -588,6 +588,63 @@ def test_disabled_daily_quota_does_not_block_saturated_agents(monkeypatch):
         )
 
 
+def test_context_compaction_preserves_market_rules_and_executable_constraints():
+    rules = "Resolve YES only if the named station reports at least 0.01 inch in the specified UTC window."
+    book = {
+        "minimum": "5",
+        "tick": ".01",
+        "fee_rate": ".07",
+        "fee_exponent": "1",
+        "observed_at": utcnow().isoformat(),
+        "asks": [{"price": ".4", "size": "25"}],
+        "bids": [{"price": ".39", "size": "10"}],
+    }
+    raw = {
+        "market": {
+            "id": "rain",
+            "description": rules,
+            "assets": {"YES": "yes", "NO": "no"},
+            "resolution_source": "https://example.org",
+            "books": {"YES": book},
+            "history": {"YES": [{"price": ".4", "at": "x" * 1000}] * 100},
+        }
+    }
+    messages = [
+        {
+            "type": "function_call_output",
+            "call_id": "inspect",
+            "output": json.dumps(raw),
+        }
+    ]
+    compact_transcript(messages, 3000)
+    result = json.loads(messages[0]["output"])["market"]
+    assert result["description"] == rules and result["books"]["YES"] == book
+    assert result["assets"] == raw["market"]["assets"]
+
+
+def test_analysis_memory_stays_bounded_after_many_research_sessions():
+    from survival.providers import analysis_memory
+
+    original = {
+        "research_memory": [
+            {"market_id": str(i), "reason": "detail " * 100} for i in range(200)
+        ],
+        "learning": {"reviews": [{"id": "lesson-1"}]},
+        "summary": "strategic memory",
+    }
+    result = analysis_memory(original)
+    assert len(result["research_memory"]) == 6
+    assert [r["market_id"] for r in result["research_memory"]] == [
+        str(i) for i in range(194, 200)
+    ]
+    assert (
+        result["learning"] == original["learning"]
+        and result["summary"] == original["summary"]
+    )
+    assert len(original["research_memory"]) == 200
+    assert all(len(r["reason"]) <= 240 for r in result["research_memory"])
+
+
 def test_structured_exit_without_new_llm():
     at = utcnow()
     markets = FixtureProvider(at).collect()

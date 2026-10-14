@@ -1,5 +1,28 @@
 # Validation survival-v5.3 — 14 octobre 2026 (Paris)
 
+## Correctif v5.5 : contexte des sessions longues
+
+98 tests Python locaux réussis, 3 ignorés. Deux régressions protègent les règles
+de résolution et les contraintes exécutables lors du compactage, ainsi que la
+taille de la mémoire de recherche envoyée au modèle. Seuls les six derniers
+résumés de recherche sont envoyés ; l'historique et les apprentissages persistent
+intégralement en base. Le contexte de travail accepte désormais 120 000 caractères.
+Les plafonds de sessions et de dépenses estimées restent désactivés.
+
+Rejeu des outils archivés des derniers échecs A2/A7 avec leur portefeuille et
+mémoire réels, modèle simulé : maxima de 90 551 et 101 936 caractères, sans appel
+Azure ni écriture financière. Cela valide le chemin de compactage, pas une nouvelle
+décision réelle. Les règles, actifs, minimums, ticks, frais, dates et cinq premiers
+niveaux des carnets restent accessibles au modèle. Une thèse PRICE_MOVE peut
+s'appuyer sur prix et profondeur observés ; l'absence d'actualité externe n'est
+pas une interdiction systématique d'investir.
+
+Audit depuis la suppression des quotas, jusqu'au contrôle du 14 octobre vers
+16:30 UTC : 136 WAIT et 24 SELL, aucun BUY proposé. Les 24 rejets concernent des
+ventes automatiques A6 sous le minimum réel du marché. Aucun achat proposé n'a été
+rejeté sur cette période. Le correctif vise les informations manquantes, sans
+forcer de transactions ni garantir l'apparition d'une opportunité rentable.
+
 ## Politique v5.4 sans plafonds de sessions ni blocages financiers
 
 96 tests locaux réussis, 3 ignorés ; [CI 38551219764](https://github.com/arthurjanicaudschool/project-survival/actions/runs/38551219764) :
