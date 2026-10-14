@@ -15,7 +15,7 @@ restent réelles et ne sont pas présentées comme des problèmes résolus.
 | 1 | NAV/ROI nuls si cotation inconnue ; bornes séparées ; agent non classé | Inconnu ne signifie ni zéro ni perte |
 | 2 | État CLOSING récupérable ; aucun nouveau trade après la fin ; rapport définitif seulement si valorisation complète | Une cotation historique inexistante ne peut être recréée |
 | 3 | Rafraîchissement des positions avant chaque analyse ; rafraîchissement des trades après réflexion ; valorisation commune finale | Les analyses séquentielles ne se produisent pas à la même seconde |
-| 4 | Minimum réel également appliqué à la valeur liquidable ; poussières explicitement non liquidables | Une poussière peut encore recevoir un payout à résolution |
+| 4 | Minimum réel également appliqué à la valeur liquidable ; résidus effectivement invendables à zéro cash liquidable, distincts des cotations inconnues | Leur valeur économique future reste bornée et peut recevoir un payout ; aucun fill ni perte réalisée inventé |
 | 5 | Dernière observation antérieure ou égale à la fin, âge maximum 15 minutes ; aucun prix futur | Convention annoncée, pas reconstruction d'un carnet exact à la seconde |
 | 6 | Extraction HTML structurée ; suppression des scripts ; texte vide/inutilisable en erreur | Pertinence sémantique encore évaluée par l'agent |
 | 7 | Flux institutionnels directs, puis Bing RSS, GDELT et Google News avec erreurs visibles | Recherche gratuite sans garantie de disponibilité ni d'exhaustivité |

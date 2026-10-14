@@ -116,7 +116,10 @@ def projection(state):
             **{
                 a["id"]: {
                     k: p[a["id"]][k]
-                    if not p[a["id"]].get("stranded")
+                    if (
+                        p[a["id"]].get("complete") is True
+                        or not p[a["id"]].get("stranded")
+                    )
                     and p[a["id"]].get("complete") is not False
                     else None
                     for k in ("nav_eur", "roi")

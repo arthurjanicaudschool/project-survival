@@ -253,13 +253,18 @@ class Polymarket:
 
     def refresh(self, market, outcome, for_execution=False):
         # Re-read metadata as well as depth: fees, delay and status can change.
-        if for_execution and market.seconds_delay:
-            if market.seconds_delay > 30:
+        raw = retry(lambda: self.client.get_market(id=market.id))
+        delay = raw.trading.seconds_delay or 0
+        if for_execution and delay:
+            if delay > 30:
                 raise ValueError("Unsupported matching delay over 30 seconds")
-            time.sleep(market.seconds_delay)
-        updated = self.normalize(
-            retry(lambda: self.client.get_market(id=market.id)), include_history=False
-        )
+            time.sleep(delay)
+            raw = retry(lambda: self.client.get_market(id=market.id))
+            if (raw.trading.seconds_delay or 0) > delay:
+                raise ValueError(
+                    "Matching delay changed during observation; order not simulated"
+                )
+        updated = self.normalize(raw, include_history=False)
         updated.history = market.history
         from .analytics import features
 

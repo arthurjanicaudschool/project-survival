@@ -166,7 +166,7 @@ def performance(history, aid):
     valid = lambda p: (
         aid in p
         and p[aid].get("roi") is not None
-        and not p[aid].get("stranded")
+        and (p[aid].get("complete") is True or not p[aid].get("stranded"))
         and p[aid].get("complete") is not False
     )
     rows = [p[aid] for p in history if valid(p)]
@@ -191,7 +191,9 @@ def observed_drawdown(agent, history, current_nav, fx):
         for p in history
         if isinstance(p.get(agent["id"]), dict)
         and p[agent["id"]].get("nav_eur") is not None
-        and not p[agent["id"]].get("stranded")
+        and (
+            p[agent["id"]].get("complete") is True or not p[agent["id"]].get("stranded")
+        )
         and p[agent["id"]].get("complete") is not False
     ]
     if current_nav is not None:

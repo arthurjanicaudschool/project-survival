@@ -84,8 +84,10 @@ Frais/métadonnées et carnets revalidés avant trade. Un délai de matching jus
 Le simulateur ne confirme pas un matching réel et ne modélise pas toute la
 concurrence, les annulations et la latence.
 
-Valorisation au bid net immédiatement liquidable. Cotation manquante/périmée ou
-résidu non vendable : NAV/ROI inconnus, borne basse séparée, agent non classé.
+Valorisation au bid net immédiatement liquidable. Cotation manquante/périmée :
+NAV/ROI inconnus, bornes séparées, agent non classé. Un résidu sous un minimum ou
+une précision effectivement observés apporte zéro cash liquidable ; sa valeur
+économique future n'est pas supposée nulle et le résidu reste signalé.
 Aucun prix inventé. Les résolutions exigent les payouts officiels. Le taux BCE
 EUR/USD obtenu au START reste figé ; aucun gain de change attribué au trading.
 La convention fictive pUSD/USD est affichée.

@@ -10,7 +10,7 @@ export type Snapshot = {
   complete?: boolean;
   nav_lower_bound_eur?: string;
   nav_upper_bound_eur?: string;
-  valuation_details?: {position: string; reason: string; observed_at: string | null}[];
+  valuation_details?: {position: string; reason: string; observed_at: string | null; liquidatable_zero?:boolean}[];
   stranded: string[];
   valuation: string;
 };

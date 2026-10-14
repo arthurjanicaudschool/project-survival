@@ -56,6 +56,17 @@ def test_protocol_identifiers_and_fee_metadata(version, expected, monkeypatch):
     market = provider.normalize(m)
     assert market.assets["YES"] == expected
     assert market.books["YES"].fee_rate == D(".07")
+    sleeps = []
+    monkeypatch.setattr("survival.providers.time.sleep", sleeps.append)
+    provider.client.get_market = lambda **kwargs: m
+    m.trading.seconds_delay = 3
+    m.trading.fee_schedule = NS(rate=D(".09"), exponent=1)
+    provider.refresh(market, "YES", for_execution=True)
+    assert (
+        3 in sleeps
+        and market.books["YES"].fee_rate == D(".09")
+        and market.seconds_delay == 3
+    )
     m.trading.fee_schedule = None
     with pytest.raises(ValueError, match="Unknown fee"):
         provider.normalize(m)

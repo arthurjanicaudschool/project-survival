@@ -213,6 +213,8 @@ def valuation(wallet, markets, now, max_age=180):
     lower, cost, stranded = value(wallet, markets, now, max_age)
     details = []
     unknown_quantity = ZERO
+    economic_unliquidated = ZERO
+    unknown = []
     for key in stranded:
         p = wallet.positions[key]
         m = markets.get(p.market_id)
@@ -223,7 +225,7 @@ def valuation(wallet, markets, now, max_age=180):
             else ZERO
         )
         remaining = p.quantity - sold
-        unknown_quantity += remaining
+        economic_unliquidated += remaining
         reason = (
             "MISSING_BOOK"
             if not b
@@ -231,33 +233,41 @@ def valuation(wallet, markets, now, max_age=180):
             if m and not m.active
             else "STALE_BOOK"
             if (now - b.observed_at).total_seconds() > max_age
+            or (now - b.observed_at).total_seconds() < -5
             else "BELOW_MARKET_MINIMUM"
             if p.quantity < b.minimum
             else "INPUT_PRECISION_DUST"
             if 0 < remaining < D(".01")
             else "INSUFFICIENT_DEPTH"
         )
+        known_zero = reason in ("BELOW_MARKET_MINIMUM", "INPUT_PRECISION_DUST")
+        if not known_zero:
+            unknown.append(key)
+            unknown_quantity += remaining
         details.append(
             {
                 "position": key,
                 "reason": reason,
                 "quantity": str(p.quantity),
                 "unliquidated_quantity": str(remaining),
+                "liquidatable_zero": known_zero,
                 "cost": str(p.cost),
                 "observed_at": b.observed_at.isoformat() if b else None,
             }
         )
-    complete = not stranded
+    complete = not unknown
     return {
         "complete": complete,
         "nav_lower_bound": str(lower),
         "nav_upper_bound": str(lower + unknown_quantity),
+        "economic_upper_bound": str(lower + economic_unliquidated),
+        "unknown_positions": unknown,
         "nav": str(lower) if complete else None,
         "roi": str(lower / wallet.initial - 1) if complete else None,
         "invested_cost": str(cost),
         "stranded": stranded,
         "valuation_details": details,
-        "valuation": "observed immediately liquidatable bids after fees"
+        "valuation": "Observed immediately liquidatable bids after fees; observed minimum/precision residues contribute zero liquidatable cash, not zero economic value"
         if complete
         else "INCOMPLETE: unknown value; lower bound is not a measured loss",
     }

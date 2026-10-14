@@ -25,7 +25,7 @@ from survival.runtime import automatic_exits
 from survival.store import Store
 
 
-def test_missing_quote_and_dust_are_unknown_not_losses():
+def test_known_minimum_liquidatable_zero_is_distinct_from_unknown_quote():
     at = utcnow()
     m = next(iter(FixtureProvider(at).collect().values()))
     w = Wallet(
@@ -36,12 +36,18 @@ def test_missing_quote_and_dust_are_unknown_not_losses():
         },
     )
     result = valuation(w, {m.id: m}, at)
-    assert not result["complete"] and result["nav"] is None and result["roi"] is None
+    assert (
+        result["complete"]
+        and D(result["nav"]) == 8
+        and result["valuation_details"][0]["liquidatable_zero"]
+    )
+    assert D(result["economic_upper_bound"]) == 10 and w.realized == 0
     assert (
         result["nav_lower_bound"] == "8"
         and result["valuation_details"][0]["reason"] == "BELOW_MARKET_MINIMUM"
     )
     result = valuation(w, {}, at)
+    assert result["nav"] is None and result["roi"] is None and not result["complete"]
     assert result["valuation_details"][0]["reason"] == "MISSING_BOOK"
 
 
@@ -301,7 +307,8 @@ def test_valuation_bounds_only_include_remaining_unsellable_quantity():
         },
     )
     result = valuation(wallet, {m.id: m}, at)
-    assert D(result["nav_upper_bound"]) - D(result["nav_lower_bound"]) == D(".001")
+    assert D(result["economic_upper_bound"]) - D(result["nav_lower_bound"]) == D(".001")
+    assert result["complete"] and result["nav_upper_bound"] == result["nav_lower_bound"]
     assert result["valuation_details"][0]["reason"] == "INPUT_PRECISION_DUST"
 
 

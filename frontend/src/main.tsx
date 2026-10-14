@@ -69,7 +69,7 @@ const time = (s: string) =>
     minute: "2-digit",
     second: "2-digit",
   });
-const known = (a: Agent) => a.snapshot?.complete !== false && !a.snapshot?.stranded.length && a.snapshot?.nav_eur !== null;
+const known = (a: Agent) => a.snapshot?.nav_eur !== null && (a.snapshot?.complete === true || a.snapshot?.complete !== false && !a.snapshot?.stranded.length);
 const nav = (a: Agent) => known(a) ? Number(a.snapshot?.nav_eur ?? a.initial_eur) : NaN;
 const roi = (a: Agent) => known(a) ? Number(a.snapshot?.roi || 0) : NaN;
 const placement = (a: Agent, agents: Agent[]) => known(a) ? String(1 + agents.filter(x => known(x) && roi(x) > roi(a) + 1e-8).length).padStart(2,"0") : "—";
@@ -305,9 +305,10 @@ function Leaderboard({
                 </td>
                 <td className="mono">
                   {euro(nav(a))}
-                  {!!a.snapshot?.stranded.length && (
+                  {!known(a) && (
                     <small className="warning">Non classé · borne basse {euro(a.snapshot?.nav_lower_bound_eur)}{a.snapshot?.nav_upper_bound_eur && ` · haute ${euro(a.snapshot.nav_upper_bound_eur)}`}</small>
                   )}
+                  {known(a) && !!a.snapshot?.stranded.length && <small className="warning">Résidu non liquidable · hors valeur liquidable</small>}
                 </td>
                 <td
                   className={`mono ${!known(a) ? "warning" : nav(a) >= Number(a.initial_eur) ? "positive" : "negative"}`}
@@ -816,7 +817,7 @@ function AgentDetail({ a, state }: { a: Agent; state: State }) {
           <h3>Plan de sortie</h3>
           <p>{a.memory.exit_plan || "En attente de décision."}</p>
           {a.stats.exposure && <><h3>Expositions économiques</h3><p>{Object.entries(a.stats.exposure.economic_factor_cost).map(([k,v]) => `${k} : ${Number(v).toFixed(2)}`).join(" · ") || "Aucune exposition"}</p><p className="subtle">Risques communs par sujet ; aucune indépendance statistique présumée entre événements.</p></>}
-          {a.snapshot?.valuation_details?.map(v => <p key={v.position} className="warning">{v.position} : {v.reason}. Cette valeur reste inconnue.</p>)}
+          {a.snapshot?.valuation_details?.map(v => <p key={v.position} className="warning">{v.position} : {v.reason}. {v.liquidatable_zero ? "Résidu sous la taille ou précision admissible : zéro cash liquidable selon la contrainte observée, sans supposer sa valeur économique nulle." : "Cette valeur reste inconnue."}</p>)}
           <h3>Apprentissage par les résultats</h3>
           {a.memory.learning ? <>
             <p>{a.memory.learning.closed_events} sorties observées · {a.memory.learning.wins} positives · {a.memory.learning.losses} négatives · {a.memory.learning.open_position_count} positions suivies</p>
