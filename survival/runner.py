@@ -114,7 +114,13 @@ def projection(state):
         {
             "at": p["at"],
             **{
-                a["id"]: {"nav_eur": p[a["id"]]["nav_eur"], "roi": p[a["id"]]["roi"]}
+                a["id"]: {
+                    k: p[a["id"]][k]
+                    if not p[a["id"]].get("stranded")
+                    and p[a["id"]].get("complete") is not False
+                    else None
+                    for k in ("nav_eur", "roi")
+                }
                 for a in state["agents"]
             },
         }

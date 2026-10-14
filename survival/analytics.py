@@ -163,15 +163,43 @@ def diversity(agents):
 
 
 def performance(history, aid):
-    rows = [p[aid] for p in history if aid in p and p[aid].get("roi") is not None]
-    rois = [float(p["roi"]) for p in rows]
-    returns = [y - x for x, y in zip(rois, rois[1:])]
+    valid = lambda p: (
+        aid in p
+        and p[aid].get("roi") is not None
+        and not p[aid].get("stranded")
+        and p[aid].get("complete") is not False
+    )
+    rows = [p[aid] for p in history if valid(p)]
+    returns = [
+        float(y[aid]["roi"]) - float(x[aid]["roi"])
+        for x, y in zip(history, history[1:])
+        if valid(x) and valid(y)
+    ]
     return {
         "valid_samples": len(rows),
-        "incomplete_samples": sum(p.get(aid, {}).get("roi") is None for p in history),
+        "incomplete_samples": sum(not valid(p) for p in history),
         "return_change_volatility": pstdev(returns) if len(returns) > 1 else None,
         "method": "Unannualized changes in sampled portfolio return. Not a Sharpe ratio or proof of future profitability.",
     }
+
+
+def observed_drawdown(agent, history, current_nav, fx):
+    peak = D(agent["wallet"]["initial"])
+    worst = ZERO
+    values = [
+        D(p[agent["id"]]["nav_eur"]) * fx
+        for p in history
+        if isinstance(p.get(agent["id"]), dict)
+        and p[agent["id"]].get("nav_eur") is not None
+        and not p[agent["id"]].get("stranded")
+        and p[agent["id"]].get("complete") is not False
+    ]
+    if current_nav is not None:
+        values.append(current_nav)
+    for nav in values:
+        peak = max(peak, nav)
+        worst = max(worst, 1 - nav / peak)
+    agent["stats"].update(peak=str(peak), max_drawdown=str(worst))
 
 
 def threshold_scenarios(data, markets, now):

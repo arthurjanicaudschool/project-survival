@@ -10,7 +10,7 @@ from .models import Wallet, Decision, DecisionPlan, utcnow, ZERO
 from .agents import SETTINGS, definitions, should_reason
 from .engine import apply, authorize, settle, valuation
 from .learning import build_feedback, accept_reviews
-from .analytics import classify, risk_exposure, performance
+from .analytics import classify, risk_exposure, performance, observed_drawdown
 
 
 def clock(state, now):
@@ -31,16 +31,11 @@ def archived_market(m, held=False):
     return data
 
 
-def snapshot(a, markets, at, fx, max_age=None):
+def snapshot(a, markets, at, fx, max_age=None, history=()):
     wallet = Wallet.model_validate(a["wallet"])
     v = valuation(wallet, markets, at, max_age or SETTINGS["max_age_seconds"])
     nav = D(v["nav"]) if v["complete"] else None
-    if nav is not None:
-        peak = max(D(a["stats"]["peak"]), nav)
-        a["stats"]["peak"] = str(peak)
-        a["stats"]["max_drawdown"] = str(
-            max(D(a["stats"]["max_drawdown"]), 1 - nav / peak)
-        )
+    observed_drawdown(a, history, nav, fx)
     v.update(
         at=at.isoformat(),
         cash=str(wallet.cash),
@@ -579,7 +574,13 @@ def cycle(store, eid, provider, reasoner, cycle_id=None, now=None):
                 if a["risk"].get("participation_required"):
                     memory.setdefault("participation_started_at", at.isoformat())
                 a["participation"] = participation_status(a, at, state["end_at"])
-                v = snapshot(a, local, at, D(state["fx"]["usd_per_eur"]))
+                v = snapshot(
+                    a,
+                    local,
+                    at,
+                    D(state["fx"]["usd_per_eur"]),
+                    history=state["history"],
+                )
                 current_drawdown = (
                     1 - D(v["nav"]) / D(a["stats"]["peak"]) if v["complete"] else None
                 )
@@ -959,6 +960,7 @@ def cycle(store, eid, provider, reasoner, cycle_id=None, now=None):
                     datetime.fromisoformat(state["end_at"]) if ending else at,
                     D(state["fx"]["usd_per_eur"]),
                     SETTINGS["closing_max_age_seconds"] if ending else None,
+                    history=state["history"],
                 )
                 point[a["id"]] = {k: v[k] for k in ("nav_eur", "roi", "complete")}
                 store.record(

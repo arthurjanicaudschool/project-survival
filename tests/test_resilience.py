@@ -305,6 +305,28 @@ def test_valuation_bounds_only_include_remaining_unsellable_quantity():
     assert result["valuation_details"][0]["reason"] == "INPUT_PRECISION_DUST"
 
 
+def test_legacy_unknown_marks_do_not_become_historical_losses():
+    from survival.analytics import observed_drawdown, performance
+    from survival.runner import make_state
+
+    state = make_state("test", "demo", {"usd_per_eur": "1.1"}, utcnow())
+    state["history"].append(
+        {
+            "at": utcnow().isoformat(),
+            **{
+                a["id"]: {"nav_eur": "0", "roi": "-1", "stranded": ["missing"]}
+                for a in state["agents"]
+            },
+        }
+    )
+    public = projection(state)
+    assert public["history"][-1]["A1"]["roi"] is None
+    agent = state["agents"][0]
+    observed_drawdown(agent, state["history"], D(11), D("1.1"))
+    assert D(agent["stats"]["max_drawdown"]) == 0
+    assert performance(state["history"], "A1")["incomplete_samples"] == 1
+
+
 def test_opaque_reasoning_envelope_does_not_consume_visible_evidence_budget():
     messages = [
         {"role": "user", "content": "Evidence"},
