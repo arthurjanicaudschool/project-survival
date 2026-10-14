@@ -1,5 +1,14 @@
 # Validation survival-v5.3 — 14 octobre 2026 (Paris)
 
+## Correctif de résolution UMA v1 et d'affichage — 12:23 (Paris)
+
+**95 tests locaux réussis, 3 ignorés ; 97 tests Python CI réussis, 1 réseau ignoré,
+5 tests Node réussis**. Deux cycles de production réussis ; les dix valorisations
+sont complètes ; total 302,10 EUR, net +2,10 EUR, ROI +0,70 % vérifiés dans le
+dashboard public. [Détails et preuves](INCIDENT-2026-10-14.md).
+
+## Livraison précédente
+
 - Tests locaux : **88 réussis, 3 ignorés** (deux PostgreSQL opt-in et un réseau).
 - Dernière CI du code : **90 réussis, 1 ignoré**, PostgreSQL 17 inclus, avec restauration JSON/CSV dans une base différente : [38497875877](https://github.com/arthurjanicaudschool/project-survival/actions/runs/38497875877), commit `e6b5374`.
 - Build TypeScript/Vite local et Cloudflare Pages réussis ; [dashboard public](https://project-survival.pages.dev/).

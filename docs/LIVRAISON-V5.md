@@ -1,5 +1,11 @@
 # Livraison survival-v5.3 — 14 octobre 2026
 
+**Correctif à 12:23 (Paris)** : le problème de valorisation A2 était un défaut
+de lecture des résolutions UMA v1. Il est corrigé ; les dix portefeuilles sont
+valorisés et le total affiché est 302,10 EUR. Voir le
+[rapport d'incident et les validations](INCIDENT-2026-10-14.md).
+Les observations ci-dessous décrivent la livraison précédente, avant ce correctif.
+
 Les changements sont publiés sur `main`. Le tableau des
 [40 constats et de leur traitement](REMEDIATION.md) distingue les corrections
 effectives des limites qui subsistent. L'expérience conserve son capital, ses
