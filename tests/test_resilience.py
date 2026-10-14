@@ -418,6 +418,48 @@ def test_unicode_evidence_is_preserved_without_escape_inflation():
     assert json.loads(messages[0]["output"])["excerpt"] == excerpt
 
 
+def test_final_context_pressure_keeps_account_learning_and_inspected_evidence():
+    body = {
+        "initial_watchlist_not_a_whitelist": [
+            {
+                "id": str(i),
+                "question": "Q",
+                "features": {"YES": {"ask": ".4", "minimum_entry_cost": "2"}},
+            }
+            for i in range(24)
+        ],
+        "memory": {
+            "prices": {str(i): ".4" for i in range(100)},
+            "learning": {"reviews": [{"id": "lesson-1"}]},
+        },
+        "portfolio": {"cash": "10"},
+        "risk": {"calls_per_day": 12},
+        "allowed_sources": ["https://example.org"],
+    }
+    evidence = {
+        "market": {
+            "id": "chosen",
+            "features": {"YES": {"ask": ".3"}},
+            "description": "rules",
+        }
+    }
+    messages = [
+        {"role": "user", "content": json.dumps(body)},
+        {
+            "type": "function_call_output",
+            "call_id": "market",
+            "output": json.dumps(evidence),
+        },
+    ]
+    compact_transcript(messages, 2200)
+    reduced = json.loads(messages[0]["content"])
+    assert len(reduced["initial_watchlist_not_a_whitelist"]) == 24
+    assert reduced["portfolio"] == body["portfolio"] and reduced["risk"] == body["risk"]
+    assert reduced["memory"]["learning"] == body["memory"]["learning"]
+    assert reduced["allowed_sources"] == body["allowed_sources"]
+    assert json.loads(messages[1]["output"]) == evidence
+
+
 def test_exhausted_daily_sessions_remain_distinct_from_not_due(tmp_path):
     now = utcnow()
     store = Store(demo_path=tmp_path / "quota.sqlite")

@@ -229,6 +229,30 @@ def compact_transcript(messages, limit):
                             + " [Earlier model commentary compacted; use retrieved evidence.]"
                         )
     if size() > limit:
+        # Final pressure relief removes only the initial discovery feature
+        # matrix and the old signal cache. Inspected market evidence, portfolio,
+        # risk, learning records, URLs and every starting ID remain intact.
+        for old in messages:
+            if old.get("role") != "user" or not isinstance(old.get("content"), str):
+                continue
+            try:
+                body = json.loads(old["content"])
+            except (ValueError, TypeError):
+                continue
+            if (
+                not isinstance(body, dict)
+                or "initial_watchlist_not_a_whitelist" not in body
+            ):
+                continue
+            for market in body["initial_watchlist_not_a_whitelist"]:
+                market.pop("features", None)
+            if isinstance(body.get("memory"), dict):
+                body["memory"].pop("prices", None)
+            body["catalogue_compacted"] = (
+                "Discovery features and previous signal prices omitted under context pressure. Inspect get_market; retrieved market features, sources, account constraints and learning records retained. Every starting market ID remains available."
+            )
+            old["content"] = json.dumps(body, default=str, ensure_ascii=False)
+    if size() > limit:
         raise ValueError(
             "RESEARCH_CONTEXT_BUDGET_REACHED: retained evidence exceeds configured context"
         )
