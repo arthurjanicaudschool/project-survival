@@ -6,6 +6,7 @@ Dix portefeuilles indépendants de paper trading, données publiques Polymarket,
 Azure OpenAI, PostgreSQL/Supabase, dashboard React. Aucun wallet ni ordre réel.
 Le PC peut être éteint : GitHub exécute les cycles. Politique **survival-v5**.
 [Traitement des 40 constats](docs/REMEDIATION.md) et [audit initial](docs/AUDIT-2026-10-13.md).
+[Bilan de livraison et preuves](docs/LIVRAISON-V5.md).
 
 ## Installation et commandes
 
@@ -105,8 +106,9 @@ après interruption tant qu'elle reste valable. Quotas et réservations de coût
 survivent aux rollbacks.
 
 Plafond autorisé : **100 EUR de crédits Azure au total et 20 EUR/jour UTC**, estimés
-prudemment avec les tarifs du propriétaire. La facture Azure fait foi. Maximum
-72 sessions/jour, chacune pouvant contenir plusieurs requêtes. Les événements
+prudemment avec les tarifs du propriétaire. La facture Azure fait foi.
+L'offre effective étant inconnue, l'estimation prudente est conservée à sa demande.
+Maximum 72 sessions/jour, chacune pouvant contenir plusieurs requêtes. Les événements
 peuvent déclencher une réflexion après 10/30 minutes, dans les mêmes quotas 12/4.
 
 Cron GitHub 09/19/29/39/49/59, secours Supabase toutes les deux minutes, secours

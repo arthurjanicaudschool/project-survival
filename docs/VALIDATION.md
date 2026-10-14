@@ -1,7 +1,7 @@
-# Validation survival-v5 / v5.1 — 14 octobre 2026 (Paris)
+# Validation survival-v5.3 — 14 octobre 2026 (Paris)
 
-- Tests locaux : **82 réussis, 3 ignorés** (deux PostgreSQL opt-in et un réseau).
-- CI du lot principal : **73 réussis, 1 ignoré**, PostgreSQL 17 inclus, avec restauration JSON/CSV dans une base différente : [38486527258](https://github.com/arthurjanicaudschool/project-survival/actions/runs/38486527258).
+- Tests locaux : **84 réussis, 3 ignorés** (deux PostgreSQL opt-in et un réseau).
+- Dernière CI du code : **86 réussis, 1 ignoré**, PostgreSQL 17 inclus, avec restauration JSON/CSV dans une base différente : [38494506516](https://github.com/arthurjanicaudschool/project-survival/actions/runs/38494506516), commit `da88fed`.
 - Build TypeScript/Vite local et Cloudflare Pages réussis ; [dashboard public](https://project-survival.pages.dev/).
 - Cinq tests Node du secours Cloudflare réussis, également ajoutés à la CI.
 - Requête réelle Azure Responses : modèle gpt-6.1-sol, schéma strict DecisionPlan accepté et validé ; 882 tokens en entrée, 224 en sortie. Aucun ordre issu de ce test.
@@ -15,6 +15,10 @@ chiffrée du raisonnement était comptée comme du texte de preuves. L'exécutio
 interrompue, le contrôle corrigé et une régression ajoutée (v5.1). Les réservations
 de coût restent conservées ; aucun solde ou historique n'a été effacé. Les résultats
 des cycles réels après cette correction sont documentés dans les preuves de livraison.
+Un deuxième cas réel A1 a révélé le poids des manifestes GIS NOAA et des titres de
+recherche. Les mesures, avis et identifiants sont maintenant conservés sous forme
+compacte ; les réponses brutes restent archivées. Le rejeu des sept outils de cet
+échec tient dans 52 939 caractères, sous le plafond de 60 000, sans nouvel appel IA.
 
 Les validations du 12 octobre ci-dessous restent des observations historiques,
 pas une description des accès ni des règles courantes.
