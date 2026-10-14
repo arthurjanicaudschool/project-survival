@@ -168,6 +168,34 @@ def test_model_summary_preserves_search_cursor_and_all_ids():
     assert len(json.dumps(result)) < 22000
 
 
+def test_tracking_summary_preserves_totals_and_bounds_large_histories():
+    from survival.providers import compact_tool
+
+    raw = {
+        "data": [
+            {
+                "tracking": {
+                    "startDate": "2026-10-01",
+                    "endDate": "2026-10-20",
+                    "stats": {
+                        "total": 123,
+                        "pace": 10,
+                        "daily": list(range(300)),
+                        "cumulative": ["x" * 1000] * 300,
+                    },
+                }
+            }
+        ]
+    }
+    result = compact_tool(raw)
+    tracking = result["data"][0]["tracking"]
+    assert tracking["stats"]["total"] == 123 and tracking["startDate"] == "2026-10-01"
+    assert (
+        len(tracking["stats"]["daily"]) == 14 and "cumulative" not in tracking["stats"]
+    )
+    assert "cumulative" in raw["data"][0]["tracking"]["stats"]
+
+
 def test_strict_schema_requires_nullable_fields_and_no_extra_properties():
     def walk(node):
         if isinstance(node, dict):
@@ -182,6 +210,23 @@ def test_strict_schema_requires_nullable_fields_and_no_extra_properties():
                 walk(value)
 
     walk(strict_schema()["schema"])
+
+
+def test_generated_trades_need_agent_price_bounds_and_allow_wait():
+    from survival.providers import validate_generated_plan
+
+    d = FixtureReasoner().decide(definitions()[0], Wallet(initial=10, cash=10), {}, {})
+    d.max_buy_price = None
+    with pytest.raises(ValueError, match="max_buy_price"):
+        validate_generated_plan(d.model_dump_json(), "A1", set(), [])
+    d.action = "WAIT"
+    d.outcome = None
+    assert (
+        validate_generated_plan(d.model_dump_json(), "A1", set(), [])[0]
+        .actions[0]
+        .action
+        == "WAIT"
+    )
 
 
 def test_context_compaction_preserves_json_and_cursor():

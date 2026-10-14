@@ -25,6 +25,25 @@ def decode_plan(text):
     )
 
 
+def validate_generated_plan(text, agent_id, allowed, trace):
+    from .evidence import verify_claims
+
+    plan = decode_plan(text)
+    if plan.agent_id != agent_id or any(
+        url not in allowed for d in plan.actions for url in d.sources
+    ):
+        raise ValueError("Invalid agent identity or unsupported source")
+    for d in plan.actions:
+        if d.action == "BUY" and d.max_buy_price is None:
+            raise ValueError("BUY requires your explicit max_buy_price")
+        if d.action == "SELL" and d.min_sell_price is None:
+            raise ValueError("SELL requires your explicit min_sell_price")
+    claims = verify_claims(plan.actions, trace)
+    if any(not c["quote_verified"] for c in claims):
+        raise ValueError("Evidence quote not present in readable retrieved source")
+    return plan, claims
+
+
 def strict_schema():
     schema = DecisionPlan.model_json_schema()
 
@@ -51,6 +70,23 @@ def strict_schema():
 
 def compact_tool(result):
     result = __import__("copy").deepcopy(result)
+    if isinstance(result.get("data"), list):
+        for row in result["data"]:
+            if not isinstance(row, dict) or not isinstance(row.get("tracking"), dict):
+                continue
+            tracking = row["tracking"]
+            stats = tracking.get("stats", {})
+            if not isinstance(stats, dict):
+                continue
+            stats.pop("cumulative", None)
+            daily = stats.get("daily")
+            if isinstance(daily, list):
+                stats["daily"] = daily[-14:]
+            elif isinstance(daily, dict):
+                stats["daily"] = dict(list(daily.items())[-14:])
+            tracking["history_sampling"] = (
+                "Last 14 daily entries in provider order; cumulative series omitted. Totals and tracking window preserved."
+            )
     if result.get("markets"):
         result["markets"] = [
             {
@@ -727,17 +763,15 @@ class AzureReasoner:
                 try:
                     if response.status != "completed":
                         raise ValueError("Decision truncated; shorten plan")
-                    plan = decode_plan(response.output_text or "")
-                    claims = verify_claims(
-                        plan.actions, self.research.trace[trace_start:]
+                    plan, claims = validate_generated_plan(
+                        response.output_text or "",
+                        agent["id"],
+                        allowed,
+                        self.research.trace[trace_start:],
                     )
-                    if any(not c["quote_verified"] for c in claims):
-                        raise ValueError(
-                            "Evidence quote not present in retrieved readable source"
-                        )
                     audit["claims"] = claims
                     break
-                except ValueError:
+                except ValueError as exc:
                     if attempt:
                         raise
                     messages.extend(
@@ -746,7 +780,9 @@ class AzureReasoner:
                     messages.append(
                         {
                             "role": "user",
-                            "content": "Repair the DecisionPlan JSON. Use one or two concise actions; include only exact evidence quotes present in readable retrieved sources, or omit unverified claims. No invented prices or probability. Return complete valid JSON.",
+                            "content": "Repair the DecisionPlan JSON. Validation error: "
+                            + str(exc)[:400]
+                            + ". Use one or two concise actions; explicit max_buy_price for BUY/min_sell_price for SELL. Include only exact retrieved evidence quotes, or omit unverified claims. No invented prices or probability. Return complete valid JSON.",
                         }
                     )
                     response = request(
@@ -769,7 +805,12 @@ class AzureReasoner:
                     audit["participation"]["correction_calls"] += 1
                     if response.status != "completed":
                         raise ValueError("Participation decision truncated")
-                    plan = decode_plan(response.output_text or "")
+                    plan, _ = validate_generated_plan(
+                        response.output_text or "",
+                        agent["id"],
+                        allowed,
+                        self.research.trace[trace_start:],
+                    )
                     if any(d.action == "BUY" for d in plan.actions):
                         break
                 if not any(d.action == "BUY" for d in plan.actions):

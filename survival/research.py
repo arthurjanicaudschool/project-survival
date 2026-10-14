@@ -133,6 +133,18 @@ class ResearchTools:
                 for k, v in args.items()
             ):
                 raise ValueError("Invalid tool argument value")
+            if name == "get_public_data":
+                args = args.copy()
+                if args["topic"] in ("inflation", "weather"):
+                    args["symbol"] = ""
+                elif args["topic"] == "crypto":
+                    args["symbol"] = (args.get("symbol") or "BTC-USD").upper()
+                elif args["topic"] == "social":
+                    args["symbol"] = (
+                        "realDonaldTrump"
+                        if args.get("symbol", "").lower() == "realdonaldtrump"
+                        else (args.get("symbol") or "elonmusk").lower()
+                    )
             cache_key = (name, json.dumps(args, sort_keys=True))
             cached = self.cache.get(cache_key)
             ttl = (

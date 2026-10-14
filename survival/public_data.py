@@ -81,7 +81,19 @@ def fetch(topic, symbol="BTC-USD"):
             if not payload.get("success"):
                 raise ValueError("XTracker reported unsuccessful response")
             details = []
-            for row in payload.get("data", [])[:4]:
+            periods = payload.get("data", [])
+
+            def order(row):
+                try:
+                    start = datetime.fromisoformat(
+                        row["startDate"].replace("Z", "+00:00")
+                    )
+                    end = datetime.fromisoformat(row["endDate"].replace("Z", "+00:00"))
+                    return (not start <= utcnow() < end, (end - start).total_seconds())
+                except (KeyError, ValueError):
+                    return (True, float("inf"))
+
+            for row in sorted(periods, key=order)[:4]:
                 if not row.get("id"):
                     continue
                 source = f"https://xtracker.polymarket.com/api/trackings/{row['id']}?includeStats=true"

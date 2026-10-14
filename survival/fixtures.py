@@ -56,6 +56,8 @@ class FixtureReasoner:
             sources=[],
             proposed_stake=D(3),
             expected_edge=D(".25"),
+            max_buy_price=D(".99"),
+            min_sell_price=D(".01"),
             exit_plan="Fixture exit",
             risk_factors=["Synthetic data"],
         )

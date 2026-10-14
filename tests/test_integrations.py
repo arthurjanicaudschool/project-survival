@@ -45,7 +45,11 @@ def test_postgresql_transaction_rls_and_concurrency():
             "select 1 from pg_publication where pubname='supabase_realtime'"
         ).fetchone():
             db.execute("create publication supabase_realtime")
-        for migration in sorted((Path(__file__).resolve().parent.parent / "supabase/migrations").glob("*.sql")):
+        for migration in sorted(
+            (Path(__file__).resolve().parent.parent / "supabase/migrations").glob(
+                "*.sql"
+            )
+        ):
             db.execute(migration.read_text(encoding="utf-8"))
     from uuid import uuid4
 
@@ -74,22 +78,39 @@ def test_postgresql_transaction_rls_and_concurrency():
                 discovered = next(iter(markets.values())).model_copy(deep=True)
                 discovered.id = "research-discovered"
                 markets[discovered.id] = discovered
-                return FixtureReasoner().decide(agent, wallet, markets, memory).model_copy(
-                    update={"market_id": discovered.id}
+                return (
+                    FixtureReasoner()
+                    .decide(agent, wallet, markets, memory)
+                    .model_copy(update={"market_id": discovered.id})
                 )
 
         state = cycle(store, eid, PublicShaped(), Reasoner(), "one", now)
         assert cycle(store, eid, PublicShaped(), Reasoner(), "one", now) == state
-        assert store.db.execute(
-            "select count(*) from market_snapshots where experiment_id=%s and market_id=%s",
-            (eid, "research-discovered"),
-        ).fetchone()[0] == 1
-        store.db.execute("insert into scheduler_config(experiment_id,repository,enabled) values(%s,'test/repository',true)", (eid,))
-        assert not store.db.execute("select survival_watchdog_due(%s,%s)", (eid, now)).fetchone()[0]
+        assert (
+            store.db.execute(
+                "select count(*) from market_snapshots where experiment_id=%s and market_id=%s",
+                (eid, "research-discovered"),
+            ).fetchone()[0]
+            == 1
+        )
+        store.db.execute(
+            "insert into scheduler_config(experiment_id,repository,enabled) values(%s,'test/repository',true)",
+            (eid,),
+        )
+        assert not store.db.execute(
+            "select survival_watchdog_due(%s,%s)", (eid, now)
+        ).fetchone()[0]
         later = now + timedelta(minutes=11)
-        assert store.db.execute("select survival_watchdog_due(%s,%s)", (eid, later)).fetchone()[0]
-        store.db.execute("insert into scheduler_dispatches(experiment_id,created_at,status) values(%s,%s,'REQUESTED')", (eid, later))
-        assert not store.db.execute("select survival_watchdog_due(%s,%s)", (eid, later)).fetchone()[0]
+        assert store.db.execute(
+            "select survival_watchdog_due(%s,%s)", (eid, later)
+        ).fetchone()[0]
+        store.db.execute(
+            "insert into scheduler_dispatches(experiment_id,created_at,status) values(%s,%s,'REQUESTED')",
+            (eid, later),
+        )
+        assert not store.db.execute(
+            "select survival_watchdog_due(%s,%s)", (eid, later)
+        ).fetchone()[0]
         with store.locked(eid):
             with pytest.raises(RuntimeError):
                 with second.locked(eid):
@@ -114,26 +135,75 @@ def test_postgresql_transaction_rls_and_concurrency():
         with pytest.raises(psycopg.errors.InsufficientPrivilege):
             store.db.execute("select * from ledger_entries")
         store.db.execute("reset role")
+        store.db.execute("set role survival_runtime")
+        assert (
+            store.db.execute(
+                "select count(*) from ledger_entries where experiment_id=%s", (eid,)
+            ).fetchone()[0]
+            >= 10
+        )
+        assert not store.db.execute(
+            "select has_table_privilege(current_user,'ledger_entries','UPDATE')"
+        ).fetchone()[0]
+        assert not store.db.execute(
+            "select has_schema_privilege(current_user,'public','CREATE')"
+        ).fetchone()[0]
+        store.cache_put("test-runtime-" + eid, {"source": "fixture"}, 60)
+        assert store.cache_get("test-runtime-" + eid) == {"source": "fixture"}
+        store.db.execute("reset role")
+        reservation = store.meter_reserve(eid, "A1", D(".02"))
+        assert store.meter_summary(eid)["uncertain_requests_reserved"] == 1
+        store.meter_finish(
+            reservation, {"input_tokens": 10, "output_tokens": 10}, D(".001")
+        )
+        assert store.meter_summary(eid)["uncertain_requests_reserved"] == 0
+        before = store.db.execute(
+            "select count(*) from llm_meter where experiment_id=%s", (eid,)
+        ).fetchone()[0]
+        with pytest.raises(ValueError, match="BUDGET"):
+            store.meter_reserve(eid, "A1", D(10000))
+        assert (
+            store.db.execute(
+                "select count(*) from llm_meter where experiment_id=%s", (eid,)
+            ).fetchone()[0]
+            == before
+        )
         # Full JSON/CSV export can restore into a disposable separate database.
         import tempfile
         from psycopg import sql
-        from psycopg.conninfo import conninfo_to_dict,make_conninfo
+        from psycopg.conninfo import conninfo_to_dict, make_conninfo
         from survival.restore import restore
-        database='restore_'+uuid4().hex
-        with psycopg.connect(url,autocommit=True) as admin:
-            admin.execute(sql.SQL('create database {}').format(sql.Identifier(database)))
-        config=conninfo_to_dict(url);config['dbname']=database
-        target=Store(make_conninfo(**config))
+
+        database = "restore_" + uuid4().hex
+        with psycopg.connect(url, autocommit=True) as admin:
+            admin.execute(
+                sql.SQL("create database {}").format(sql.Identifier(database))
+            )
+        config = conninfo_to_dict(url)
+        config["dbname"] = database
+        target = Store(make_conninfo(**config))
         try:
-            target.db.execute('create publication supabase_realtime')
-            for migration in sorted((Path(__file__).resolve().parent.parent/'supabase/migrations').glob('*.sql')):target.db.execute(migration.read_text(encoding='utf-8'))
+            target.db.execute("create publication supabase_realtime")
+            for migration in sorted(
+                (Path(__file__).resolve().parent.parent / "supabase/migrations").glob(
+                    "*.sql"
+                )
+            ):
+                target.db.execute(migration.read_text(encoding="utf-8"))
             with tempfile.TemporaryDirectory() as directory:
-                store.export(eid,directory)
-                result=restore(target,directory)
-                assert result['agents']==10 and result['financial_invariants']=='verified'
-                assert target.load(eid)==state
-                assert not target.db.execute('select enabled from scheduler_config where experiment_id=%s',(eid,)).fetchone()[0]
-        finally:target.close()
+                store.export(eid, directory)
+                result = restore(target, directory)
+                assert (
+                    result["agents"] == 10
+                    and result["financial_invariants"] == "verified"
+                )
+                assert target.load(eid) == state
+                assert not target.db.execute(
+                    "select enabled from scheduler_config where experiment_id=%s",
+                    (eid,),
+                ).fetchone()[0]
+        finally:
+            target.close()
     finally:
         store.close()
         second.close()
