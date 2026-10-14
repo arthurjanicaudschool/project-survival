@@ -26,8 +26,8 @@ les quatre dynamiques peuvent à nouveau choisir WAIT sans achat forcé.
 
 | Vérification | Observation |
 |---|---|
-| Tests locaux du dernier code | 84 réussis, 3 ignorés : PostgreSQL opt-in ×2, réseau public opt-in ×1 |
-| [CI da88fed](https://github.com/arthurjanicaudschool/project-survival/actions/runs/38494506516) | 86 tests Python réussis, 1 réseau ignoré ; PostgreSQL 17 réel jetable ; 5 tests Node réussis |
+| Tests locaux du dernier code | 87 réussis, 3 ignorés : PostgreSQL opt-in ×2, réseau public opt-in ×1 |
+| [CI d99ec53](https://github.com/arthurjanicaudschool/project-survival/actions/runs/38496465359) | 89 tests Python réussis, 1 réseau ignoré ; PostgreSQL 17 réel jetable ; 5 tests Node réussis |
 | Persistance et récupération | Transactions courtes, verrou concurrent, idempotence et restauration JSON/CSV testés dans PostgreSQL |
 | Base opérationnelle | Migration 003 appliquée ; rôle limité ; journal append-only ; dix cash réconciliés avec les écritures |
 | Accès public | Projection lisible ; ledger, sessions et compteur LLM refusés avec la clé publique |
@@ -45,6 +45,16 @@ sans perdre les identifiants, curseurs, mesures ou sources ; les réponses brute
 restent dans l'audit. Le dernier cas A1 (sept outils réels) a été rejoué hors ligne
 sous le plafond de contexte. Une analyse échouée reste visible jusqu'à une nouvelle
 analyse réussie ; un simple cycle sans raisonnement ne la masque pas.
+Le rejeu complet avec portefeuille et mémoire A1 actuels atteint au plus 56 411
+caractères. Sa réponse finale est synthétique et n'est jamais enregistrée comme
+décision de l'expérience. Le test du corps des outils conserve 135 marchés et leur
+curseur dans un JSON valide, même lorsque la réponse initiale dépasse le budget.
+Les anciens cycles ont aussi rencontré le plafond chez A5 et A7. Le dernier
+correctif conserve le texte Unicode sans inflation d'échappements : les trois
+replays A1/A5/A7 passent avec 7/14/9 outils. Leurs anciennes erreurs restent dans
+le journal. Une analyse réelle réussie est nécessaire pour effacer l'alerte de
+dernière analyse ; A5 avait déjà consommé ses quatre sessions UTC lors de l'échec.
+Les quotas ne sont pas effacés pour obtenir artificiellement un état vert.
 
 ## Crédits et fréquence
 
@@ -68,6 +78,9 @@ Un cycle toutes les dix minutes n'appelle pas nécessairement les dix IA. Les
 jour UTC. Un cycle contenant plusieurs analyses peut durer plus de dix minutes ;
 le suivant attend son tour. La surveillance des sorties se fait à la cadence des
 cycles, sans garantie de prix instantané.
+Les événements peuvent consommer ces quotas tôt dans la journée. QUOTA_LIMIT est
+maintenant distinct de NOT_DUE et le dashboard montre les sessions utilisées ;
+atteindre ce plafond n'arrête pas les valorisations, règlements ou sorties définies.
 
 `python -m survival.cli cost-report` donne les quatre scénarios tarifaires sur les
 tokens enregistrés. Ses extrapolations mélangent les sessions historiques et

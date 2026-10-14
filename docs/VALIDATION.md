@@ -1,7 +1,7 @@
 # Validation survival-v5.3 — 14 octobre 2026 (Paris)
 
-- Tests locaux : **84 réussis, 3 ignorés** (deux PostgreSQL opt-in et un réseau).
-- Dernière CI du code : **86 réussis, 1 ignoré**, PostgreSQL 17 inclus, avec restauration JSON/CSV dans une base différente : [38494506516](https://github.com/arthurjanicaudschool/project-survival/actions/runs/38494506516), commit `da88fed`.
+- Tests locaux : **87 réussis, 3 ignorés** (deux PostgreSQL opt-in et un réseau).
+- Dernière CI du code : **89 réussis, 1 ignoré**, PostgreSQL 17 inclus, avec restauration JSON/CSV dans une base différente : [38496465359](https://github.com/arthurjanicaudschool/project-survival/actions/runs/38496465359), commit `d99ec53`.
 - Build TypeScript/Vite local et Cloudflare Pages réussis ; [dashboard public](https://project-survival.pages.dev/).
 - Cinq tests Node du secours Cloudflare réussis, également ajoutés à la CI.
 - Requête réelle Azure Responses : modèle gpt-6.1-sol, schéma strict DecisionPlan accepté et validé ; 882 tokens en entrée, 224 en sortie. Aucun ordre issu de ce test.
@@ -19,6 +19,16 @@ Un deuxième cas réel A1 a révélé le poids des manifestes GIS NOAA et des ti
 recherche. Les mesures, avis et identifiants sont maintenant conservés sous forme
 compacte ; les réponses brutes restent archivées. Le rejeu des sept outils de cet
 échec tient dans 52 939 caractères, sous le plafond de 60 000, sans nouvel appel IA.
+Un rejeu de session complet avec portefeuille et mémoire A1 réels, sept réponses
+d'outils archivées et modèle simulé atteint au plus 56 411 caractères. Aucun appel
+réseau ni écriture financière pendant ce rejeu. Les grandes pages de recherche
+conservent leur JSON, leurs 135 identifiants et leur curseur dans le test de charge
+du corps réellement fourni au modèle ; aucun découpage arbitraire de JSON.
+Dernier contrôle : les trois traces réelles A1/A5/A7 passent en rejeu complet avec
+respectivement 7/14/9 outils et des maxima de 59 639 / 59 267 / 59 019 caractères.
+L'encodage Unicode évite l'inflation des échappements tout en conservant les textes.
+Ces replays utilisent un modèle simulé, sans appels Azure ni écritures financières ;
+ils ne sont pas présentés comme de nouvelles décisions réelles.
 
 Les validations du 12 octobre ci-dessous restent des observations historiques,
 pas une description des accès ni des règles courantes.
