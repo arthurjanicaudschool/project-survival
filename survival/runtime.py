@@ -104,6 +104,16 @@ def record_trade(store, state, a, wallet, d, markets, cid, suffix, at):
     from .runner import event
 
     did = f"{state['id']}:{cid}:{a['id']}:{suffix}"
+    if d.action in ("BUY", "SELL") and d.market_id in markets:
+        store.record(
+            "market_snapshots",
+            id=did + ":quote",
+            experiment_id=state["id"],
+            cycle_id=cid,
+            market_id=d.market_id,
+            created_at=at.isoformat(),
+            payload=archived_market(markets[d.market_id], True),
+        )
     execution, rejection, edge = authorize(a, wallet, d, markets, at, a["memory"])
     lessons = {
         r.get("id", r.get("decision_id"))

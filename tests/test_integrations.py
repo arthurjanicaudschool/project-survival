@@ -86,13 +86,10 @@ def test_postgresql_transaction_rls_and_concurrency():
 
         state = cycle(store, eid, PublicShaped(), Reasoner(), "one", now)
         assert cycle(store, eid, PublicShaped(), Reasoner(), "one", now) == state
-        assert (
-            store.db.execute(
-                "select count(*) from market_snapshots where experiment_id=%s and market_id=%s",
-                (eid, "research-discovered"),
-            ).fetchone()[0]
-            == 1
-        )
+        assert store.db.execute(
+            "select count(*) from market_snapshots where experiment_id=%s and market_id=%s",
+            (eid, "research-discovered"),
+        ).fetchone()[0] == 1 + sum(len(a["orders"]) for a in state["agents"])
         store.db.execute(
             "insert into scheduler_config(experiment_id,repository,enabled) values(%s,'test/repository',true)",
             (eid,),
