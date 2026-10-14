@@ -1,5 +1,18 @@
 # Validation survival-v5.3 — 14 octobre 2026 (Paris)
 
+## Politique v5.4 sans plafonds de sessions ni blocages financiers
+
+96 tests locaux réussis, 3 ignorés ; [CI 38551219764](https://github.com/arthurjanicaudschool/project-survival/actions/runs/38551219764) :
+98 tests Python réussis, 1 réseau ignoré, 5 tests Node réussis. Les tests PostgreSQL
+vérifient une réservation au-delà des anciennes limites monétaires, sans blocage,
+et des sessions sans plafond qui conservent leur idempotence. Build frontend et
+déploiement Cloudflare Pages réussis. Le cycle réel
+[38551305070](https://github.com/arthurjanicaudschool/project-survival/actions/runs/38551305070)
+a démarré sur les contrôles désactivés : A3, A4, A5, A9 et A10 ont terminé une
+cinquième session UTC, dépassant l'ancien maximum de quatre. A8 a également repris.
+Les quatre dynamiques sont traités ensuite ; aucun compteur historique n'a été effacé.
+Le dashboard public affiche « sans plafond quotidien » et « aucun plafond logiciel ».
+
 ## Correctif de résolution UMA v1 et d'affichage — 12:23 (Paris)
 
 **95 tests locaux réussis, 3 ignorés ; 97 tests Python CI réussis, 1 réseau ignoré,

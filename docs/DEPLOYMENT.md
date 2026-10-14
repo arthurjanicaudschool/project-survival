@@ -1,5 +1,12 @@
 # Version courante : survival-v5
 
+Mise à jour **v5.4** : les plafonds de sessions et les blocages sur estimation de
+crédits sont désactivés à la demande du propriétaire (`session_quotas_enabled=false`,
+`estimated_budget_limits_enabled=false`). Les anciennes valeurs 12/4 et 100/20
+mentionnées ci-dessous sont historiques et inactives. Aucune remise à zéro des
+portefeuilles ou des compteurs n'est nécessaire. Les estimations sont indicatives,
+et l'idempotence des sessions reste active même sans plafond quotidien.
+
 Ce guide garde les étapes de création de comptes. Les règles et limites actuelles
 sont détaillées dans [REMEDIATION.md](REMEDIATION.md) et le README.
 Budget autorisé : 100 EUR total, 20 EUR/jour UTC de crédits Azure.
