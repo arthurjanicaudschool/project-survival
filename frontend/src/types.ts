@@ -139,6 +139,7 @@ export type Activity = {
   details?: Record<string, unknown> | null;
 };
 export type State = {
+  wind_down?: {started_at: string; deadline: string; no_new_purchases: boolean; method: string};
   settings?: {session_quotas_enabled?: boolean; estimated_budget_limits_enabled?: boolean; policy_version?:string};
   id: string;
   mode: "live" | "demo";

@@ -122,7 +122,9 @@ def feedback(store, state, a, markets, at):
         )
 
 
-def record_trade(store, state, a, wallet, d, markets, cid, suffix, at):
+def record_trade(
+    store, state, a, wallet, d, markets, cid, suffix, at, *, liquidation=False
+):
     from .runner import event
 
     did = f"{state['id']}:{cid}:{a['id']}:{suffix}"
@@ -136,13 +138,16 @@ def record_trade(store, state, a, wallet, d, markets, cid, suffix, at):
             created_at=at.isoformat(),
             payload=archived_market(markets[d.market_id], True),
         )
-    execution, rejection, edge = authorize(a, wallet, d, markets, at, a["memory"])
+    execution, rejection, edge = authorize(
+        a, wallet, d, markets, at, a["memory"], liquidation=liquidation
+    )
     lessons = {
         r.get("id", r.get("decision_id"))
         for r in a["memory"].get("learning", {}).get("reviews", [])
     }
     d.applied_lesson_ids = [i for i in d.applied_lesson_ids if i in lessons]
     data = d.model_dump(mode="json") | {
+        "execution_origin": "COMPETITION_LIQUIDATION" if liquidation else "AGENT",
         "id": did,
         "at": at.isoformat(),
         "verified_edge": str(edge)
@@ -196,6 +201,7 @@ def record_trade(store, state, a, wallet, d, markets, cid, suffix, at):
             else None
         )
         order = {
+            "execution_origin": data["execution_origin"],
             "id": did,
             "at": at.isoformat(),
             "market_id": d.market_id,
@@ -396,6 +402,51 @@ def automatic_exits(a, wallet, markets, at):
             )
 
 
+def winding_down(state, at):
+    hours = SETTINGS.get("liquidation_before_end_hours", 24)
+    return at >= datetime.fromisoformat(state["end_at"]) - timedelta(hours=hours)
+
+
+def liquidation_exits(a, wallet, markets, at):
+    """Close against observable bids; never manufacture minimums or dust fills."""
+    for key, p in wallet.positions.items():
+        m = markets.get(p.market_id)
+        b = m.books.get(p.outcome) if m else None
+        if (
+            p.quantity <= 0
+            or not m
+            or not m.active
+            or m.resolved
+            or not b
+            or not b.bids
+        ):
+            continue
+        if p.quantity < b.minimum:
+            continue
+        yield (
+            key,
+            Decision(
+                agent_id=a["id"],
+                market_id=m.id,
+                outcome=p.outcome,
+                action="SELL",
+                estimated_probability=D(".5"),
+                confidence=0,
+                reasoning="User-authorized competition wind-down: liquidate before deadline against fresh observable bids, including fees and available depth. Not an AI investment thesis.",
+                sources=[m.url],
+                proposed_stake=0,
+                expected_edge=0,
+                exit_plan="Close all executable quantity before competition deadline; no invented fills for unsellable residues.",
+                risk_factors=[
+                    "Partial fills, minimums and unavailable bids can prevent full liquidation"
+                ],
+                probability_basis="UNESTIMATED",
+                close_position=True,
+                min_sell_price=b.tick,
+            ),
+        )
+
+
 def refresh_positions(provider, wallet, markets):
     if not hasattr(provider, "refresh"):
         return
@@ -472,7 +523,13 @@ def cycle(store, eid, provider, reasoner, cycle_id=None, now=None):
                 )
             )
         try:
-            markets = provider.collect(held | tracked)
+            from .providers import Polymarket
+
+            markets = (
+                provider.collect(held, held_only=True)
+                if isinstance(provider, Polymarket) and winding_down(state, now)
+                else provider.collect(held | tracked)
+            )
             provider_ok = bool(markets)
         except Exception as exc:
             markets = {}
@@ -483,6 +540,20 @@ def cycle(store, eid, provider, reasoner, cycle_id=None, now=None):
                 m.category, m.category_source = classify(m.question, m.category)
         seed = copy.deepcopy(markets)
         with store.locked(eid):
+            if winding_down(state, now) and not state.get("wind_down"):
+                state["wind_down"] = {
+                    "started_at": now.isoformat(),
+                    "deadline": state["end_at"],
+                    "no_new_purchases": True,
+                    "method": "Verified settlements and immediate paper sales against observed bids before deadline. Unsellable residues remain explicit; no invented prices or fills.",
+                }
+                event(
+                    store,
+                    state,
+                    "WIND_DOWN",
+                    "Competition wind-down activated; no new investment decisions",
+                    details=state["wind_down"],
+                )
             if not state.get("inflight"):
                 state["inflight"] = {
                     "id": cid,
@@ -570,6 +641,7 @@ def cycle(store, eid, provider, reasoner, cycle_id=None, now=None):
                 continue
             at = clock(state, now)
             ending = at >= datetime.fromisoformat(state["end_at"])
+            winddown = winding_down(state, at)
             wallet = Wallet.model_validate(a["wallet"])
             memory = a["memory"]
             local = copy.deepcopy(seed)
@@ -577,7 +649,11 @@ def cycle(store, eid, provider, reasoner, cycle_id=None, now=None):
             markets.update(local)
             prepared = a["id"] in state["inflight"].get("prepared_agents", [])
             exits = (
-                list(automatic_exits(a, wallet, local, at))
+                list(
+                    liquidation_exits(a, wallet, local, at)
+                    if winddown
+                    else automatic_exits(a, wallet, local, at)
+                )
                 if not ending and not prepared
                 else []
             )
@@ -644,6 +720,8 @@ def cycle(store, eid, provider, reasoner, cycle_id=None, now=None):
                     "prepared_agents", []
                 ):
                     for key, d in exits:
+                        if clock(state, now) >= datetime.fromisoformat(state["end_at"]):
+                            break
                         record_trade(
                             store,
                             state,
@@ -654,6 +732,7 @@ def cycle(store, eid, provider, reasoner, cycle_id=None, now=None):
                             cid,
                             "exit:" + key,
                             clock(state, now),
+                            liquidation=winddown,
                         )
                 if a["id"] not in state["inflight"].setdefault("prepared_agents", []):
                     state["inflight"]["prepared_agents"].append(a["id"])
@@ -666,6 +745,7 @@ def cycle(store, eid, provider, reasoner, cycle_id=None, now=None):
             eligible = {k: v for k, v in local.items() if v.active}
             due = (
                 not ending
+                and not winddown
                 and provider_ok
                 and should_reason(memory, list(eligible.values()), at, a["risk"])
             )
@@ -676,7 +756,7 @@ def cycle(store, eid, provider, reasoner, cycle_id=None, now=None):
             )
             if deferred:
                 due = False
-            if task and task["status"] == "READY" and not ending:
+            if task and task["status"] == "READY" and not ending and not winddown:
                 due = True
             attempted = False
             financial_started = False
@@ -812,6 +892,7 @@ def cycle(store, eid, provider, reasoner, cycle_id=None, now=None):
                                     cid,
                                     str(i),
                                     action_at,
+                                    liquidation=winding_down(state, action_at),
                                 )
                             memory["research_memory"] = (
                                 memory.get("research_memory", [])
@@ -950,6 +1031,8 @@ def cycle(store, eid, provider, reasoner, cycle_id=None, now=None):
                     if deferred
                     else "CLOSING"
                     if ending
+                    else "WIND_DOWN"
+                    if winddown
                     else "QUOTA_LIMIT"
                     if provider_ok
                     and SETTINGS.get("session_quotas_enabled", True)
@@ -958,7 +1041,9 @@ def cycle(store, eid, provider, reasoner, cycle_id=None, now=None):
                     if provider_ok
                     else "PROVIDER_ERROR",
                     "at": at.isoformat(),
-                    "reason": "Daily UTC session quota reached; valuation and exits continue"
+                    "reason": "Competition liquidation phase: no new purchases or AI sessions; settlements and observable bid sales only"
+                    if winddown
+                    else "Daily UTC session quota reached; valuation and exits continue"
                     if SETTINGS.get("session_quotas_enabled", True)
                     and memory.get("calls", 0) >= a["risk"]["calls_per_day"]
                     else "Interval/event priority; no forced trade",

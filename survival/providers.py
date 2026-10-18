@@ -359,11 +359,13 @@ class Polymarket:
         if market.active and outcome not in market.books:
             raise ValueError("Execution book unavailable")
 
-    def collect(self, held_ids=()):
+    def collect(self, held_ids=(), *, held_only=False):
         self.errors = []
         now = utcnow()
         discovered = []
-        for order in ("volume24hr", "liquidity", "endDate", "startDate"):
+        for order in (
+            () if held_only else ("volume24hr", "liquidity", "endDate", "startDate")
+        ):
             try:
                 discovered.extend(
                     retry(

@@ -276,7 +276,7 @@ def valuation(wallet, markets, now, max_age=180):
     }
 
 
-def authorize(agent, wallet, decision, markets, now, memory):
+def authorize(agent, wallet, decision, markets, now, memory, *, liquidation=False):
     from .agents import SETTINGS
 
     if decision.agent_id != agent["id"]:
@@ -292,6 +292,8 @@ def authorize(agent, wallet, decision, markets, now, memory):
     key = position_key(m.id, decision.outcome)
     p = wallet.positions.get(key)
     budget = decision.proposed_stake
+    if liquidation and decision.action == "BUY":
+        return None, "COMPETITION_WIND_DOWN", ZERO
     cap = p.quantity if p else ZERO
     if decision.action == "SELL":
         if decision.sell_quantity is not None:
@@ -350,7 +352,9 @@ def authorize(agent, wallet, decision, markets, now, memory):
         budget,
         now,
         SETTINGS["max_age_seconds"],
-        D(risk.get("max_slippage", SETTINGS["max_slippage"])),
+        D(1)
+        if liquidation and decision.action == "SELL"
+        else D(risk.get("max_slippage", SETTINGS["max_slippage"])),
         cap,
         limit_price=decision.max_buy_price
         if decision.action == "BUY"

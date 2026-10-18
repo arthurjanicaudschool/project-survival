@@ -1,6 +1,7 @@
 {
   "duration_hours": 168,
-  "policy_version": "survival-v5.5",
+  "policy_version": "survival-v5.6",
+  "liquidation_before_end_hours": 24,
   "event_min_interval_minutes": {
     "dynamic": 10,
     "standard": 30

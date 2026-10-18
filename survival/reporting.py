@@ -61,6 +61,19 @@ def final_report(state, now):
     }
     return {
         "generated_at": now.isoformat(),
+        "wind_down": state.get("wind_down"),
+        "remaining_positions": [
+            {
+                "agent_id": a["id"],
+                "market_id": p["market_id"],
+                "outcome": p["outcome"],
+                "quantity": p["quantity"],
+                "cost": p["cost"],
+            }
+            for a in state["agents"]
+            for p in a["wallet"]["positions"].values()
+            if D(p["quantity"]) > 0
+        ],
         "deadline": state["end_at"],
         "valuation_time": state["end_at"],
         "valuation_method": "Last verifiable observation at or before deadline, maximum age 15 minutes. No post-deadline price lookahead; missing data stays unknown.",
