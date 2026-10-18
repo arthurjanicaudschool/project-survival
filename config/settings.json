@@ -1,7 +1,9 @@
 {
   "duration_hours": 168,
-  "policy_version": "survival-v5.6",
+  "policy_version": "survival-v5.7",
   "liquidation_before_end_hours": 24,
+  "closing_split_max_collateral": "0.01",
+  "closing_abandonment_max_payout": "0.02",
   "event_min_interval_minutes": {
     "dynamic": 10,
     "standard": 30

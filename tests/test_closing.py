@@ -103,3 +103,126 @@ def test_wind_down_does_not_hide_unavailable_quotes(tmp_path):
     ]
     assert not state["agents"][0]["snapshot"]["complete"]
     store.close()
+
+
+def test_rescue_split_preserves_cash_journal_and_closes_fractional_minimum(tmp_path):
+    now = utcnow()
+    store = Store(demo_path=tmp_path / "rescue.sqlite")
+    initialize(store, "test", "demo", {"usd_per_eur": "1.1"}, now)
+
+    class Partial(FixtureProvider):
+        def collect(self, *args):
+            markets = super().collect()
+            markets["fixture-weather"].books["YES"].asks = [
+                Level(price=".4", size="4.99")
+            ]
+            return markets
+
+    class OnlyA3(FixtureReasoner):
+        def decide(self, agent, *args):
+            d = super().decide(agent, *args)
+            if agent["id"] != "A3":
+                d.action = "WAIT"
+            return d
+
+    before = cycle(store, "test", Partial(now), OnlyA3(), "buy", now)
+    a = before["agents"][2]
+    assert D(a["wallet"]["positions"]["fixture-weather:YES"]["quantity"]) == D("4.99")
+
+    class Rescue(FixtureProvider):
+        def collect(self, *args):
+            markets = super().collect()
+            markets["fixture-weather"].condition_id = "0x" + "a" * 64
+            return markets
+
+    close = now + timedelta(hours=145)
+    state = cycle(store, "test", Rescue(close), NoLLM(), "close", close)
+    a = state["agents"][2]
+    assert all(D(p["quantity"]) == 0 for p in a["wallet"]["positions"].values())
+    assert a["orders"][-1]["execution"]["fills"][0]["quantity"] == "5.00"
+    assert state["abandoned_positions"][0]["quantity"] == "0.01"
+    assert state["abandoned_positions"][0]["not_a_sale_or_resolution"]
+    rows = [
+        __import__("json").loads(r[0])
+        for r in store.db.execute(
+            "select payload from audit where kind='ledger_entries'"
+        )
+    ]
+    assert sum(D(r["amount"]) for r in rows if r["agent_id"] == "A3") == D(
+        a["wallet"]["cash"]
+    )
+    assert [(r["kind"], D(r["amount"])) for r in rows if r["kind"] == "SPLIT"] == [
+        ("SPLIT", D("-.01"))
+    ]
+    assert sum(r["kind"] == "ABANDONMENT" for r in rows) == 1
+    count = store.db.execute("select count(*) from audit").fetchone()[0]
+    cycle(store, "test", Rescue(close), NoLLM(), "close", close)
+    assert store.db.execute("select count(*) from audit").fetchone()[0] == count
+    store.close()
+
+
+def test_abandonment_cap_is_on_total_possible_payout_not_cost(tmp_path):
+    from survival.closing import abandon_tiny_residues
+
+    store = Store(demo_path=tmp_path / "tiny.sqlite")
+    now = utcnow()
+    state = initialize(store, "test", "demo", {"usd_per_eur": "1.1"}, now)
+    markets = FixtureProvider(now).collect()
+    for index in (0, 1):
+        a = state["agents"][index]
+        w = Wallet(
+            initial=10,
+            cash=10,
+            positions={
+                "fixture-weather:YES": Position(
+                    market_id="fixture-weather",
+                    outcome="YES",
+                    quantity=".011",
+                    cost=".00001",
+                )
+            },
+        )
+        abandon_tiny_residues(store, state, a, w, markets, now)
+        assert w.cash == 10
+        assert w.positions["fixture-weather:YES"].quantity == (
+            0 if index == 0 else D(".011")
+        )
+    assert sum(D(r["max_foregone_payout"]) for r in state["abandoned_positions"]) == D(
+        ".011"
+    )
+    w.positions["fixture-weather:YES"].quantity = D("4.99")
+    abandon_tiny_residues(store, state, a, w, markets, now)
+    assert w.positions["fixture-weather:YES"].quantity == D("4.99")
+    store.close()
+
+
+def test_rescue_never_spends_on_stale_or_insufficient_bids(tmp_path):
+    from survival.closing import rescue_minimums
+
+    store = Store(demo_path=tmp_path / "no-rescue.sqlite")
+    now = utcnow()
+    state = initialize(store, "test", "demo", {"usd_per_eur": "1.1"}, now)
+    a = state["agents"][0]
+    markets = FixtureProvider(now).collect()
+    m = markets["fixture-weather"]
+    m.condition_id = "0x" + "b" * 64
+    m.books["YES"].bids = [Level(price=".38", size="4.99")]
+    wallet = Wallet(
+        initial=10,
+        cash=8,
+        positions={
+            m.id + ":YES": Position(
+                market_id=m.id, outcome="YES", quantity="4.99", cost=2
+            )
+        },
+    )
+    rescue_minimums(store, state, a, wallet, markets, "fail", now)
+    m.books["YES"].bids = [Level(price=".38", size=100)]
+    rescue_minimums(
+        store, state, a, wallet, markets, "stale", now + timedelta(minutes=4)
+    )
+    assert wallet.cash == 8 and len(wallet.positions) == 1
+    assert not store.db.execute(
+        "select 1 from audit where kind='ledger_entries' and payload like '%SPLIT%'"
+    ).fetchone()
+    store.close()

@@ -530,7 +530,7 @@ def cycle(store, eid, provider, reasoner, cycle_id=None, now=None):
                 if isinstance(provider, Polymarket) and winding_down(state, now)
                 else provider.collect(held | tracked)
             )
-            provider_ok = bool(markets)
+            provider_ok = bool(markets) or (not held and winding_down(state, now))
         except Exception as exc:
             markets = {}
             provider_ok = False
@@ -733,6 +733,17 @@ def cycle(store, eid, provider, reasoner, cycle_id=None, now=None):
                             "exit:" + key,
                             clock(state, now),
                             liquidation=winddown,
+                        )
+                    if winddown and clock(state, now) < datetime.fromisoformat(
+                        state["end_at"]
+                    ):
+                        from .closing import rescue_minimums, abandon_tiny_residues
+
+                        rescue_minimums(
+                            store, state, a, wallet, local, cid, clock(state, now)
+                        )
+                        abandon_tiny_residues(
+                            store, state, a, wallet, local, clock(state, now)
                         )
                 if a["id"] not in state["inflight"].setdefault("prepared_agents", []):
                     state["inflight"]["prepared_agents"].append(a["id"])
@@ -1084,7 +1095,7 @@ def cycle(store, eid, provider, reasoner, cycle_id=None, now=None):
                 datetime.fromisoformat(state["end_at"]),
                 SETTINGS["closing_max_age_seconds"],
             )
-            if ending
+            if ending and held
             else markets
         )
         if ending:
@@ -1132,6 +1143,25 @@ def cycle(store, eid, provider, reasoner, cycle_id=None, now=None):
             )
             state.pop("inflight", None)
             state["updated_at"] = utcnow().isoformat()
+            if state.get("wind_down"):
+                remaining = sum(
+                    p["quantity"] != "0" and D(p["quantity"]) > 0
+                    for a in state["agents"]
+                    for p in a["wallet"]["positions"].values()
+                )
+                state["wind_down"].update(
+                    all_cash=remaining == 0,
+                    remaining_positions=remaining,
+                    abandoned_max_payout=str(
+                        sum(
+                            (
+                                D(r["max_foregone_payout"])
+                                for r in state.get("abandoned_positions", [])
+                            ),
+                            ZERO,
+                        )
+                    ),
+                )
             if provider_ok:
                 state["last_market_sync"] = at.isoformat()
             partial = any(not a["snapshot"]["complete"] for a in state["agents"])
@@ -1142,6 +1172,7 @@ def cycle(store, eid, provider, reasoner, cycle_id=None, now=None):
                 "duration_seconds": round((utcnow() - started).total_seconds(), 2),
                 "market_count": len(markets),
                 "market_provider_ok": provider_ok,
+                "market_data_required": bool(held),
                 "partial_data": partial,
                 "provider_error_count": len(provider.errors),
                 "cycle_count": len(state["cycles"]),

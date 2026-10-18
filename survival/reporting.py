@@ -62,6 +62,16 @@ def final_report(state, now):
     return {
         "generated_at": now.isoformat(),
         "wind_down": state.get("wind_down"),
+        "abandoned_positions": state.get("abandoned_positions", []),
+        "abandoned_max_payout": str(
+            sum(
+                (
+                    D(r["max_foregone_payout"])
+                    for r in state.get("abandoned_positions", [])
+                ),
+                D(0),
+            )
+        ),
         "remaining_positions": [
             {
                 "agent_id": a["id"],
