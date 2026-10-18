@@ -1,5 +1,16 @@
 # Validation survival-v5.3 — 14 octobre 2026 (Paris)
 
+## Version courante v5.7 — 18 octobre 2026
+
+Reprise après épuisement des minutes GitHub privées, dépôt rendu public avec
+accord du propriétaire. Liquidation réelle en paper trading vérifiée : zéro
+position restante, dix NAV complètes, 285,55 EUR fictifs en cash. Conversion de
+collatéral et abandon des fractions explicitement journalisés ; gain futur maximal
+abandonné inférieur à 0,02 unité. CI : 106 tests Python, un réseau ignoré, cinq tests
+Node ; build frontend réussi. Rejeu final hors production : FINISHED sans prix
+de marché, sans IA et sans aucune position en suspens.
+[Incident, méthodes et preuves de production](INCIDENT-2026-10-18.md).
+
 ## Correctif v5.5 : contexte des sessions longues
 
 98 tests Python locaux réussis, 3 ignorés. Deux régressions protègent les règles

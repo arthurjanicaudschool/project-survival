@@ -1162,7 +1162,7 @@ def cycle(store, eid, provider, reasoner, cycle_id=None, now=None):
                         )
                     ),
                 )
-            if provider_ok:
+            if markets:
                 state["last_market_sync"] = at.isoformat()
             partial = any(not a["snapshot"]["complete"] for a in state["agents"])
             state["health"] = {

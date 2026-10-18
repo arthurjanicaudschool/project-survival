@@ -37,6 +37,11 @@ def test_wind_down_sells_existing_holdings_and_rerun_is_idempotent(tmp_path):
     count = store.db.execute("select count(*) from audit").fetchone()[0]
     cycle(store, "test", FixtureProvider(close), NoLLM(), "liquidate", close)
     assert store.db.execute("select count(*) from audit").fetchone()[0] == count
+
+    def forbidden_historical_lookup(*args):
+        raise AssertionError("Cash-only closing needs no historic market price")
+
+    store.historical_markets = forbidden_historical_lookup
     final = cycle(
         store,
         "test",
