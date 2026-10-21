@@ -71,6 +71,22 @@ def report(state):
             if sessions
             else None,
         }
+    if state.get("phase") == 2:
+        from .phase2 import CONFIG
+        normal_sessions = len(state["agents"]) * (CONFIG["duration_hours"] - CONFIG["resolution_buffer_hours"]) // CONFIG["analysis_interval_hours"]
+        return {
+            "phase": 2, "measured_committed_sessions": sessions, "tokens": totals,
+            "normal_week_scenario_sessions": normal_sessions,
+            "normal_requests_per_session": CONFIG["research_rounds"] + 1,
+            "normal_week_scenario_requests": normal_sessions * (CONFIG["research_rounds"] + 1),
+            "max_requests_per_session_with_json_repair": CONFIG["research_rounds"] + 2,
+            "conditional_eur_cost": {offer: {
+                "measured_committed_sessions_eur": row["measured_committed_cycles_eur"],
+                "normal_week_extrapolation_eur": str(D(row["measured_committed_cycles_eur"]) / sessions * normal_sessions) if sessions else None,
+            } for offer, row in euro.items()},
+            "daily_quota_enabled": False, "estimated_budget_limits_enabled": False,
+            "limitations": "Normal cadence scenario, not a spending cap or guaranteed savings. Provider failures may add retries. Failed request usage is in llm_meter, not successful session totals. Azure invoice is authoritative; offer unknown.",
+        }
     return {
         "measured_since_v2": totals,
         "models": sorted({u["model"] for u in usage if u.get("model")}),

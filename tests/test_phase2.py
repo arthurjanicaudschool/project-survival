@@ -185,6 +185,16 @@ def test_phase2_schema_has_no_trading_actions():
     assert "SELL" in strict_schema()["schema"]["$defs"]["Decision"]["properties"]["action"]["enum"]
 
 
+def test_phase2_cost_report_uses_actual_new_cadence(setup):
+    from survival.costs import report
+    store,_=setup
+    cost=report(store.load("phase2-test"))
+    assert cost["normal_week_scenario_sessions"]==180
+    assert cost["normal_week_scenario_requests"]==720
+    assert cost["max_requests_per_session_with_json_repair"]==5
+    assert cost["daily_quota_enabled"] is False
+
+
 def test_phase2_model_has_seen_rules_before_buy(setup):
     from survival.providers import validate_generated_plan
     store, now=setup

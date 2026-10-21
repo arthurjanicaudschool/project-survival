@@ -55,7 +55,7 @@ def test_watchdog_dispatch_missing_secret_lock_and_http_result():
         assert request["status"] == "HTTP_RESULT" and request["http_status"] == 204
         row = store.db.execute("select url,body from extensions.test_requests order by id desc limit 1").fetchone()
         assert row[0] == "https://api.github.com/repos/test/repository/actions/workflows/cycle.yml/dispatches"
-        assert row[1]["inputs"] == {"action": "cycle", "source": "supabase-watchdog"}
+        assert row[1]["inputs"] == {"action": "cycle", "source": "supabase-watchdog", "experiment": target}
         assert not store.db.execute("select survival_watchdog_tick()").fetchone()[0]
         store.db.execute("select survival_watchdog_tick()")
         store.db.execute("select survival_watchdog_tick()")

@@ -369,7 +369,9 @@ def cycle(store, eid, provider, reasoner, cycle_id=None, now=None):
                 agent["memory"]["action_history"] = agent["memory"].get("action_history", [])[-40:]
                 audit = task.get("audit", {})
                 usage = agent["stats"].setdefault("llm_usage", {})
-                for key in ("requests", "prompt_tokens", "completion_tokens", "cached_prompt_tokens"):
+                usage["sessions"] = usage.get("sessions", 0) + 1
+                usage["model"] = audit.get("model")
+                for key in ("requests", "prompt_tokens", "completion_tokens", "cached_prompt_tokens", "cache_write_prompt_tokens"):
                     usage[key] = usage.get(key, 0) + audit.get(key, 0)
                 event(store, state, "LLM_USAGE", "Recherche terminée ; décision et mémoire enregistrées.", agent["id"], audit)
                 task["status"] = "COMMITTED"
