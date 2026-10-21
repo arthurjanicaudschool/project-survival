@@ -54,10 +54,16 @@ def restore(store, directory):
         restored = store.load(state["id"])
         if restored != state:
             raise RuntimeError("Restored state differs from exported state")
-        for a in restored["agents"]:
-            store.assert_wallet(
-                state["id"], a["id"], Wallet.model_validate(a["wallet"])
-            )
+        if restored["status"] == "READY":
+            if restored["started_at"] or restored["end_at"] or store.db.execute(
+                "select count(*) from ledger_entries where experiment_id=%s", (state["id"],)
+            ).fetchone()[0]:
+                raise RuntimeError("READY backup must have no funded financial journal")
+        else:
+            for a in restored["agents"]:
+                store.assert_wallet(
+                    state["id"], a["id"], Wallet.model_validate(a["wallet"])
+                )
         # A restored backup cannot reuse an encrypted scheduler token implicitly.
         store.db.execute("update scheduler_config set enabled=false")
     return {

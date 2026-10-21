@@ -189,7 +189,7 @@ def record_trade(
             a["id"],
             {"accepted": accepted, "rejected_references": rejected},
         )
-    if d.action == "HOLD" and d.exit_rules and d.outcome:
+    if not rejection and d.action == "HOLD" and d.exit_rules and d.outcome:
         p = wallet.positions.get(f"{d.market_id}:{d.outcome}")
         if p:
             p.exit_rules = d.exit_rules
@@ -463,6 +463,10 @@ def refresh_positions(provider, wallet, markets):
 
 
 def cycle(store, eid, provider, reasoner, cycle_id=None, now=None):
+    existing = store.load(eid)
+    if existing and existing.get("phase") == 2:
+        from .phase2 import cycle as bet_cycle
+        return bet_cycle(store, eid, provider, reasoner, cycle_id, now)
     from .runner import projection, event
     from .fixtures import FixtureProvider, FixtureReasoner
     from .participation import status as participation_status

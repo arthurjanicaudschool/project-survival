@@ -40,6 +40,7 @@ import {
 import { useCompetition } from "./data";
 import type { Agent, State, Snapshot } from "./types";
 import "./style.css";
+import { PhaseTwo } from "./phase2";
 
 const colors = [
   "#c9f36c",
@@ -1097,7 +1098,7 @@ function App() {
     [selected, setSelected] = useState("A1"),
     [clock, setClock] = useState(Date.now()),
     [start, setStart] = useState(false);
-  const { state, error, loading, realtime } = useCompetition(demo);
+  const { state, error, loading, realtime } = useCompetition(demo, "survival-001");
   useEffect(() => {
     const id = setInterval(() => setClock(Date.now()), 1000);
     return () => clearInterval(id);
@@ -1454,6 +1455,6 @@ function App() {
 }
 createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    <App />
+    {new URLSearchParams(location.search).get("phase") === "1" ? <App /> : <PhaseTwo />}
   </React.StrictMode>,
 );

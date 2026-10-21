@@ -1,5 +1,25 @@
 # PROJECT SURVIVAL
 
+## Phase 2 — paris sur événements
+
+**Dix agents, 100 € fictifs chacun, deux par domaine : politique, sport, météo,
+crypto, économie.** Une mise est conservée jusqu'au résultat officiel ; aucune
+revente, aucun stop ni changement de côté. Le dashboard principal présente les
+mises et raisonnements en langage courant. La phase 1 reste dans `/?phase=1`.
+
+[Guide complet Phase 2 : règles, lancement, coûts, mémoire et limites](docs/PHASE2.md).
+Configuration : `config/phase2.json`. L'expérience `survival-002` reste **READY**
+jusqu'à un START explicite. Ne pas réinitialiser `survival-001`.
+
+```powershell
+python -m survival.cli demo-phase2
+python -m survival.cli prepare-phase2 --experiment survival-002
+# Uniquement au moment choisi pour lancer les 168 heures :
+python -m survival.cli start --experiment survival-002
+```
+
+Les sections qui suivent documentent la phase 1 historique.
+
 Politique **survival-v5.4** : à la demande du propriétaire, les plafonds quotidiens
 de sessions et les blocages par estimation financière sont désactivés. Les anciens
 12/4 et 100/20 restent des réglages historiques inactifs ; ils ne bloquent aucun

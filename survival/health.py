@@ -9,7 +9,9 @@ def assess(state, now=None):
     health = state.get("health", {})
     stamp = health.get("completed_at") or state["updated_at"]
     age = max(0, (now - datetime.fromisoformat(stamp)).total_seconds())
-    if state["status"] == "FINISHED":
+    if state["status"] == "READY":
+        status = "READY"
+    elif state["status"] == "FINISHED":
         status = "FINISHED"
     elif (
         state.get("inflight")
@@ -24,9 +26,9 @@ def assess(state, now=None):
     elif (
         health.get("partial_data")
         or any(
-            a.get("snapshot", {}).get("complete") is False
+            state.get("phase") != 2 and (a.get("snapshot", {}).get("complete") is False
             or a.get("snapshot", {}).get("stranded")
-            and a.get("snapshot", {}).get("complete") is not True
+            and a.get("snapshot", {}).get("complete") is not True)
             for a in state["agents"]
         )
         or health.get("provider_error_count", 0)
@@ -44,7 +46,7 @@ def assess(state, now=None):
         "checked_at": now.isoformat(),
         "cycle_age_seconds": round(age),
         "inflight": state.get("inflight"),
-        "closing_due": state["status"] != "FINISHED"
+        "closing_due": state["status"] not in ("READY", "FINISHED")
         and now >= datetime.fromisoformat(state["end_at"]),
         "last_cycle_id": health.get("last_cycle_id"),
         "last_github_schedule": state.get("last_scheduled_cycle"),

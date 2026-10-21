@@ -21,8 +21,10 @@ def main():
         "command",
         choices=[
             "start",
+            "prepare-phase2",
             "cycle",
             "demo",
+            "demo-phase2",
             "api-check",
             "export",
             "migrate",
@@ -35,7 +37,7 @@ def main():
             "watchdog-status",
         ],
     )
-    p.add_argument("--experiment", default=os.getenv("EXPERIMENT_ID", "survival-001"))
+    p.add_argument("--experiment", default=os.getenv("EXPERIMENT_ID", "survival-002"))
     p.add_argument("--output", default="exports")
     p.add_argument("--cycle-id")
     args = p.parse_args()
@@ -136,6 +138,8 @@ def main():
         return
     if args.command == "api-check":
         provider = Polymarket()
+        if args.experiment == "survival-002":
+            provider.phase = 2
         try:
             markets = provider.collect()
             print(
@@ -144,6 +148,7 @@ def main():
                         "markets": len(markets),
                         "books": sum(len(m.books) for m in markets.values()),
                         "errors": provider.errors,
+                        "categories": {m.category: sum(x.category == m.category for x in markets.values()) for m in markets.values()},
                     },
                     indent=2,
                 )
@@ -155,8 +160,8 @@ def main():
         finally:
             provider.close()
         return
-    demo = args.command == "demo"
-    store = Store(demo_path="data/demo.sqlite" if demo else None)
+    demo = args.command in ("demo", "demo-phase2")
+    store = Store(demo_path=("data/demo-phase2.sqlite" if args.command == "demo-phase2" else "data/demo.sqlite") if demo else None)
     try:
         if args.command == "migrate":
             if os.getenv("DATABASE_ADMIN_URL"):
@@ -227,9 +232,27 @@ def main():
                         indent=2,
                     )
                 )
+        elif args.command == "prepare-phase2":
+            from .phase2 import prepare
+            state = prepare(store, args.experiment)
+            print(json.dumps({"experiment": state["id"], "status": state["status"], "phase": 2}))
         elif args.command == "start":
             state = initialize(store, args.experiment, "live", reference_fx())
             print(f"START {state['started_at']} → {state['end_at']}")
+        elif args.command == "demo-phase2":
+            from .phase2 import start as start_bets
+            from .phase2_fixtures import BetFixtureProvider, BetFixtureReasoner
+            from datetime import timedelta, datetime
+            now = utcnow()
+            eid = "demo-phase2"
+            existing = store.load(eid)
+            origin = datetime.fromisoformat(existing["started_at"]) if existing else now - timedelta(days=2)
+            if not existing:
+                start_bets(store, eid, {"usd_per_eur":"1.10", "reference_date":origin.date().isoformat(), "source":"SYNTHETIC", "method":"DEMO: taux entièrement fictif."}, origin)
+                cycle(store, eid, BetFixtureProvider(origin), BetFixtureReasoner(), "demo-bets", origin)
+            state = cycle(store, eid, BetFixtureProvider(now, origin, True), BetFixtureReasoner(), "demo-results", now)
+            Path("frontend/public/demo-phase2.json").write_text(json.dumps(projection(state), ensure_ascii=False), encoding="utf-8")
+            print("DEMO phase 2: isolated SQLite, synthetic markets, no Azure calls.")
         elif demo:
             now = utcnow()
             eid = "demo-fixture"

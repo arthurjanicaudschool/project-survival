@@ -277,6 +277,9 @@ def valuation(wallet, markets, now, max_age=180):
 
 
 def authorize(agent, wallet, decision, markets, now, memory, *, liquidation=False):
+    if agent.get("phase") == 2:
+        from .phase2 import authorize as authorize_bet
+        return authorize_bet(agent, wallet, decision, markets, now, memory)
     from .agents import SETTINGS
 
     if decision.agent_id != agent["id"]:

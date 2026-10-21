@@ -139,6 +139,9 @@ def projection(state):
 
 def initialize(store, eid, mode, fx, now=None):
     now = now or utcnow()
+    if eid == "survival-002":
+        from .phase2 import start
+        return start(store, eid, fx, now)
     with store.locked(eid):
         if store.load(eid):
             raise ValueError("Experiment already exists; START is never a reset")

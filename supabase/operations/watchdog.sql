@@ -31,7 +31,7 @@ begin
       row('Accept','application/vnd.github+json')::extensions.http_header,
       row('User-Agent','ProjectSurvivalWatchdog')::extensions.http_header],
     'application/json',
-    jsonb_build_object('ref',c.branch,'inputs',jsonb_build_object('action','cycle','source','supabase-watchdog'))::text
+    jsonb_build_object('ref',c.branch,'inputs',jsonb_build_object('action','cycle','source','supabase-watchdog','experiment',c.experiment_id))::text
    )::extensions.http_request);
   exception when others then
    -- Do not persist provider exception text, request bodies or headers.

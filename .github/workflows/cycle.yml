@@ -7,8 +7,13 @@ on:
       action:
         description: 'api-check tests public market access without START. start creates the competition; cycle resumes it.'
         type: choice
-        options: [cycle, start, export, api-check, research-check, health, cost-report]
+        options: [cycle, start, prepare-phase2, export, api-check, research-check, health, cost-report]
         default: cycle
+      experiment:
+        description: 'Phase 2 = survival-002. Phase 1 remains archived; START never resets an experiment.'
+        type: choice
+        options: [survival-002, survival-001]
+        default: survival-002
       source:
         description: 'Dispatch origin for operational diagnosis; never a trading instruction.'
         type: choice
@@ -25,7 +30,7 @@ jobs:
     timeout-minutes: 25
     env:
       DATABASE_URL: ${{ secrets.DATABASE_URL }}
-      EXPERIMENT_ID: ${{ vars.EXPERIMENT_ID || 'survival-001' }}
+      EXPERIMENT_ID: ${{ inputs.experiment || vars.EXPERIMENT_ID || 'survival-001' }}
       AZURE_OPENAI_ENDPOINT: ${{ secrets.AZURE_OPENAI_ENDPOINT }}
       AZURE_OPENAI_API_KEY: ${{ secrets.AZURE_OPENAI_API_KEY }}
       AZURE_OPENAI_API_VERSION: ${{ vars.AZURE_OPENAI_API_VERSION || '2024-10-21' }}

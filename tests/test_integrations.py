@@ -11,6 +11,47 @@ from survival.models import utcnow
 
 
 @pytest.mark.integration
+def test_phase2_postgresql_ready_bet_and_isolation():
+    url = os.getenv("TEST_DATABASE_URL")
+    if not url:
+        pytest.skip("Dedicated disposable PostgreSQL required")
+    from survival.phase2 import prepare, start
+    from survival.phase2_fixtures import BetFixtureProvider, BetFixtureReasoner
+    from uuid import uuid4
+    with psycopg.connect(url, autocommit=True) as db:
+        db.execute("do $$ begin if not exists(select 1 from pg_roles where rolname='anon') then create role anon; end if; if not exists(select 1 from pg_roles where rolname='authenticated') then create role authenticated; end if; end $$")
+        if not db.execute("select 1 from pg_publication where pubname='supabase_realtime'").fetchone():
+            db.execute("create publication supabase_realtime")
+        for migration in sorted((Path(__file__).resolve().parent.parent / "supabase/migrations").glob("*.sql")):
+            db.execute(migration.read_text(encoding="utf-8"))
+    store = Store(url)
+    eid = "phase2-test-" + uuid4().hex
+    now = utcnow()
+    try:
+        ready = prepare(store, eid)
+        assert ready["started_at"] is None and ready["end_at"] is None
+        assert store.db.execute("select count(*) from ledger_entries where experiment_id=%s",(eid,)).fetchone()[0] == 0
+        start(store, eid, {"usd_per_eur":"1.10"}, now)
+        class PublicShaped:
+            errors = []
+            def collect(self, *args):
+                return BetFixtureProvider(utcnow(), now).collect()
+        class Reasoner:
+            def decide(self, *args):
+                return BetFixtureReasoner().decide(*args)
+        state = cycle(store, eid, PublicShaped(), Reasoner(), "one", now)
+        assert len(state["agents"]) == 10
+        assert sum(len(a["bets"]) for a in state["agents"]) == 10
+        assert cycle(store, eid, PublicShaped(), Reasoner(), "one", now) == state
+        assert store.db.execute("select count(*) from simulated_orders where experiment_id=%s",(eid,)).fetchone()[0] == 10
+        for a in state["agents"]:
+            from survival.models import Wallet
+            store.assert_wallet(eid, a["id"], Wallet.model_validate(a["wallet"]))
+    finally:
+        store.close()
+
+
+@pytest.mark.integration
 def test_live_public_api():
     if os.getenv("RUN_NETWORK_TESTS") != "1":
         pytest.skip("Set RUN_NETWORK_TESTS=1 for public API test")

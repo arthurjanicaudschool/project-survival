@@ -24,7 +24,7 @@ create trigger immutable_audit before update or delete on scheduler_dispatches
 create or replace function survival_watchdog_due(eid text, observed_at timestamptz default clock_timestamp())
 returns boolean language sql stable set search_path = pg_catalog,public as $$
  select coalesce((
-  select c.enabled and e.status <> 'FINISHED'
+  select c.enabled and e.status in ('RUNNING','CLOSING')
    and coalesce((e.state->'health'->>'started_at')::timestamptz,e.updated_at)
        <= observed_at - interval '9 minutes'
    and not exists(select 1 from public.scheduler_dispatches d

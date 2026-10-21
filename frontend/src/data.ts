@@ -6,7 +6,7 @@ export const supabase =
   env.VITE_SUPABASE_URL && env.VITE_SUPABASE_ANON_KEY
     ? createClient(env.VITE_SUPABASE_URL, env.VITE_SUPABASE_ANON_KEY)
     : null;
-export function useCompetition(demo: boolean) {
+export function useCompetition(demo: boolean, experiment = env.VITE_EXPERIMENT_ID || "survival-001") {
   const [state, setState] = useState<State | null>(null),
     [error, setError] = useState(""),
     [loading, setLoading] = useState(true),
@@ -27,7 +27,7 @@ export function useCompetition(demo: boolean) {
       try {
         let result: State | null;
         if (demo) {
-          const r = await fetch("/demo.json");
+          const r = await fetch(experiment === "survival-002" ? "/demo-phase2.json" : "/demo.json");
           if (!r.ok)
             throw Error(
               "Exécutez python -m survival.cli demo pour générer les fixtures.",
@@ -40,7 +40,7 @@ export function useCompetition(demo: boolean) {
             throw Error(
               "Supabase non configuré. Connectez vos variables publiques pour suivre la compétition.",
             );
-          const eid = env.VITE_EXPERIMENT_ID || "survival-001";
+          const eid = experiment;
           const version = await supabase
             .from("dashboard_updates")
             .select("updated_at")
@@ -88,7 +88,7 @@ export function useCompetition(demo: boolean) {
                 event: "*",
                 schema: "public",
                 table: "dashboard_updates",
-                filter: `experiment_id=eq.${env.VITE_EXPERIMENT_ID || "survival-001"}`,
+                filter: `experiment_id=eq.${experiment}`,
               },
               () => {if(pending)return;pending=setTimeout(()=>{pending=undefined;void refresh();},Math.max(0,60000-(Date.now()-lastRefresh)));},
             )
@@ -100,6 +100,6 @@ export function useCompetition(demo: boolean) {
       if(pending)clearTimeout(pending);
       if (channel && supabase) void supabase.removeChannel(channel);
     };
-  }, [demo]);
+  }, [demo, experiment]);
   return { state, error, loading, realtime };
 }

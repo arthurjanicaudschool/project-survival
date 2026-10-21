@@ -337,7 +337,7 @@ class Store:
         eid = state["id"]
         self.db.execute(
             """insert into experiments(id,mode,status,started_at,end_at,state,updated_at)
-            values(%s,%s,%s,%s,%s,%s,%s) on conflict(id) do update set status=excluded.status,state=excluded.state,updated_at=excluded.updated_at""",
+            values(%s,%s,%s,%s,%s,%s,%s) on conflict(id) do update set status=excluded.status,started_at=excluded.started_at,end_at=excluded.end_at,state=excluded.state,updated_at=excluded.updated_at""",
             (
                 eid,
                 state["mode"],

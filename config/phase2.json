@@ -1,0 +1,19 @@
+{
+  "policy_version": "survival-phase2-v1",
+  "duration_hours": 168,
+  "initial_eur": "100",
+  "resolution_buffer_hours": 24,
+  "analysis_interval_hours": 8,
+  "cycle_analysis_budget_seconds": 720,
+  "failure_retry_minutes": 60,
+  "research_rounds": 3,
+  "research_tools_per_round": 4,
+  "research_timeout_seconds": 150,
+  "max_context_characters": 50000,
+  "max_llm_tokens": 2600,
+  "max_markets": 20,
+  "max_slippage": "0.03",
+  "suggested_stake_eur": ["10", "25"],
+  "mentality": "Libre et raisonnée : rechercher une conviction vérifiable, choisir sa mise et accepter de perdre celle-ci. Aucun pari forcé.",
+  "categories": ["Politics", "Sports", "Weather", "Crypto", "Economics"]
+}
