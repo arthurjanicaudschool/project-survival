@@ -81,6 +81,11 @@ Les recherches sont mises en cache et partagées ; les
 portefeuilles et décisions restent indépendants. Plus d'analyse de revente ni de
 réaction LLM aux variations des positions bloquées. Les historiques de prix ne
 sont pas collectés automatiquement pour les paris de phase 2.
+Les paris déjà verrouillés sont suivis par leurs métadonnées et leur résolution,
+sans interroger des carnets de revente inutilisés. Les observations inchangées
+des paris détenus ne sont pas recopiées à chaque passage ; les changements de
+règles, de dates, de statut et les preuves de résolution restent archivés.
+Chaque cycle et chaque contrôle financier restent enregistrés.
 
 | Mesure | Phase 1 observée | Phase 2 prévue |
 |---|---:|---:|

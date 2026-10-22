@@ -453,14 +453,19 @@ class Polymarket:
         markets = {}
         for mid, m in raw.items():
             try:
-                markets[mid] = self.normalize(m, include_history=getattr(self, "phase", 1) != 2)
+                markets[mid] = (
+                    self.normalize(m, include_history=False, include_books=mid not in held_ids)
+                    if getattr(self, "phase", 1) == 2
+                    else self.normalize(m)
+                )
             except Exception as exc:
                 self.errors.append(
                     f"Market {mid}: {type(exc).__name__}: {str(exc)[:180]}"
                 )
         return markets
 
-    def normalize(self, m, include_history=True):
+    def normalize(self, m, include_history=True, include_books=True):
+        include_history = include_history and getattr(self, "phase", 1) != 2
         version = m.version
         if version not in ("v1", "v2"):
             raise ValueError(f"Unsupported protocol {version}")
@@ -571,6 +576,9 @@ class Polymarket:
                             else "UTC when final resolution was observed; not the chain settlement timestamp",
                         }
                         return market
+        if not include_books:
+            # Locked event bets need rules and official settlement, never an exit quote.
+            return market
         trading = m.trading
         if trading.fees_enabled is False:
             rate, exponent = D(0), D(1)

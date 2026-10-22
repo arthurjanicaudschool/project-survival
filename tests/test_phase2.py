@@ -222,6 +222,39 @@ def test_start_does_not_begin_week_if_azure_check_fails(monkeypatch):
         cli.main()
 
 
+def test_locked_bets_do_not_duplicate_unchanged_market_snapshots(setup):
+    store,now=setup
+    cycle(store,"phase2-test",BetFixtureProvider(now),BetFixtureReasoner(),"initial",now)
+    count=lambda:store.db.execute("select count(*) from audit where kind='market_snapshots'").fetchone()[0]
+    first=count()
+    later=now+timedelta(minutes=10)
+    cycle(store,"phase2-test",BetFixtureProvider(later,now),BetFixtureReasoner(),"unchanged",later)
+    assert count()==first
+    class Changed(BetFixtureProvider):
+        def collect(self,*args):
+            markets=super().collect(*args)
+            markets["fixture-Weather"].description="Updated official resolution rules"
+            return markets
+    later+=timedelta(minutes=10)
+    cycle(store,"phase2-test",Changed(later,now),BetFixtureReasoner(),"rules-changed",later)
+    assert count()==first+1
+
+
+def test_locked_market_metadata_does_not_require_books_or_fee_parameters():
+    from types import SimpleNamespace as NS
+    from survival.providers import Polymarket
+    p=Polymarket.__new__(Polymarket);p.phase=2;p.errors=[]
+    def forbidden(*args,**kwargs):raise AssertionError("No order book needed for locked bets")
+    p.client=NS(get_order_book=forbidden)
+    raw=NS(version="v2",id="held",slug="held",question="Highest temperature in Paris?",description="Rules",
+           resolution=NS(source="https://example.com",uma_resolution_status=None),condition_id=None,
+           events=[],category="Weather",tags=[],metrics=NS(liquidity=1,volume_24hr=1),
+           state=NS(active=True,closed=False,accepting_orders=True,end_date=utcnow()+timedelta(days=1)),
+           outcomes=NS(yes=NS(position_id="yes"),no=NS(position_id="no")))
+    market=p.normalize(raw,include_books=False)
+    assert market.id=="held" and market.books=={} and not market.resolved
+
+
 def test_phase2_model_has_seen_rules_before_buy(setup):
     from survival.providers import validate_generated_plan
     store, now=setup

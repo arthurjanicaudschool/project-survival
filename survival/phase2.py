@@ -247,11 +247,20 @@ def cycle(store, eid, provider, reasoner, cycle_id=None, now=None):
         except Exception as exc:
             markets, ok = {}, False
             provider.errors = [f"Market provider: {type(exc).__name__}"]
+        resolution_fields = ("question", "description", "resolution_source", "condition_id", "version", "assets", "group", "category", "end_at", "active",
+                             "resolved", "payouts", "resolved_at", "resolution_evidence")
+        archive_ids = set()
+        for mid, market in markets.items():
+            data = market.model_dump(mode="json")
+            if mid not in held or any(data.get(k) != state["markets"].get(mid, {}).get(k) for k in resolution_fields):
+                archive_ids.add(mid)
         with store.locked(eid):
             state["markets"].update({k: v.model_dump(mode="json") for k, v in markets.items()})
             state["updated_at"] = at.isoformat()
             store.save(state, projection(state))
             for mid, market in markets.items():
+                if mid not in archive_ids:
+                    continue
                 sid = f"{eid}:{cid}:initial:{mid}"
                 if not store.audit_exists("market_snapshots", sid):
                     store.record("market_snapshots", id=sid, experiment_id=eid, cycle_id=cid,
