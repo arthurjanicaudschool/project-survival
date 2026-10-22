@@ -195,6 +195,33 @@ def test_phase2_cost_report_uses_actual_new_cadence(setup):
     assert cost["daily_quota_enabled"] is False
 
 
+def test_phase2_azure_deployment_is_distinct(monkeypatch):
+    from survival.providers import deployment_for
+    monkeypatch.setenv("AZURE_OPENAI_DEPLOYMENT", "old-phase1")
+    monkeypatch.delenv("AZURE_OPENAI_DEPLOYMENT_PHASE2", raising=False)
+    assert deployment_for({"phase":2}) == "gpt-6.1-sol-2"
+    assert deployment_for({}) == "old-phase1"
+    monkeypatch.setenv("AZURE_OPENAI_DEPLOYMENT_PHASE2", "custom-phase2")
+    assert deployment_for({"phase":2}) == "custom-phase2"
+
+
+def test_start_does_not_begin_week_if_azure_check_fails(monkeypatch):
+    from survival import cli
+    from survival import providers
+    class Prepared:
+        def load(self, eid): return {"status":"READY"}
+        def close(self): pass
+    monkeypatch.setattr(cli,"Store",lambda **kwargs: Prepared())
+    monkeypatch.setattr(cli,"load_dotenv",lambda: None)
+    def fail(*args):raise ValueError("Deployment unavailable")
+    monkeypatch.setattr(providers,"check_azure",fail)
+    def forbidden(*args):raise AssertionError("Must not start or fund accounts")
+    monkeypatch.setattr(cli,"initialize",forbidden)
+    monkeypatch.setattr("sys.argv",["survival","start","--experiment","survival-002"])
+    with pytest.raises(ValueError, match="Deployment unavailable"):
+        cli.main()
+
+
 def test_phase2_model_has_seen_rules_before_buy(setup):
     from survival.providers import validate_generated_plan
     store, now=setup

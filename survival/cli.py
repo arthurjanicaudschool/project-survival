@@ -26,6 +26,7 @@ def main():
             "demo",
             "demo-phase2",
             "api-check",
+            "azure-check",
             "export",
             "migrate",
             "quota-check",
@@ -41,6 +42,10 @@ def main():
     p.add_argument("--output", default="exports")
     p.add_argument("--cycle-id")
     args = p.parse_args()
+    if args.command == "azure-check":
+        from .providers import check_azure
+        print(json.dumps(check_azure(2 if args.experiment == "survival-002" else 1), indent=2))
+        return
     if args.command == "research-check":
         from .research import ResearchTools
 
@@ -237,6 +242,12 @@ def main():
             state = prepare(store, args.experiment)
             print(json.dumps({"experiment": state["id"], "status": state["status"], "phase": 2}))
         elif args.command == "start":
+            if args.experiment == "survival-002":
+                from .providers import check_azure
+                existing = store.load(args.experiment)
+                if existing and existing["status"] != "READY":
+                    raise ValueError("START cannot reset an existing experiment")
+                check_azure(2)
             state = initialize(store, args.experiment, "live", reference_fx())
             print(f"START {state['started_at']} → {state['end_at']}")
         elif args.command == "demo-phase2":

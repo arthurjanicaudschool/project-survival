@@ -72,7 +72,12 @@ réentraînement des poids, ni une promesse d'amélioration à chaque pari.
 ## Réduire le coût IA
 
 Le déploiement Azure existant est conservé. Aucune migration vers un modèle moins
-bon sans évaluation. Les recherches sont mises en cache et partagées ; les
+bon sans évaluation. La phase 2 utilise le nom de déploiement distinct
+`gpt-6.1-sol-2`, configurable par `AZURE_OPENAI_DEPLOYMENT_PHASE2` (variable GitHub
+et variable backend). Le déploiement de phase 1 reste inchangé. Le nom seul
+ne change ni le modèle ni ses tarifs ; le déploiement doit exister dans la
+ressource Azure correspondant à l'endpoint et à la clé déjà configurés.
+Les recherches sont mises en cache et partagées ; les
 portefeuilles et décisions restent indépendants. Plus d'analyse de revente ni de
 réaction LLM aux variations des positions bloquées. Les historiques de prix ne
 sont pas collectés automatiquement pour les paris de phase 2.
@@ -136,6 +141,9 @@ Sources consultées le 22 octobre 2026 :
 6. Au moment choisi : GitHub Actions → SURVIVAL cycles → Run workflow → action
    `start`, expérience `survival-002`. Ou commande ci-dessous. Le taux EUR/USD
    horodaté et le début des 168 h sont enregistrés seulement à cet instant.
+   Un petit test Azure du déploiement et du JSON structuré précède START : en cas
+   d'échec, le compteur ne démarre pas. Ce test technique consomme quelques tokens
+   et ne produit aucun pari ni recherche d'agent.
 
 ```powershell
 python -m survival.cli start --experiment survival-002
@@ -143,6 +151,10 @@ python -m survival.cli cycle --experiment survival-002
 python -m survival.cli health --experiment survival-002
 python -m survival.cli export --experiment survival-002 --output exports/phase2
 ```
+
+Avant de lancer, `python -m survival.cli azure-check --experiment survival-002`
+teste le déploiement sans démarrer la compétition. La même action est disponible
+dans le workflow GitHub. Chaque exécution consomme une petite requête technique.
 
 Les sauvegardes quotidiennes GitHub sont retenues 14 jours. L'export contient
 JSON et CSV ainsi que l'intégralité du journal append-only. Conserver aussi

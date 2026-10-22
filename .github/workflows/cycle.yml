@@ -7,7 +7,7 @@ on:
       action:
         description: 'api-check tests public market access without START. start creates the competition; cycle resumes it.'
         type: choice
-        options: [cycle, start, prepare-phase2, export, api-check, research-check, health, cost-report]
+        options: [cycle, start, prepare-phase2, export, api-check, azure-check, research-check, health, cost-report]
         default: cycle
       experiment:
         description: 'Phase 2 = survival-002. Phase 1 remains archived; START never resets an experiment.'
@@ -35,6 +35,7 @@ jobs:
       AZURE_OPENAI_API_KEY: ${{ secrets.AZURE_OPENAI_API_KEY }}
       AZURE_OPENAI_API_VERSION: ${{ vars.AZURE_OPENAI_API_VERSION || '2024-10-21' }}
       AZURE_OPENAI_DEPLOYMENT: ${{ secrets.AZURE_OPENAI_DEPLOYMENT }}
+      AZURE_OPENAI_DEPLOYMENT_PHASE2: ${{ vars.AZURE_OPENAI_DEPLOYMENT_PHASE2 || 'gpt-6.1-sol-2' }}
       SURVIVAL_TRIGGER_SOURCE: ${{ inputs.source || github.event_name }}
     steps:
       - uses: actions/checkout@v4

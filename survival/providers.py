@@ -14,6 +14,37 @@ from .agents import SETTINGS
 log = logging.getLogger(__name__)
 
 
+def deployment_for(agent):
+    if agent.get("phase") == 2:
+        return os.getenv("AZURE_OPENAI_DEPLOYMENT_PHASE2", "gpt-6.1-sol-2").strip()
+    return os.environ["AZURE_OPENAI_DEPLOYMENT"].strip()
+
+
+def check_azure(phase=2):
+    """A small, explicitly technical request; never runs research or an experiment."""
+    from openai import OpenAI
+    deployment = deployment_for({"phase": phase})
+    example = DecisionPlan(agent_id="TECHNICAL_CHECK", actions=[Decision(
+        agent_id="TECHNICAL_CHECK", market_id="", outcome=None, action="WAIT",
+        estimated_probability=D(".5"), confidence=0, reasoning="Vérification technique uniquement.",
+        sources=[], proposed_stake=0, expected_edge=0, exit_plan="Aucun pari.", risk_factors=[])]).model_dump_json()
+    with OpenAI(api_key=os.environ["AZURE_OPENAI_API_KEY"],
+                base_url=os.environ["AZURE_OPENAI_ENDPOINT"].rstrip("/") + "/openai/v1/",
+                timeout=45, max_retries=0) as client:
+        response = client.responses.create(model=deployment, store=False, max_output_tokens=1300,
+            input=[{"role":"user", "content":"Technical connectivity/schema check only. No research, no bets. Return this JSON with the same values: " + example}],
+            text={"format": strict_schema(phase)})
+    if response.status != "completed":
+        raise ValueError("Azure technical check did not complete")
+    plan = DecisionPlan.model_validate_json(response.output_text)
+    if plan.agent_id != "TECHNICAL_CHECK" or any(d.action != "WAIT" or d.proposed_stake != 0 for d in plan.actions):
+        raise ValueError("Azure technical check returned an unexpected action")
+    return {"status":"OK", "deployment": deployment, "model":response.model,
+            "checked_at":utcnow().isoformat(), "input_tokens":response.usage.input_tokens if response.usage else None,
+            "output_tokens":response.usage.output_tokens if response.usage else None,
+            "purpose":"Technical preflight only; no experiment decision or bet."}
+
+
 def decode_plan(text):
     raw = json.loads(text)
     return (
@@ -675,6 +706,7 @@ class AzureReasoner:
         trace_start = len(self.research.trace)
         audit = {
             "agent_id": agent["id"],
+            "deployment": deployment_for(agent),
             "requests": 0,
             "prompt_tokens": 0,
             "completion_tokens": 0,
@@ -807,7 +839,7 @@ class AzureReasoner:
                 else None
             )
             response = self.responses_client.responses.create(
-                model=os.environ["AZURE_OPENAI_DEPLOYMENT"],
+                model=deployment_for(agent),
                 input=messages,
                 max_output_tokens=token_limit,
                 store=False,
@@ -831,6 +863,7 @@ class AzureReasoner:
                         reserve,
                         {
                             "model": response.model,
+                            "deployment": deployment_for(agent),
                             "input_tokens": usage.input_tokens,
                             "output_tokens": usage.output_tokens,
                             "cached_tokens": getattr(
@@ -1094,7 +1127,7 @@ class AzureReasoner:
             "external_news": "No verified external news provider configured; do not invent current events.",
         }
         response = self.client.chat.completions.create(
-            model=os.environ["AZURE_OPENAI_DEPLOYMENT"],
+            model=deployment_for(agent),
             messages=[
                 {
                     "role": "system",
