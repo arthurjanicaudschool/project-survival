@@ -12,6 +12,21 @@ from survival.phase2 import definitions, start, prepare, eligible, CONFIG, marke
 from survival.phase2_fixtures import BetFixtureProvider, BetFixtureReasoner
 
 
+def test_public_projection_omits_unused_discovery_without_mutating_evidence(setup):
+    from survival.runner import projection
+    store, now = setup
+    state = store.load("phase2-test")
+    markets = BetFixtureProvider(now).collect()
+    state["markets"] = {mid: m.model_dump(mode="json") for mid, m in markets.items()}
+    ids = list(state["markets"])
+    state["agents"][0]["bets"] = [{"market_id": ids[0]}]
+    state["agents"][1]["decisions"] = [{"market_id": ids[1]}]
+    result = projection(state)
+    assert set(result["markets"]) == {ids[0], ids[1]}
+    assert len(state["markets"]) == len(markets)
+    assert result["agents"][0]["wallet"] == state["agents"][0]["wallet"]
+
+
 @pytest.fixture
 def setup(tmp_path):
     store = Store(demo_path=tmp_path / "bets.sqlite")

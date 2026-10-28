@@ -21,7 +21,7 @@ export function PhaseTwo() {
   const [now,setNow] = useState(Date.now());
   const {state:raw,error,loading,realtime} = useCompetition(demo,"survival-002");
   const state = raw as unknown as Competition|null;
-  const ready = !state || state.status === "READY";
+  const ready = state?.status === "READY";
   const fx = Number(state?.fx.usd_per_eur || 1);
   const agents = state?.agents || [];
   const sum = (fn:(a:Forecaster)=>number) => agents.reduce((n,a)=>n+fn(a),0);
@@ -36,7 +36,7 @@ export function PhaseTwo() {
   const remaining = state?.end_at ? Math.max(0,Math.ceil((new Date(state.end_at).getTime()-now)/60000)) : 10080;
   useEffect(()=>{const t=setInterval(()=>setNow(Date.now()),10000);return()=>clearInterval(t);},[]);
   function changeDemo() {const value=!demo;setDemo(value);const u=new URL(location.href);value?u.searchParams.set("mode","demo"):u.searchParams.delete("mode");history.replaceState({},"",u);}
-  const source = demo ? "Démonstration · données entièrement inventées" : ready ? "Prête · pas encore démarrée" : state?.status === "FINISHED" ? "Expérience terminée" : state?.status === "CLOSING" ? "Derniers résultats officiels attendus" : "Expérience en cours";
+  const source = demo ? "Démonstration · données entièrement inventées" : !state ? "État de l’expérience indisponible" : ready ? "Prête · pas encore démarrée" : state?.status === "FINISHED" ? "Expérience terminée" : state?.status === "CLOSING" ? "Derniers résultats officiels attendus" : "Expérience en cours";
   function betCard(b:Bet & {agent:Forecaster}) {
     const settled=b.status === "SETTLED";
     return <article className="p2-bet" key={b.id}>
@@ -52,17 +52,18 @@ export function PhaseTwo() {
     <header className="p2-header"><a href="/" className="p2-brand"><span>PS</span><div>PROJECT SURVIVAL<small>10 intelligences. 7 jours. Des convictions.</small></div></a><div className="p2-header-links"><a href="/?phase=1">Archives · Phase 1 <ArrowUpRight size={14}/></a><button onClick={changeDemo}>{demo?"Voir les vraies données":"Voir une démonstration"}</button><span className="p2-simulation"><ShieldCheck size={14}/> 100 % fictif</span></div></header>
     <main className="p2-main">
       {demo && <div className="p2-alert">DÉMONSTRATION — aucun chiffre ni pari ci-dessous ne provient de l’expérience réelle.</div>}
-      {error && <div className="p2-alert danger">La connexion aux données a échoué : {error}. {state?"Les dernières données reçues restent affichées.":"Aucun résultat n’est disponible."}</div>}
-      <div className="p2-hero"><div><span className="p2-eyebrow">PHASE 02 / PARIER SUR LE RÉEL</span><h1>Une conviction.<br/><em>Un événement. Un résultat.</em></h1><p>Dix agents spécialisés choisissent leurs paris. Chacun dispose de 100 € fictifs et garde ses mises jusqu’au résultat officiel.</p><div className="p2-status"><i/>{loading?"Connexion aux données…":source}</div></div><aside className="p2-clock"><span><Clock3 size={16}/>{ready?"DURÉE DU DÉFI":"TEMPS RESTANT"}</span><strong>{Math.floor(remaining/1440)}<small>j</small> {Math.floor(remaining%1440/60)}<small>h</small> {remaining%60}<small>min</small></strong><p>{ready?"Le compteur commencera uniquement au START.":state?.end_at?`Fin prévue : ${date(state.end_at)}`:""}</p></aside></div>
+      {!demo && state && <div className="p2-alert">Dernier état reçu du serveur : {date(state.updated_at)}. {loading ? "Vérification de la connexion en cours…" : error ? "Copie conservée : connexion indisponible." : ""}</div>}
+      {error && <div className="p2-alert danger">La connexion aux données a échoué : {error}. {state?"Les dernières données reçues restent affichées ; elles ne sont pas actualisées.":"Aucun résultat n’est disponible."}</div>}
+      <div className="p2-hero"><div><span className="p2-eyebrow">PHASE 02 / PARIER SUR LE RÉEL</span><h1>Une conviction.<br/><em>Un événement. Un résultat.</em></h1><p>Dix agents spécialisés choisissent leurs paris. Chacun dispose de 100 € fictifs et garde ses mises jusqu’au résultat officiel.</p><div className="p2-status"><i/>{loading?"Connexion aux données…":source}</div></div><aside className="p2-clock"><span><Clock3 size={16}/>{ready?"DURÉE DU DÉFI":"TEMPS RESTANT"}</span><strong>{state ? <>{Math.floor(remaining/1440)}<small>j</small> {Math.floor(remaining%1440/60)}<small>h</small> {remaining%60}<small>min</small></> : "—"}</strong><p>{ready?"Le compteur commencera uniquement au START.":state?.end_at?`Fin prévue : ${date(state.end_at)}`:""}</p></aside></div>
       <nav className="p2-nav" aria-label="Navigation principale">{["L’essentiel","Les 10 agents","Les paris","Les décisions","Les règles"].map(t=><button key={t} className={t===tab?"active":""} onClick={()=>{setTab(t);setSelected(null);}}>{t}</button>)}</nav>
       {state?.status === "READY" && !error && <section className="p2-ready"><div><span className="p2-eyebrow">LE NOUVEAU DÉPART EST PRÊT</span><h2>1 000 € fictifs. Cinq domaines. Les mêmes règles.</h2><p>Aucun pari réel, aucun crédit Azure consommé par les agents avant le lancement. La première phase reste consultable dans les archives.</p></div><a className="p2-primary" href={github} target="_blank" rel="noreferrer">Préparer le START <ArrowUpRight size={16}/></a></section>}
       {!state && !loading && !error && <p className="p2-empty">La phase 2 doit être préparée côté serveur. Aucun résultat n’a été simulé pour remplir cette page.</p>}
       {(tab === "L’essentiel") && <>
         <section className="p2-metrics">{[
-          {label:ready?"Capital prévu":"Argent disponible",value:ready?eur(1000):eur(cash),text:ready?"100 € pour chacun des dix agents":"Peut servir à de nouveaux paris",icon:Wallet},
-          {label:"Argent engagé",value:eur(committed),text:"Mises bloquées en attendant les résultats",icon:Clock3},
-          {label:"Gains ou pertes confirmés",value:eur(profit),text:"Seulement les paris officiellement terminés",icon:Trophy},
-          {label:"Paris en attente",value:String(pending.length),text:`${completed.length} pari${completed.length>1?"s":""} déjà terminé${completed.length>1?"s":""}`,icon:Globe2},
+          {label:ready?"Capital prévu":"Argent disponible",value:!state?"—":ready?eur(1000):eur(cash),text:ready?"100 € pour chacun des dix agents":"Peut servir à de nouveaux paris",icon:Wallet},
+          {label:"Argent engagé",value:state?eur(committed):"—",text:"Mises bloquées en attendant les résultats",icon:Clock3},
+          {label:"Gains ou pertes confirmés",value:state?eur(profit):"—",text:"Seulement les paris officiellement terminés",icon:Trophy},
+          {label:"Paris en attente",value:state?String(pending.length):"—",text:`${completed.length} pari${completed.length>1?"s":""} déjà terminé${completed.length>1?"s":""}`,icon:Globe2},
         ].map(({label,value,text,icon:Icon})=><article key={label}><div><span>{label}</span><Icon size={17}/></div><strong>{value}</strong><p>{text}</p></article>)}</section>
         <div className="p2-section-heading"><div><span className="p2-eyebrow">CINQ TERRAINS DE JEU</span><h2>Deux agents par spécialité</h2></div><button onClick={()=>setTab("Les 10 agents")}>Rencontrer les agents <ArrowRight size={15}/></button></div>
         <div className="p2-domains">{Object.entries(labels).map(([key,label])=><button key={key} onClick={()=>{setSelected(agents.find(a=>a.category===key)?.id || null);setTab("Les 10 agents");}}><span>{icons[key]}</span><h3>{label}</h3><p>{agents.filter(a=>a.category===key).map(a=>a.id).join(" & ") || "Deux agents indépendants"}</p><small>Même capital · décisions distinctes</small><ArrowUpRight size={18}/></button>)}</div>

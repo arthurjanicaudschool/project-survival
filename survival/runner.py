@@ -96,9 +96,23 @@ def projection(state):
     # prevents each Realtime refresh from downloading all depth and history.
     from .providers import compact_tool
 
+    markets = state["markets"]
+    if state.get("phase") == 2:
+        # The event-betting dashboard only displays markets mentioned by an
+        # agent. Discovery evidence remains in the private state and exports.
+        referenced = {
+            item.get("market_id")
+            for agent in state["agents"]
+            for item in agent.get("bets", []) + agent["decisions"][-10:]
+        }
+        referenced.update(
+            p["market_id"] for a in state["agents"]
+            for p in a["wallet"]["positions"].values()
+        )
+        markets = {mid: m for mid, m in markets.items() if mid in referenced}
     result["markets"] = {
         mid: compact_tool({"market": m})["market"] | {"history": {}}
-        for mid, m in state["markets"].items()
+        for mid, m in markets.items()
     }
     stride = max(1, __import__("math").ceil(len(state["history"]) / 360))
     points = state["history"][::stride]

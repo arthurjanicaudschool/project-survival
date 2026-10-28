@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { createClient } from "@supabase/supabase-js";
 import type { State } from "./types";
+import { cacheConfirmed, confirmedState, connectionError, readConfirmed } from "./data-cache";
 const env = import.meta.env;
 export const supabase =
   env.VITE_SUPABASE_URL && env.VITE_SUPABASE_ANON_KEY
@@ -17,17 +18,21 @@ export function useCompetition(demo: boolean, experiment = env.VITE_EXPERIMENT_I
       running = false,
       lastRefresh=0;
     let pending: ReturnType<typeof setTimeout> | undefined;
-    setState(null);
+    let request: AbortController | undefined;
+    setState(demo ? null : readConfirmed(experiment));
     setError("");
     setLoading(true);
     const refresh = async () => {
       if (running) return;
       running = true;
       lastRefresh=Date.now();
+      const controller = new AbortController();
+      request = controller;
+      const timeout = setTimeout(() => controller.abort(), 20000);
       try {
         let result: State | null;
         if (demo) {
-          const r = await fetch(experiment === "survival-002" ? "/demo-phase2.json" : "/demo.json");
+          const r = await fetch(experiment === "survival-002" ? "/demo-phase2.json" : "/demo.json", {signal: controller.signal});
           if (!r.ok)
             throw Error(
               "Exécutez python -m survival.cli demo pour générer les fixtures.",
@@ -45,6 +50,7 @@ export function useCompetition(demo: boolean, experiment = env.VITE_EXPERIMENT_I
             .from("dashboard_updates")
             .select("updated_at")
             .eq("experiment_id", eid)
+            .abortSignal(controller.signal)
             .maybeSingle();
           if (version.error) throw version.error;
           if (version.data?.updated_at === lastVersion) {
@@ -55,12 +61,14 @@ export function useCompetition(demo: boolean, experiment = env.VITE_EXPERIMENT_I
             .from("dashboard_states")
             .select("payload")
             .eq("experiment_id", eid)
+            .abortSignal(controller.signal)
             .maybeSingle();
           if (error) throw error;
           result = data?.payload || null;
-          if (result && result.mode !== "live")
-            throw Error("Données synthétiques interdites dans la vue réelle.");
+          if (result && !confirmedState(result, experiment))
+            throw Error("Source réelle invalide.");
           lastVersion = version.data?.updated_at || "";
+          if (result && active) cacheConfirmed(experiment, result);
         }
         if (active) {
           setState(result);
@@ -69,10 +77,12 @@ export function useCompetition(demo: boolean, experiment = env.VITE_EXPERIMENT_I
       } catch (e) {
         if (active)
           setError(
-            e instanceof Error ? e.message : "Synchronisation indisponible",
+            demo && e instanceof Error ? e.message : connectionError(e, controller.signal.aborted),
           );
       } finally {
         running = false;
+        clearTimeout(timeout);
+        if (request === controller) request = undefined;
         if (active) setLoading(false);
       }
     };
@@ -96,6 +106,7 @@ export function useCompetition(demo: boolean, experiment = env.VITE_EXPERIMENT_I
         : null;
     return () => {
       active = false;
+      request?.abort();
       clearInterval(interval);
       if(pending)clearTimeout(pending);
       if (channel && supabase) void supabase.removeChannel(channel);
