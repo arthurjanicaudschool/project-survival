@@ -270,6 +270,16 @@ def cycle(store, eid, provider, reasoner, cycle_id=None, now=None):
         for agent in state["agents"]:
             at = at_now()
             wallet = Wallet.model_validate(agent["wallet"])
+            if at >= deadline and not held:
+                # No more bets may be placed and every position is already
+                # settled. Check the ledger, then persist all ten unchanged
+                # accounts together at the final cycle checkpoint. Rewriting
+                # the full discovery archive once per agent adds no evidence.
+                bet_snapshot(agent, at, D(state["fx"]["usd_per_eur"]))
+                store.assert_wallet(eid, agent["id"], wallet)
+                agent["runtime"] = {"status": "AWAITING_RESULTS", "at": at.isoformat(),
+                    "reason": "Paris terminés ; aucun nouveau pari après la date limite."}
+                continue
             with store.locked(eid):
                 settlements(store, state, agent, wallet, markets, at)
                 for bet in agent.get("bets", []):

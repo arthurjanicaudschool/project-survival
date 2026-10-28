@@ -27,6 +27,28 @@ def test_public_projection_omits_unused_discovery_without_mutating_evidence(setu
     assert result["agents"][0]["wallet"] == state["agents"][0]["wallet"]
 
 
+def test_idle_after_betting_deadline_uses_one_final_account_checkpoint(setup, monkeypatch):
+    store, started = setup
+    before = store.load("phase2-test")
+    at = started + timedelta(days=6, minutes=1)
+    saves = []
+    original = store.save
+    def tracked(state, public):
+        saves.append(state["updated_at"])
+        return original(state, public)
+    monkeypatch.setattr(store, "save", tracked)
+    class NoReasoning:
+        def decide(self, *args):
+            raise AssertionError("No reasoning after betting deadline")
+    state = cycle(store, "phase2-test", BetFixtureProvider(at), NoReasoning(), "idle", at)
+    assert len(saves) == 3  # inflight, provider checkpoint, completed cycle
+    assert state["health"]["pending_bets"] == 0
+    for old, new in zip(before["agents"], state["agents"]):
+        assert old["wallet"] == new["wallet"]
+        assert new["runtime"]["status"] == "AWAITING_RESULTS"
+    assert cycle(store, "phase2-test", BetFixtureProvider(at), NoReasoning(), "idle", at) == state
+
+
 @pytest.fixture
 def setup(tmp_path):
     store = Store(demo_path=tmp_path / "bets.sqlite")

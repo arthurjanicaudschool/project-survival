@@ -52,18 +52,18 @@ export function useCompetition(demo: boolean, experiment = env.VITE_EXPERIMENT_I
             .eq("experiment_id", eid)
             .abortSignal(controller.signal)
             .maybeSingle();
-          if (version.error) throw version.error;
+          if (version.error) throw {status: version.status};
           if (version.data?.updated_at === lastVersion) {
             if (active) setError("");
             return;
           }
-          const { data, error } = await supabase
+          const { data, error, status } = await supabase
             .from("dashboard_states")
             .select("payload")
             .eq("experiment_id", eid)
             .abortSignal(controller.signal)
             .maybeSingle();
-          if (error) throw error;
+          if (error) throw {status};
           result = data?.payload || null;
           if (result && !confirmedState(result, experiment))
             throw Error("Source réelle invalide.");
