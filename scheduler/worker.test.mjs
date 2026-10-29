@@ -6,7 +6,7 @@ async function scenario(state,dispatchStatus=204) {
   const original=globalThis.fetch;const calls=[];
   globalThis.fetch=async (url,options)=>{
     calls.push({url,options});
-    return calls.length===1 ? Response.json([{payload:state}]) : new Response(null,{status:dispatchStatus});
+    return calls.length===1 ? Response.json([state]) : new Response(null,{status:dispatchStatus});
   };
   try{return {result:await tick({SUPABASE_URL:'https://example.org',SUPABASE_ANON_KEY:'public-test',EXPERIMENT_ID:'fixture',GITHUB_REPOSITORY:'test/fixture',GITHUB_SCHEDULER_TOKEN:'not-a-real-token'}),calls};}
   finally{globalThis.fetch=original;}

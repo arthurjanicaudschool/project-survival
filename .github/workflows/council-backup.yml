@@ -1,0 +1,27 @@
+name: Council daily archive
+on:
+  schedule:
+    - cron: '37 3 * * *'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      COUNCIL_API_URL: ${{ vars.COUNCIL_API_URL }}
+      COUNCIL_ADMIN_TOKEN: ${{ secrets.COUNCIL_ADMIN_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install httpx python-dotenv
+      - run: python operations/council_admin.py export --output exports/phase3/council.json
+      - run: gzip -9 exports/phase3/council.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: council-backup-${{ github.run_id }}
+          path: exports/phase3/council.json.gz
+          retention-days: 7

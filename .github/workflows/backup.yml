@@ -1,7 +1,6 @@
 name: Daily paper competition backup
 on:
-  schedule:
-    - cron: '43 3 * * *'
+  # Finished phases remain manually exportable; avoid repeated full DB reads.
   workflow_dispatch:
 permissions:
   contents: read

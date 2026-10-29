@@ -11,3 +11,4 @@ data/
 exports/
 output/
 *.log
+.wrangler/

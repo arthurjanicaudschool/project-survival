@@ -1,0 +1,25 @@
+name = "project-survival-council"
+main = "src/worker.ts"
+compatibility_date = "2026-10-01"
+workers_dev = true
+
+[vars]
+EXPERIMENT_ID = "survival-003"
+AZURE_DEPLOYMENT = "gpt-6.1-sol-3"
+PUBLIC_ORIGIN = "https://project-survival.pages.dev"
+ALLOW_FIXTURES = "false"
+
+[triggers]
+crons = ["* * * * *"]
+
+[[durable_objects.bindings]]
+name = "COUNCIL"
+class_name = "Council"
+
+[[migrations]]
+tag = "v3-sqlite-1"
+new_sqlite_classes = ["Council"]
+
+[observability]
+enabled = true
+head_sampling_rate = 0.1

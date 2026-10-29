@@ -41,6 +41,7 @@ import { useCompetition } from "./data";
 import type { Agent, State, Snapshot } from "./types";
 import "./style.css";
 import { PhaseTwo } from "./phase2";
+import { PhaseThree } from "./phase3";
 
 const colors = [
   "#c9f36c",
@@ -1455,6 +1456,6 @@ function App() {
 }
 createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    {new URLSearchParams(location.search).get("phase") === "1" ? <App /> : <PhaseTwo />}
+    {new URLSearchParams(location.search).get("phase") === "1" ? <App /> : new URLSearchParams(location.search).get("phase") === "3" ? <PhaseThree /> : <PhaseTwo />}
   </React.StrictMode>,
 );

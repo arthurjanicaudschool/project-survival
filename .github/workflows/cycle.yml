@@ -1,7 +1,7 @@
 name: SURVIVAL cycles
 on:
-  schedule:
-    - cron: '9,19,29,39,49,59 * * * *'
+  # Phases 1/2 are finished. Their engine remains available manually.
+  # Phase 3 uses persistent Cloudflare alarms, not Actions cron.
   workflow_dispatch:
     inputs:
       action:

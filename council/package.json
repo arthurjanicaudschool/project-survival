@@ -1,0 +1,6 @@
+{
+  "name": "survival-council", "private": true, "type": "module", "version": "3.0.0",
+  "scripts": {"dev":"wrangler dev --port 8787", "build":"wrangler deploy --dry-run --outdir dist", "check":"tsc --noEmit", "test":"tsx --test test/*.test.ts", "deploy":"wrangler deploy"},
+  "dependencies": {"decimal.js":"^10.6.0", "zod":"^4.0.0"},
+  "devDependencies": {"@cloudflare/workers-types":"latest", "@types/node":"^22.0.0", "tsx":"^4.20.0", "typescript":"^5.9.0", "wrangler":"latest"}
+}

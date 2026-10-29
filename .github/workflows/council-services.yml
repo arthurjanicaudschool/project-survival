@@ -1,0 +1,29 @@
+name: Council research and notification relay
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: council-external-services
+  cancel-in-progress: false
+jobs:
+  services:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      COUNCIL_API_URL: ${{ vars.COUNCIL_API_URL }}
+      COUNCIL_ADMIN_TOKEN: ${{ secrets.COUNCIL_ADMIN_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install httpx python-dotenv
+      - name: Relay phone notifications
+        run: python operations/council_collect.py notifications
+      - name: Collect shared public research
+        if: github.event_name == 'workflow_dispatch' || github.event.schedule == '*/5 * * * *'
+        # Collector itself checks the last feed timestamp; no LLM or trading job.
+        run: python operations/council_collect.py research
