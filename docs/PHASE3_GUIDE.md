@@ -82,6 +82,14 @@ Les règlements produisent un retour factuel : probabilité initiale du spécial
 
 Pour chaque refus/attente, une référence indépendante de 10 € utilise les prix observables. La cohérence initiale, selon la probabilité subjective et les motifs, reste séparée de l’issue. Un prix non observable donne « gain non calculable », pas un faux gain nul. Une issue gagnante ne prouve pas que le refus était une erreur.
 
+## Lecture sur téléphone et ordinateur
+
+Sur téléphone, le sélecteur « Explorer » permet de changer de rubrique sans faire défiler un menu horizontal. Les interventions utilisent un texte de 16 px et les justifications des votes de 15 px. Le débat suit le défilement normal de la page. « Mode lecture » masque la salle et les indicateurs pour se concentrer sur les échanges ; « Afficher la salle » rétablit la vue complète. « Lire les échanges » rejoint le compte rendu et « Dernier échange », accessible pendant la lecture mobile, rejoint la dernière intervention. L’arrivée de messages ne déplace pas automatiquement la lecture.
+
+Sur ordinateur, la navigation latérale et la salle autour de la table sont conservées. Les textes du débat sont aussi agrandis, les lignes limitées pour faciliter la lecture et le mode lecture reste disponible. Les animations respectent la préférence de réduction des mouvements.
+
+Vérification visuelle en navigateur : largeurs de 320, 390, 430, 768 et 1 440 px, sans débordement horizontal du conseil ; les sept rubriques ont également été parcourues à 390 px. Ce contrôle de mise en page ne remplace pas une vérification sur Safari iOS réel.
+
 ## Notifications iPhone
 
 L’iPhone est abonné à ntfy. Le topic n’est pas intégré au frontend public.

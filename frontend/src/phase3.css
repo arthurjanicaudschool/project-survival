@@ -2,3 +2,82 @@
 .p3-probability{display:block;color:#b6cba7;font-size:10px;margin-top:12px}.p3-sources{margin-top:14px;color:#899c83;font-size:10px}.p3-sources summary{cursor:pointer}.p3-sources blockquote{border-left:1px solid #607157;padding:4px 13px;margin:12px 0}.p3-sources button{border:0;background:none;color:#bdcfae;font-size:10px;padding:0;cursor:pointer}.p3-sources p{font-size:10px;margin:0 0 6px}
 .p3-table-scroll{overflow:auto}.p3-results-table{width:100%;border-collapse:collapse;text-align:left;font-size:11px}.p3-results-table th{font-weight:400;color:#81938b;font-size:9px;white-space:nowrap}.p3-results-table td,.p3-results-table th{padding:14px 12px;border-bottom:1px solid #253038}.p3-results-table td:not(:first-child){font-variant-numeric:tabular-nums}
 .p3-seat.outside-dossier{opacity:.38;filter:grayscale(.85)}
+
+/* Meetings use the page scroll, so reading never traps a touch gesture. */
+.p3-mobile-navigation{display:none}
+.p3-meeting-tools,.p3-transcript-actions{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 20px;flex-wrap:wrap}
+.p3-meeting-tools button,.p3-meeting-tools a,.p3-transcript-actions button{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:10px 15px;border:1px solid #3f5144;border-radius:6px;background:#19251f;color:#d1e4c0;font-size:13px;line-height:1.4}
+.p3-meeting-tools a{background:transparent}
+.p3-transcript-actions{margin:0 0 14px;color:#a0aab2;font-size:12px}
+.p3-transcript{max-height:none;overflow:visible}
+.p3-conversation-head{scroll-margin-top:24px}
+.p3-conversation-end{height:1px;scroll-margin-bottom:24px}
+.p3-event-body>p{font-size:14px;line-height:1.85;max-width:82ch;overflow-wrap:anywhere;color:#c1cbd1}
+.p3-event-meta b{font-size:13px}.p3-event-meta>span,.p3-event-meta time{font-size:11px}
+.p3-votes p,.p3-votes small{font-size:13px;line-height:1.8;overflow-wrap:anywhere}
+.p3-votes b{font-size:12px}.p3-votes span{font-size:12px}
+.p3-votes>div{padding:16px;gap:10px}
+.p3-decision{font-size:13px;line-height:1.75;overflow-wrap:anywhere}
+.p3-probability,.p3-sources,.p3-sources p,.p3-sources button{font-size:12px}
+.p3-sources summary{min-height:44px;align-content:center;line-height:1.6}
+.p3-sources button{min-height:44px;padding:8px 0}
+.p3-card a,.p3-event a{font-size:13px;min-height:44px;overflow-wrap:anywhere}
+.p3-card button{min-height:44px;font-size:13px}
+.p3-reading-hint{display:block;color:#99aaa1;font-size:12px}
+.p3 select{min-height:44px;font-size:13px}
+.p3-topbar button{min-width:44px;min-height:44px;display:grid;place-items:center}
+.p3 button:focus-visible,.p3 a:focus-visible,.p3 select:focus-visible,.p3 summary:focus-visible{outline:2px solid #c3d8b0;outline-offset:4px}
+.p3-reading .p3-heading,.p3-reading .p3-metrics,.p3-reading .p3-statusline,.p3-reading .p3-board-layout{display:none}
+.p3-reading .p3-conversation-head{margin-top:24px}
+.p3-reading .p3-transcript{max-width:1000px;margin-inline:auto}
+@media(max-width:750px){
+  .p3-sidebar{display:flex;flex-direction:row;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px}
+  .p3-sidebar nav{display:none}
+  .p3-mobile-navigation{display:block;min-width:0;max-width:60%}
+  .p3-mobile-navigation>span{display:block;font-size:10px;color:#9daaa3;margin-bottom:3px}
+  .p3-mobile-navigation select{font-size:16px;width:100%;max-width:100%;padding:8px 10px;margin:0}
+  .p3-logo{flex-shrink:0}.p3-logo strong{font-size:13px}
+  .p3-topbar{padding:4px 16px;font-size:11px}
+  .p3-content{padding:24px 16px}
+  .p3 h2{font-size:19px}.p3 h3{font-size:18px}
+  .p3-heading p,.p3 p{font-size:14px;line-height:1.75}
+  .p3-metric>span{font-size:10px;letter-spacing:.7px}.p3-metric>small{font-size:12px;line-height:1.5}
+  .p3-metric{padding:16px 12px}.p3-metric>b{font-size:25px}
+  .p3-statusline{font-size:12px;gap:12px;padding-block:18px}
+  .p3-card small,.p3-label{font-size:12px}
+  .p3-alert{font-size:14px;line-height:1.75}
+  .p3-meeting-tools{gap:8px}.p3-meeting-tools button,.p3-meeting-tools a{font-size:14px;flex:1;padding:12px 8px}
+  .p3-room-title{gap:10px;flex-wrap:wrap}.p3-room-title h2{font-size:16px}.p3-room-title .p3-eyebrow{font-size:10px}
+  .p3-live-tag{font-size:10px}
+  .p3-room-scene{height:auto;min-height:430px;perspective:none}
+  .p3-seats{position:relative;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:22px 3px;padding:60px 7px 25px;z-index:2}
+  .p3-seat{position:static;transform:none;width:auto;min-width:0;gap:2px;text-align:center}
+  .p3-seat img{width:48px;height:48px}
+  .p3-seat b{font-size:11px;line-height:1.45;margin-top:4px;padding:2px 3px;max-width:100%;overflow-wrap:anywhere}
+  .p3-seat small{font-size:10px;line-height:1.4;padding:2px 3px}
+  .p3-table{inset:120px 7% 95px;transform:none}.p3-table span{font-size:13px;letter-spacing:3px}
+  .p3-voice{position:static;font-size:11px;line-height:1}
+  .p3-seat.speaking{align-self:start}
+  .p3-room-footer{font-size:11px;line-height:1.6;align-items:flex-start}
+  .p3-room-footer svg{flex-shrink:0;margin-top:3px}
+  .p3-conversation-head{scroll-margin-top:110px;gap:14px}
+  .p3-conversation-head select{font-size:16px;max-width:100%;width:100%}
+  .p3-event{padding:22px 14px;gap:10px}
+  .p3-event>img{width:32px;height:32px}
+  .p3-event-meta b{font-size:13px}.p3-event-meta>span,.p3-event-meta time{font-size:11px}
+  .p3-event-meta time{margin-left:0;flex-basis:100%;margin-top:2px}
+  .p3-event-body>p{font-size:16px;line-height:1.85;margin-top:12px}
+  .p3-event a{font-size:14px}
+  .p3-decision{font-size:14px;padding:12px;display:block}
+  .p3-decision svg{vertical-align:middle;margin-right:6px}
+  .p3-votes>div{padding:12px;grid-template-columns:minmax(0,1fr) auto}
+  .p3-votes b,.p3-votes span{font-size:13px}
+  .p3-votes p,.p3-votes small{font-size:15px;line-height:1.8}
+  .p3-probability,.p3-sources,.p3-sources p,.p3-sources button{font-size:14px}
+  .p3-sources blockquote{margin-inline:0;padding-inline:10px}
+  .p3-transcript-actions{position:sticky;top:88px;z-index:10;padding:8px 0;background:#0b1013f5;font-size:13px;align-items:center;border-bottom:1px solid var(--line)}.p3-transcript-actions button{font-size:14px;margin-left:auto}
+  .p3-record b,.p3-record>span{font-size:14px}.p3-check{font-size:13px;align-items:flex-start}.p3-check small{font-size:11px}
+  .p3-results-table{font-size:13px}.p3-results-table th{font-size:12px}
+  .p3-footer{font-size:10px}
+}
+@media(prefers-reduced-motion:reduce){.p3 *, .p3 *::before,.p3 *::after{animation:none!important;scroll-behavior:auto!important}}
