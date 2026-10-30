@@ -26,4 +26,4 @@ Journal append-only, documents dédupliqués par empreinte, états courants cour
 
 Parité Decimal, minimum/tick/liquidité/frais, résolution et FX ; vote/amendements/abstention/absences ; panne Azure, reprises et idempotence ; source indisponible ; retour WebSocket et replay ; sauvegarde/restauration ; charge et consommation Cloudflare. Mode démonstration isolé des données réelles. Répétition technique sur données réelles isolée de survival-003, qui reste READY.
 
-État de construction : en cours. Les preuves de tests et de déploiement seront ajoutées après leur exécution effective.
+Les modules sont implémentés. Les procédures, preuves de vérification et limites sont regroupées dans [PHASE3_GUIDE.md](PHASE3_GUIDE.md). Le fonds reste READY tant qu’un START explicite n’a pas été demandé.

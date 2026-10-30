@@ -1,0 +1,4992 @@
+[
+  {
+    "book": {
+      "asset_id": "reference",
+      "observed_at": "2026-10-29T00:00:00Z",
+      "bids": [
+        {
+          "price": "0.84",
+          "size": "100"
+        }
+      ],
+      "asks": [
+        {
+          "price": "0.85",
+          "size": "52"
+        },
+        {
+          "price": "0.87",
+          "size": "66"
+        },
+        {
+          "price": "0.91",
+          "size": "321"
+        }
+      ],
+      "minimum": "5",
+      "tick": "0.01",
+      "fee_rate": "0",
+      "fee_exponent": "2",
+      "evidence": "reference-0"
+    },
+    "budget": "25.96",
+    "limit": "0.84",
+    "at": "2026-10-29T00:00:00+00:00",
+    "expected": {
+      "status": "REJECTED",
+      "reason": "PRICE_LIMIT",
+      "quantity": "0",
+      "gross": "0",
+      "fees": "0",
+      "spent": "0",
+      "fills": []
+    }
+  },
+  {
+    "book": {
+      "asset_id": "reference",
+      "observed_at": "2026-10-29T00:00:00Z",
+      "bids": [
+        {
+          "price": "0.57",
+          "size": "100"
+        }
+      ],
+      "asks": [
+        {
+          "price": "0.58",
+          "size": "246"
+        },
+        {
+          "price": "0.6",
+          "size": "253"
+        },
+        {
+          "price": "0.64",
+          "size": "271"
+        }
+      ],
+      "minimum": "1",
+      "tick": "0.01",
+      "fee_rate": "0.1",
+      "fee_exponent": "2",
+      "evidence": "reference-1"
+    },
+    "budget": "132.61",
+    "limit": "0.61",
+    "at": "2026-10-29T00:00:00+00:00",
+    "expected": {
+      "status": "FILLED",
+      "reason": "",
+      "quantity": "226.32",
+      "gross": "131.2656",
+      "fees": "1.34300",
+      "spent": "132.60860",
+      "fills": [
+        {
+          "price": "0.58",
+          "quantity": "226.32",
+          "fee": "1.34300"
+        }
+      ]
+    }
+  },
+  {
+    "book": {
+      "asset_id": "reference",
+      "observed_at": "2026-10-29T00:00:00Z",
+      "bids": [
+        {
+          "price": "0.35",
+          "size": "100"
+        }
+      ],
+      "asks": [
+        {
+          "price": "0.36",
+          "size": "309"
+        },
+        {
+          "price": "0.38",
+          "size": "139"
+        },
+        {
+          "price": "0.42",
+          "size": "157"
+        }
+      ],
+      "minimum": "5",
+      "tick": "0.01",
+      "fee_rate": "0.02",
+      "fee_exponent": "0",
+      "evidence": "reference-2"
+    },
+    "budget": "173.18",
+    "limit": "0.39",
+    "at": "2026-10-29T00:00:00+00:00",
+    "expected": {
+      "status": "PARTIAL",
+      "reason": "",
+      "quantity": "448.00",
+      "gross": "164.0600",
+      "fees": "8.96000",
+      "spent": "173.02000",
+      "fills": [
+        {
+          "price": "0.36",
+          "quantity": "309.00",
+          "fee": "6.18000"
+        },
+        {
+          "price": "0.38",
+          "quantity": "139.00",
+          "fee": "2.78000"
+        }
+      ]
+    }
+  },
+  {
+    "book": {
+      "asset_id": "reference",
+      "observed_at": "2026-10-29T00:00:00Z",
+      "bids": [
+        {
+          "price": "0.77",
+          "size": "100"
+        }
+      ],
+      "asks": [
+        {
+          "price": "0.78",
+          "size": "109"
+        },
+        {
+          "price": "0.8",
+          "size": "334"
+        },
+        {
+          "price": "0.84",
+          "size": "229"
+        }
+      ],
+      "minimum": "1",
+      "tick": "0.01",
+      "fee_rate": "0.03",
+      "fee_exponent": "1",
+      "evidence": "reference-3"
+    },
+    "budget": "192.65",
+    "limit": "0.81",
+    "at": "2026-10-29T00:00:00+00:00",
+    "expected": {
+      "status": "PARTIAL",
+      "reason": "",
+      "quantity": "242.03",
+      "gross": "191.4440",
+      "fees": "1.19967",
+      "spent": "192.64367",
+      "fills": [
+        {
+          "price": "0.78",
+          "quantity": "109.00",
+          "fee": "0.56113"
+        },
+        {
+          "price": "0.8",
+          "quantity": "133.03",
+          "fee": "0.63854"
+        }
+      ]
+    }
+  },
+  {
+    "book": {
+      "asset_id": "reference",
+      "observed_at": "2026-10-29T00:00:00Z",
+      "bids": [
+        {
+          "price": "0.22",
+          "size": "100"
+        }
+      ],
+      "asks": [
+        {
+          "price": "0.23",
+          "size": "238"
+        },
+        {
+          "price": "0.25",
+          "size": "5"
+        },
+        {
+          "price": "0.29",
+          "size": "28"
+        }
+      ],
+      "minimum": "5",
+      "tick": "0.01",
+      "fee_rate": "0",
+      "fee_exponent": "1",
+      "evidence": "reference-4"
+    },
+    "budget": "171.47",
+    "limit": "0.26",
+    "at": "2026-10-29T00:00:00+00:00",
+    "expected": {
+      "status": "PARTIAL",
+      "reason": "",
+      "quantity": "243.00",
+      "gross": "55.9900",
+      "fees": "0.00000",
+      "spent": "55.99000",
+      "fills": [
+        {
+          "price": "0.23",
+          "quantity": "238.00",
+          "fee": "0.00000"
+        },
+        {
+          "price": "0.25",
+          "quantity": "5.00",
+          "fee": "0.00000"
+        }
+      ]
+    }
+  },
+  {
+    "book": {
+      "asset_id": "reference",
+      "observed_at": "2026-10-29T00:00:00Z",
+      "bids": [
+        {
+          "price": "0.67",
+          "size": "100"
+        }
+      ],
+      "asks": [
+        {
+          "price": "0.68",
+          "size": "245"
+        },
+        {
+          "price": "0.7",
+          "size": "319"
+        },
+        {
+          "price": "0.74",
+          "size": "28"
+        }
+      ],
+      "minimum": "1",
+      "tick": "0.01",
+      "fee_rate": "0",
+      "fee_exponent": "1",
+      "evidence": "reference-5"
+    },
+    "budget": "204.98",
+    "limit": "0.68",
+    "at": "2026-10-29T00:00:00+00:00",
+    "expected": {
+      "status": "PARTIAL",
+      "reason": "",
+      "quantity": "245.00",
+      "gross": "166.6000",
+      "fees": "0.00000",
+      "spent": "166.60000",
+      "fills": [
+        {
+          "price": "0.68",
+          "quantity": "245.00",
+          "fee": "0.00000"
+        }
+      ]
+    }
+  },
+  {
+    "book": {
+      "asset_id": "reference",
+      "observed_at": "2026-10-29T00:00:00Z",
+      "bids": [
+        {
+          "price": "0.14",
+          "size": "100"
+        }
+      ],
+      "asks": [
+        {
+          "price": "0.15",
+          "size": "166"
+        },
+        {
+          "price": "0.17",
+          "size": "233"
+        },
+        {
+          "price": "0.21",
+          "size": "80"
+        }
+      ],
+      "minimum": "5",
+      "tick": "0.01",
+      "fee_rate": "0.02",
+      "fee_exponent": "2",
+      "evidence": "reference-6"
+    },
+    "budget": "143.41",
+    "limit": "0.15",
+    "at": "2026-10-29T00:00:00+00:00",
+    "expected": {
+      "status": "PARTIAL",
+      "reason": "",
+      "quantity": "166.00",
+      "gross": "24.9000",
+      "fees": "0.05397",
+      "spent": "24.95397",
+      "fills": [
+        {
+          "price": "0.15",
+          "quantity": "166.00",
+          "fee": "0.05397"
+        }
+      ]
+    }
+  },
+  {
+    "book": {
+      "asset_id": "reference",
+      "observed_at": "2026-10-29T00:00:00Z",
+      "bids": [
+        {
+          "price": "0.42",
+          "size": "100"
+        }
+      ],
+      "asks": [
+        {
+          "price": "0.43",
+          "size": "164"
+        },
+        {
+          "price": "0.45",
+          "size": "162"
+        },
+        {
+          "price": "0.49",
+          "size": "132"
+        }
+      ],
+      "minimum": "10",
+      "tick": "0.01",
+      "fee_rate": "0.02",
+      "fee_exponent": "1",
+      "evidence": "reference-7"
+    },
+    "budget": "130.1",
+    "limit": "0.42",
+    "at": "2026-10-29T00:00:00+00:00",
+    "expected": {
+      "status": "REJECTED",
+      "reason": "PRICE_LIMIT",
+      "quantity": "0",
+      "gross": "0",
+      "fees": "0",
+      "spent": "0",
+      "fills": []
+    }
+  },
+  {
+    "book": {
+      "asset_id": "reference",
+      "observed_at": "2026-10-29T00:00:00Z",
+      "bids": [
+        {
+          "price": "0.18",
+          "size": "100"
+        }
+      ],
+      "asks": [
+        {
+          "price": "0.19",
+          "size": "325"
+        },
+        {
+          "price": "0.21",
+          "size": "116"
+        },
+        {
+          "price": "0.25",
+          "size": "196"
+        }
+      ],
+      "minimum": "5",
+      "tick": "0.01",
+      "fee_rate": "0.03",
+      "fee_exponent": "1",
+      "evidence": "reference-8"
+    },
+    "budget": "193.11",
+    "limit": "0.22",
+    "at": "2026-10-29T00:00:00+00:00",
+    "expected": {
+      "status": "PARTIAL",
+      "reason": "",
+      "quantity": "441.00",
+      "gross": "86.1100",
+      "fees": "2.07786",
+      "spent": "88.18786",
+      "fills": [
+        {
+          "price": "0.19",
+          "quantity": "325.00",
+          "fee": "1.50053"
+        },
+        {
+          "price": "0.21",
+          "quantity": "116.00",
+          "fee": "0.57733"
+        }
+      ]
+    }
+  },
+  {
+    "book": {
+      "asset_id": "reference",
+      "observed_at": "2026-10-29T00:00:00Z",
+      "bids": [
+        {
+          "price": "0.4",
+          "size": "100"
+        }
+      ],
+      "asks": [
+        {
+          "price": "0.41",
+          "size": "174"
+        },
+        {
+          "price": "0.43",
+          "size": "150"
+        },
+        {
+          "price": "0.47",
+          "size": "103"
+        }
+      ],
+      "minimum": "5",
+      "tick": "0.01",
+      "fee_rate": "0.1",
+      "fee_exponent": "2",
+      "evidence": "reference-9"
+    },
+    "budget": "161.89",
+    "limit": "0.51",
+    "at": "2026-10-29T00:00:00+00:00",
+    "expected": {
+      "status": "PARTIAL",
+      "reason": "",
+      "quantity": "374.67",
+      "gross": "159.6549",
+      "fees": "2.23369",
+      "spent": "161.88859",
+      "fills": [
+        {
+          "price": "0.41",
+          "quantity": "174.00",
+          "fee": "1.01817"
+        },
+        {
+          "price": "0.43",
+          "quantity": "150.00",
+          "fee": "0.90111"
+        },
+        {
+          "price": "0.47",
+          "quantity": "50.67",
+          "fee": "0.31441"
+        }
+      ]
+    }
+  },
+  {
+    "book": {
+      "asset_id": "reference",
+      "observed_at": "2026-10-29T00:00:00Z",
+      "bids": [
+        {
+          "price": "0.82",
+          "size": "100"
+        }
+      ],
+      "asks": [
+        {
+          "price": "0.83",
+          "size": "348"
+        },
+        {
+          "price": "0.85",
+          "size": "213"
+        },
+        {
+          "price": "0.89",
+          "size": "171"
+        }
+      ],
+      "minimum": "5",
+      "tick": "0.01",
+      "fee_rate": "0",
+      "fee_exponent": "0",
+      "evidence": "reference-10"
+    },
+    "budget": "175.81",
+    "limit": "0.86",
+    "at": "2026-10-29T00:00:00+00:00",
+    "expected": {
+      "status": "FILLED",
+      "reason": "",
+      "quantity": "211.81",
+      "gross": "175.8023",
+      "fees": "0.00000",
+      "spent": "175.80230",
+      "fills": [
+        {
+          "price": "0.83",
+          "quantity": "211.81",
+          "fee": "0.00000"
+        }
+      ]
+    }
+  },
+  {
+    "book": {
+      "asset_id": "reference",
+      "observed_at": "2026-10-29T00:00:00Z",
+      "bids": [
+        {
+          "price": "0.09",
+          "size": "100"
+        }
+      ],
+      "asks": [
+        {
+          "price": "0.1",
+          "size": "209"
+        },
+        {
+          "price": "0.12",
+          "size": "333"
+        },
+        {
+          "price": "0.16",
+          "size": "288"
+        }
+      ],
+      "minimum": "10",
+      "tick": "0.01",
+      "fee_rate": "0.02",
+      "fee_exponent": "0",
+      "evidence": "reference-11"
+    },
+    "budget": "237.92",
+    "limit": "0.2",
+    "at": "2026-10-29T00:00:00+00:00",
+    "expected": {
+      "status": "PARTIAL",
+      "reason": "",
+      "quantity": "830.00",
+      "gross": "106.9400",
+      "fees": "16.60000",
+      "spent": "123.54000",
+      "fills": [
+        {
+          "price": "0.1",
+          "quantity": "209.00",
+          "fee": "4.18000"
+        },
+        {
+          "price": "0.12",
+          "quantity": "333.00",
+          "fee": "6.66000"
+        },
+        {
+          "price": "0.16",
+          "quantity": "288.00",
+          "fee": "5.76000"
+        }
+      ]
+    }
+  },
+  {
+    "book": {
+      "asset_id": "reference",
+      "observed_at": "2026-10-29T00:00:00Z",
+      "bids": [
+        {
+          "price": "0.31",
+          "size": "100"
+        }
+      ],
+      "asks": [
+        {
+          "price": "0.32",
+          "size": "331"
+        },
+        {
+          "price": "0.34",
+          "size": "237"
+        },
+        {
+          "price": "0.38",
+          "size": "102"
+        }
+      ],
+      "minimum": "5",
+      "tick": "0.01",
+      "fee_rate": "0.03",
+      "fee_exponent": "2",
+      "evidence": "reference-12"
+    },
+    "budget": "37.5",
+    "limit": "0.42",
+    "at": "2026-10-29T00:00:00+00:00",
+    "expected": {
+      "status": "FILLED",
+      "reason": "",
+      "quantity": "116.66",
+      "gross": "37.3312",
+      "fees": "0.16571",
+      "spent": "37.49691",
+      "fills": [
+        {
+          "price": "0.32",
+          "quantity": "116.66",
+          "fee": "0.16571"
+        }
+      ]
+    }
+  },
+  {
+    "book": {
+      "asset_id": "reference",
+      "observed_at": "2026-10-29T00:00:00Z",
+      "bids": [
+        {
+          "price": "0.66",
+          "size": "100"
+        }
+      ],
+      "asks": [
+        {
+          "price": "0.67",
+          "size": "33"
+        },
+        {
+          "price": "0.69",
+          "size": "171"
+        },
+        {
+          "price": "0.73",
+          "size": "344"
+        }
+      ],
+      "minimum": "10",
+      "tick": "0.01",
+      "fee_rate": "0.02",
+      "fee_exponent": "2",
+      "evidence": "reference-13"
+    },
+    "budget": "218.27",
+    "limit": "0.67",
+    "at": "2026-10-29T00:00:00+00:00",
+    "expected": {
+      "status": "PARTIAL",
+      "reason": "",
+      "quantity": "33.00",
+      "gross": "22.1100",
+      "fees": "0.03226",
+      "spent": "22.14226",
+      "fills": [
+        {
+          "price": "0.67",
+          "quantity": "33.00",
+          "fee": "0.03226"
+        }
+      ]
+    }
+  },
+  {
+    "book": {
+      "asset_id": "reference",
+      "observed_at": "2026-10-29T00:00:00Z",
+      "bids": [
+        {
+          "price": "0.66",
+          "size": "100"
+        }
+      ],
+      "asks": [
+        {
+          "price": "0.67",
+          "size": "9"
+        },
+        {
+          "price": "0.69",
+          "size": "257"
+        },
+        {
+          "price": "0.73",
+          "size": "107"
+        }
+      ],
+      "minimum": "10",
+      "tick": "0.01",
+      "fee_rate": "0",
+      "fee_exponent": "0",
+      "evidence": "reference-14"
+    },
+    "budget": "247.89",
+    "limit": "0.66",
+    "at": "2026-10-29T00:00:00+00:00",
+    "expected": {
+      "status": "REJECTED",
+      "reason": "PRICE_LIMIT",
+      "quantity": "0",
+      "gross": "0",
+      "fees": "0",
+      "spent": "0",
+      "fills": []
+    }
+  },
+  {
+    "book": {
+      "asset_id": "reference",
+      "observed_at": "2026-10-29T00:00:00Z",
+      "bids": [
+        {
+          "price": "0.33",
+          "size": "100"
+        }
+      ],
+      "asks": [
+        {
+          "price": "0.34",
+          "size": "162"
+        },
+        {
+          "price": "0.36",
+          "size": "60"
+        },
+        {
+          "price": "0.4",
+          "size": "66"
+        }
+      ],
+      "minimum": "1",
+      "tick": "0.01",
+      "fee_rate": "0",
+      "fee_exponent": "2",
+      "evidence": "reference-15"
+    },
+    "budget": "66.02",
+    "limit": "0.34",
+    "at": "2026-10-29T00:00:00+00:00",
+    "expected": {
+      "status": "PARTIAL",
+      "reason": "",
+      "quantity": "162.00",
+      "gross": "55.0800",
+      "fees": "0.00000",
+      "spent": "55.08000",
+      "fills": [
+        {
+          "price": "0.34",
+          "quantity": "162.00",
+          "fee": "0.00000"
+        }
+      ]
+    }
+  },
+  {
+    "book": {
+      "asset_id": "reference",
+      "observed_at": "2026-10-29T00:00:00Z",
+      "bids": [
+        {
+          "price": "0.05",
+          "size": "100"
+        }
+      ],
+      "asks": [
+        {
+          "price": "0.06",
+          "size": "108"
+        },
+        {
+          "price": "0.08",
+          "size": "132"
+        },
+        {
+          "price": "0.12",
+          "size": "58"
+        }
+      ],
+      "minimum": "1",
+      "tick": "0.01",
+      "fee_rate": "0.1",
+      "fee_exponent": "0",
+      "evidence": "reference-16"
+    },
+    "budget": "154.81",
+    "limit": "0.16",
+    "at": "2026-10-29T00:00:00+00:00",
+    "expected": {
+      "status": "PARTIAL",
+      "reason": "",
+      "quantity": "298.00",
+      "gross": "24.0000",
+      "fees": "29.80000",
+      "spent": "53.80000",
+      "fills": [
+        {
+          "price": "0.06",
+          "quantity": "108.00",
+          "fee": "10.80000"
+        },
+        {
+          "price": "0.08",
+          "quantity": "132.00",
+          "fee": "13.20000"
+        },
+        {
+          "price": "0.12",
+          "quantity": "58.00",
+          "fee": "5.80000"
+        }
+      ]
+    }
+  },
+  {
+    "book": {
+      "asset_id": "reference",
+      "observed_at": "2026-10-29T00:00:00Z",
+      "bids": [
+        {
+          "price": "0.07",
+          "size": "100"
+        }
+      ],
+      "asks": [
+        {
+          "price": "0.08",
+          "size": "349"
+        },
+        {
+          "price": "0.1",
+          "size": "232"
+        },
+        {
+          "price": "0.14",
+          "size": "340"
+        }
+      ],
+      "minimum": "5",
+      "tick": "0.01",
+      "fee_rate": "0",
+      "fee_exponent": "2",
+      "evidence": "reference-17"
+    },
+    "budget": "137.18",
+    "limit": "0.07",
+    "at": "2026-10-29T00:00:00+00:00",
+    "expected": {
+      "status": "REJECTED",
+      "reason": "PRICE_LIMIT",
+      "quantity": "0",
+      "gross": "0",
+      "fees": "0",
+      "spent": "0",
+      "fills": []
+    }
+  },
+  {
+    "book": {
+      "asset_id": "reference",
+      "observed_at": "2026-10-29T00:00:00Z",
+      "bids": [
+        {
+          "price": "0.37",
+          "size": "100"
+        }
+      ],
+      "asks": [
+        {
+          "price": "0.38",
+          "size": "81"
+        },
+        {
+          "price": "0.4",
+          "size": "16"
+        },
+        {
+          "price": "0.44",
+          "size": "206"
+        }
+      ],
+      "minimum": "10",
+      "tick": "0.01",
+      "fee_rate": "0",
+      "fee_exponent": "0",
+      "evidence": "reference-18"
+    },
+    "budget": "82.36",
+    "limit": "0.37",
+    "at": "2026-10-29T00:00:00+00:00",
+    "expected": {
+      "status": "REJECTED",
+      "reason": "PRICE_LIMIT",
+      "quantity": "0",
+      "gross": "0",
+      "fees": "0",
+      "spent": "0",
+      "fills": []
+    }
+  },
+  {
+    "book": {
+      "asset_id": "reference",
+      "observed_at": "2026-10-29T00:00:00Z",
+      "bids": [
+        {
+          "price": "0.01",
+          "size": "100"
+        }
+      ],
+      "asks": [
+        {
+          "price": "0.02",
+          "size": "153"
+        },
+        {
+          "price": "0.04",
+          "size": "47"
+        },
+        {
+          "price": "0.08",
+          "size": "350"
+        }
+      ],
+      "minimum": "1",
+      "tick": "0.01",
+      "fee_rate": "0.02",
+      "fee_exponent": "1",
+      "evidence": "reference-19"
+    },
+    "budget": "143.22",
+    "limit": "0.12",
+    "at": "2026-10-29T00:00:00+00:00",
+    "expected": {
+      "status": "PARTIAL",
+      "reason": "",
+      "quantity": "550.00",
+      "gross": "32.9400",
+      "fees": "0.61128",
+      "spent": "33.55128",
+      "fills": [
+        {
+          "price": "0.02",
+          "quantity": "153.00",
+          "fee": "0.05998"
+        },
+        {
+          "price": "0.04",
+          "quantity": "47.00",
+          "fee": "0.03610"
+        },
+        {
+          "price": "0.08",
+          "quantity": "350.00",
+          "fee": "0.51520"
+        }
+      ]
+    }
+  },
+  {
+    "book": {
+      "asset_id": "reference",
+      "observed_at": "2026-10-29T00:00:00Z",
+      "bids": [
+        {
+          "price": "0.83",
+          "size": "100"
+        }
+      ],
+      "asks": [
+        {
+          "price": "0.84",
+          "size": "301"
+        },
+        {
+          "price": "0.86",
+          "size": "335"
+        },
+        {
+          "price": "0.9",
+          "size": "181"
+        }
+      ],
+      "minimum": "1",
+      "tick": "0.01",
+      "fee_rate": "0.02",
+      "fee_exponent": "0",
+      "evidence": "reference-20"
+    },
+    "budget": "49.44",
+    "limit": "0.83",
+    "at": "2026-10-29T00:00:00+00:00",
+    "expected": {
+      "status": "REJECTED",
+      "reason": "PRICE_LIMIT",
+      "quantity": "0",
+      "gross": "0",
+      "fees": "0",
+      "spent": "0",
+      "fills": []
+    }
+  },
+  {
+    "book": {
+      "asset_id": "reference",
+      "observed_at": "2026-10-29T00:00:00Z",
+      "bids": [
+        {
+          "price": "0.28",
+          "size": "100"
+        }
+      ],
+      "asks": [
+        {
+          "price": "0.29",
+          "size": "67"
+        },
+        {
+          "price": "0.31",
+          "size": "195"
+        },
+        {
+          "price": "0.35",
+          "size": "59"
+        }
+      ],
+      "minimum": "1",
+      "tick": "0.01",
+      "fee_rate": "0",
+      "fee_exponent": "1",
+      "evidence": "reference-21"
+    },
+    "budget": "24.68",
+    "limit": "0.32",
+    "at": "2026-10-29T00:00:00+00:00",
+    "expected": {
+      "status": "PARTIAL",
+      "reason": "",
+      "quantity": "83.93",
+      "gross": "24.6783",
+      "fees": "0.00000",
+      "spent": "24.67830",
+      "fills": [
+        {
+          "price": "0.29",
+          "quantity": "67.00",
+          "fee": "0.00000"
+        },
+        {
+          "price": "0.31",
+          "quantity": "16.93",
+          "fee": "0.00000"
+        }
+      ]
+    }
+  },
+  {
+    "book": {
+      "asset_id": "reference",
+      "observed_at": "2026-10-29T00:00:00Z",
+      "bids": [
+        {
+          "price": "0.79",
+          "size": "100"
+        }
+      ],
+      "asks": [
+        {
+          "price": "0.8",
+          "size": "282"
+        },
+        {
+          "price": "0.82",
+          "size": "318"
+        },
+        {
+          "price": "0.86",
+          "size": "245"
+        }
+      ],
+      "minimum": "1",
+      "tick": "0.01",
+      "fee_rate": "0.03",
+      "fee_exponent": "0",
+      "evidence": "reference-22"
+    },
+    "budget": "151.2",
+    "limit": "0.79",
+    "at": "2026-10-29T00:00:00+00:00",
+    "expected": {
+      "status": "REJECTED",
+      "reason": "PRICE_LIMIT",
+      "quantity": "0",
+      "gross": "0",
+      "fees": "0",
+      "spent": "0",
+      "fills": []
+    }
+  },
+  {
+    "book": {
+      "asset_id": "reference",
+      "observed_at": "2026-10-29T00:00:00Z",
+      "bids": [
+        {
+          "price": "0.53",
+          "size": "100"
+        }
+      ],
+      "asks": [
+        {
+          "price": "0.54",
+          "size": "113"
+        },
+        {
+          "price": "0.56",
+          "size": "14"
+        },
+        {
+          "price": "0.6",
+          "size": "325"
+        }
+      ],
+      "minimum": "10",
+      "tick": "0.01",
+      "fee_rate": "0.02",
+      "fee_exponent": "1",
+      "evidence": "reference-23"
+    },
+    "budget": "95.68",
+    "limit": "0.57",
+    "at": "2026-10-29T00:00:00+00:00",
+    "expected": {
+      "status": "PARTIAL",
+      "reason": "",
+      "quantity": "127.00",
+      "gross": "68.8600",
+      "fees": "0.63037",
+      "spent": "69.49037",
+      "fills": [
+        {
+          "price": "0.54",
+          "quantity": "113.00",
+          "fee": "0.56138"
+        },
+        {
+          "price": "0.56",
+          "quantity": "14.00",
+          "fee": "0.06899"
+        }
+      ]
+    }
+  },
+  {
+    "book": {
+      "asset_id": "reference",
+      "observed_at": "2026-10-29T00:00:00Z",
+      "bids": [
+        {
+          "price": "0.34",
+          "size": "100"
+        }
+      ],
+      "asks": [
+        {
+          "price": "0.35",
+          "size": "81"
+        },
+        {
+          "price": "0.37",
+          "size": "296"
+        },
+        {
+          "price": "0.41",
+          "size": "209"
+        }
+      ],
+      "minimum": "1",
+      "tick": "0.01",
+      "fee_rate": "0.02",
+      "fee_exponent": "1",
+      "evidence": "reference-24"
+    },
+    "budget": "28.53",
+    "limit": "0.45",
+    "at": "2026-10-29T00:00:00+00:00",
+    "expected": {
+      "status": "FILLED",
+      "reason": "",
+      "quantity": "80.46",
+      "gross": "28.1610",
+      "fees": "0.36609",
+      "spent": "28.52709",
+      "fills": [
+        {
+          "price": "0.35",
+          "quantity": "80.46",
+          "fee": "0.36609"
+        }
+      ]
+    }
+  },
+  {
+    "book": {
+      "asset_id": "reference",
+      "observed_at": "2026-10-29T00:00:00Z",
+      "bids": [
+        {
+          "price": "0.6",
+          "size": "100"
+        }
+      ],
+      "asks": [
+        {
+          "price": "0.61",
+          "size": "324"
+        },
+        {
+          "price": "0.63",
+          "size": "4"
+        },
+        {
+          "price": "0.67",
+          "size": "265"
+        }
+      ],
+      "minimum": "10",
+      "tick": "0.01",
+      "fee_rate": "0.1",
+      "fee_exponent": "1",
+      "evidence": "reference-25"
+    },
+    "budget": "78.95",
+    "limit": "0.61",
+    "at": "2026-10-29T00:00:00+00:00",
+    "expected": {
+      "status": "FILLED",
+      "reason": "",
+      "quantity": "124.56",
+      "gross": "75.9816",
+      "fees": "2.96328",
+      "spent": "78.94488",
+      "fills": [
+        {
+          "price": "0.61",
+          "quantity": "124.56",
+          "fee": "2.96328"
+        }
+      ]
+    }
+  },
+  {
+    "book": {
+      "asset_id": "reference",
+      "observed_at": "2026-10-29T00:00:00Z",
+      "bids": [
+        {
+          "price": "0.24",
+          "size": "100"
+        }
+      ],
+      "asks": [
+        {
+          "price": "0.25",
+          "size": "330"
+        },
+        {
+          "price": "0.27",
+          "size": "18"
+        },
+        {
+          "price": "0.31",
+          "size": "28"
+        }
+      ],
+      "minimum": "1",
+      "tick": "0.01",
+      "fee_rate": "0.1",
+      "fee_exponent": "1",
+      "evidence": "reference-26"
+    },
+    "budget": "61.09",
+    "limit": "0.25",
+    "at": "2026-10-29T00:00:00+00:00",
+    "expected": {
+      "status": "FILLED",
+      "reason": "",
+      "quantity": "227.31",
+      "gross": "56.8275",
+      "fees": "4.26206",
+      "spent": "61.08956",
+      "fills": [
+        {
+          "price": "0.25",
+          "quantity": "227.31",
+          "fee": "4.26206"
+        }
+      ]
+    }
+  },
+  {
+    "book": {
+      "asset_id": "reference",
+      "observed_at": "2026-10-29T00:00:00Z",
+      "bids": [
+        {
+          "price": "0.7",
+          "size": "100"
+        }
+      ],
+      "asks": [
+        {
+          "price": "0.71",
+          "size": "232"
+        },
+        {
+          "price": "0.73",
+          "size": "150"
+        },
+        {
+          "price": "0.77",
+          "size": "218"
+        }
+      ],
+      "minimum": "5",
+      "tick": "0.01",
+      "fee_rate": "0.02",
+      "fee_exponent": "0",
+      "evidence": "reference-27"
+    },
+    "budget": "161.75",
+    "limit": "0.71",
+    "at": "2026-10-29T00:00:00+00:00",
+    "expected": {
+      "status": "FILLED",
+      "reason": "",
+      "quantity": "221.57",
+      "gross": "157.3147",
+      "fees": "4.43140",
+      "spent": "161.74610",
+      "fills": [
+        {
+          "price": "0.71",
+          "quantity": "221.57",
+          "fee": "4.43140"
+        }
+      ]
+    }
+  },
+  {
+    "book": {
+      "asset_id": "reference",
+      "observed_at": "2026-10-29T00:00:00Z",
+      "bids": [
+        {
+          "price": "0.73",
+          "size": "100"
+        }
+      ],
+      "asks": [
+        {
+          "price": "0.74",
+          "size": "22"
+        },
+        {
+          "price": "0.76",
+          "size": "36"
+        },
+        {
+          "price": "0.8",
+          "size": "192"
+        }
+      ],
+      "minimum": "1",
+      "tick": "0.01",
+      "fee_rate": "0.02",
+      "fee_exponent": "1",
+      "evidence": "reference-28"
+    },
+    "budget": "173.9",
+    "limit": "0.77",
+    "at": "2026-10-29T00:00:00+00:00",
+    "expected": {
+      "status": "PARTIAL",
+      "reason": "",
+      "quantity": "58.00",
+      "gross": "43.6400",
+      "fees": "0.21599",
+      "spent": "43.85599",
+      "fills": [
+        {
+          "price": "0.74",
+          "quantity": "22.00",
+          "fee": "0.08466"
+        },
+        {
+          "price": "0.76",
+          "quantity": "36.00",
+          "fee": "0.13133"
+        }
+      ]
+    }
+  },
+  {
+    "book": {
+      "asset_id": "reference",
+      "observed_at": "2026-10-29T00:00:00Z",
+      "bids": [
+        {
+          "price": "0.32",
+          "size": "100"
+        }
+      ],
+      "asks": [
+        {
+          "price": "0.33",
+          "size": "1"
+        },
+        {
+          "price": "0.35",
+          "size": "30"
+        },
+        {
+          "price": "0.39",
+          "size": "318"
+        }
+      ],
+      "minimum": "1",
+      "tick": "0.01",
+      "fee_rate": "0.1",
+      "fee_exponent": "2",
+      "evidence": "reference-29"
+    },
+    "budget": "108.92",
+    "limit": "0.33",
+    "at": "2026-10-29T00:00:00+00:00",
+    "expected": {
+      "status": "PARTIAL",
+      "reason": "",
+      "quantity": "1.00",
+      "gross": "0.3300",
+      "fees": "0.00489",
+      "spent": "0.33489",
+      "fills": [
+        {
+          "price": "0.33",
+          "quantity": "1.00",
+          "fee": "0.00489"
+        }
+      ]
+    }
+  },
+  {
+    "book": {
+      "asset_id": "reference",
+      "observed_at": "2026-10-29T00:00:00Z",
+      "bids": [
+        {
+          "price": "0.06",
+          "size": "100"
+        }
+      ],
+      "asks": [
+        {
+          "price": "0.07",
+          "size": "257"
+        },
+        {
+          "price": "0.09",
+          "size": "341"
+        },
+        {
+          "price": "0.13",
+          "size": "348"
+        }
+      ],
+      "minimum": "10",
+      "tick": "0.01",
+      "fee_rate": "0.03",
+      "fee_exponent": "1",
+      "evidence": "reference-30"
+    },
+    "budget": "160.84",
+    "limit": "0.17",
+    "at": "2026-10-29T00:00:00+00:00",
+    "expected": {
+      "status": "PARTIAL",
+      "reason": "",
+      "quantity": "946.00",
+      "gross": "93.9200",
+      "fees": "2.52052",
+      "spent": "96.44052",
+      "fills": [
+        {
+          "price": "0.07",
+          "quantity": "257.00",
+          "fee": "0.50192"
+        },
+        {
+          "price": "0.09",
+          "quantity": "341.00",
+          "fee": "0.83784"
+        },
+        {
+          "price": "0.13",
+          "quantity": "348.00",
+          "fee": "1.18076"
+        }
+      ]
+    }
+  },
+  {
+    "book": {
+      "asset_id": "reference",
+      "observed_at": "2026-10-29T00:00:00Z",
+      "bids": [
+        {
+          "price": "0.03",
+          "size": "100"
+        }
+      ],
+      "asks": [
+        {
+          "price": "0.04",
+          "size": "303"
+        },
+        {
+          "price": "0.06",
+          "size": "308"
+        },
+        {
+          "price": "0.1",
+          "size": "68"
+        }
+      ],
+      "minimum": "1",
+      "tick": "0.01",
+      "fee_rate": "0.02",
+      "fee_exponent": "0",
+      "evidence": "reference-31"
+    },
+    "budget": "57.49",
+    "limit": "0.07",
+    "at": "2026-10-29T00:00:00+00:00",
+    "expected": {
+      "status": "PARTIAL",
+      "reason": "",
+      "quantity": "611.00",
+      "gross": "30.6000",
+      "fees": "12.22000",
+      "spent": "42.82000",
+      "fills": [
+        {
+          "price": "0.04",
+          "quantity": "303.00",
+          "fee": "6.06000"
+        },
+        {
+          "price": "0.06",
+          "quantity": "308.00",
+          "fee": "6.16000"
+        }
+      ]
+    }
+  },
+  {
+    "book": {
+      "asset_id": "reference",
+      "observed_at": "2026-10-29T00:00:00Z",
+      "bids": [
+        {
+          "price": "0.38",
+          "size": "100"
+        }
+      ],
+      "asks": [
+        {
+          "price": "0.39",
+          "size": "228"
+        },
+        {
+          "price": "0.41",
+          "size": "189"
+        },
+        {
+          "price": "0.45",
+          "size": "123"
+        }
+      ],
+      "minimum": "5",
+      "tick": "0.01",
+      "fee_rate": "0.1",
+      "fee_exponent": "0",
+      "evidence": "reference-32"
+    },
+    "budget": "232.39",
+    "limit": "0.38",
+    "at": "2026-10-29T00:00:00+00:00",
+    "expected": {
+      "status": "REJECTED",
+      "reason": "PRICE_LIMIT",
+      "quantity": "0",
+      "gross": "0",
+      "fees": "0",
+      "spent": "0",
+      "fills": []
+    }
+  },
+  {
+    "book": {
+      "asset_id": "reference",
+      "observed_at": "2026-10-29T00:00:00Z",
+      "bids": [
+        {
+          "price": "0.46",
+          "size": "100"
+        }
+      ],
+      "asks": [
+        {
+          "price": "0.47",
+          "size": "224"
+        },
+        {
+          "price": "0.49",
+          "size": "145"
+        },
+        {
+          "price": "0.53",
+          "size": "44"
+        }
+      ],
+      "minimum": "5",
+      "tick": "0.01",
+      "fee_rate": "0.02",
+      "fee_exponent": "0",
+      "evidence": "reference-33"
+    },
+    "budget": "113.18",
+    "limit": "0.5",
+    "at": "2026-10-29T00:00:00+00:00",
+    "expected": {
+      "status": "PARTIAL",
+      "reason": "",
+      "quantity": "230.70",
+      "gross": "108.5630",
+      "fees": "4.61400",
+      "spent": "113.17700",
+      "fills": [
+        {
+          "price": "0.47",
+          "quantity": "224.00",
+          "fee": "4.48000"
+        },
+        {
+          "price": "0.49",
+          "quantity": "6.70",
+          "fee": "0.13400"
+        }
+      ]
+    }
+  },
+  {
+    "book": {
+      "asset_id": "reference",
+      "observed_at": "2026-10-29T00:00:00Z",
+      "bids": [
+        {
+          "price": "0.88",
+          "size": "100"
+        }
+      ],
+      "asks": [
+        {
+          "price": "0.89",
+          "size": "20"
+        },
+        {
+          "price": "0.91",
+          "size": "71"
+        },
+        {
+          "price": "0.95",
+          "size": "28"
+        }
+      ],
+      "minimum": "10",
+      "tick": "0.01",
+      "fee_rate": "0.02",
+      "fee_exponent": "0",
+      "evidence": "reference-34"
+    },
+    "budget": "162.21",
+    "limit": "0.92",
+    "at": "2026-10-29T00:00:00+00:00",
+    "expected": {
+      "status": "PARTIAL",
+      "reason": "",
+      "quantity": "91.00",
+      "gross": "82.4100",
+      "fees": "1.82000",
+      "spent": "84.23000",
+      "fills": [
+        {
+          "price": "0.89",
+          "quantity": "20.00",
+          "fee": "0.40000"
+        },
+        {
+          "price": "0.91",
+          "quantity": "71.00",
+          "fee": "1.42000"
+        }
+      ]
+    }
+  },
+  {
+    "book": {
+      "asset_id": "reference",
+      "observed_at": "2026-10-29T00:00:00Z",
+      "bids": [
+        {
+          "price": "0.42",
+          "size": "100"
+        }
+      ],
+      "asks": [
+        {
+          "price": "0.43",
+          "size": "50"
+        },
+        {
+          "price": "0.45",
+          "size": "157"
+        },
+        {
+          "price": "0.49",
+          "size": "47"
+        }
+      ],
+      "minimum": "5",
+      "tick": "0.01",
+      "fee_rate": "0",
+      "fee_exponent": "1",
+      "evidence": "reference-35"
+    },
+    "budget": "16",
+    "limit": "0.53",
+    "at": "2026-10-29T00:00:00+00:00",
+    "expected": {
+      "status": "FILLED",
+      "reason": "",
+      "quantity": "37.20",
+      "gross": "15.9960",
+      "fees": "0.00000",
+      "spent": "15.99600",
+      "fills": [
+        {
+          "price": "0.43",
+          "quantity": "37.20",
+          "fee": "0.00000"
+        }
+      ]
+    }
+  },
+  {
+    "book": {
+      "asset_id": "reference",
+      "observed_at": "2026-10-29T00:00:00Z",
+      "bids": [
+        {
+          "price": "0.46",
+          "size": "100"
+        }
+      ],
+      "asks": [
+        {
+          "price": "0.47",
+          "size": "296"
+        },
+        {
+          "price": "0.49",
+          "size": "77"
+        },
+        {
+          "price": "0.53",
+          "size": "239"
+        }
+      ],
+      "minimum": "1",
+      "tick": "0.01",
+      "fee_rate": "0.1",
+      "fee_exponent": "1",
+      "evidence": "reference-36"
+    },
+    "budget": "82.81",
+    "limit": "0.57",
+    "at": "2026-10-29T00:00:00+00:00",
+    "expected": {
+      "status": "FILLED",
+      "reason": "",
+      "quantity": "167.32",
+      "gross": "78.6404",
+      "fees": "4.16794",
+      "spent": "82.80834",
+      "fills": [
+        {
+          "price": "0.47",
+          "quantity": "167.32",
+          "fee": "4.16794"
+        }
+      ]
+    }
+  },
+  {
+    "book": {
+      "asset_id": "reference",
+      "observed_at": "2026-10-29T00:00:00Z",
+      "bids": [
+        {
+          "price": "0.77",
+          "size": "100"
+        }
+      ],
+      "asks": [
+        {
+          "price": "0.78",
+          "size": "72"
+        },
+        {
+          "price": "0.8",
+          "size": "327"
+        },
+        {
+          "price": "0.84",
+          "size": "341"
+        }
+      ],
+      "minimum": "5",
+      "tick": "0.01",
+      "fee_rate": "0.1",
+      "fee_exponent": "2",
+      "evidence": "reference-37"
+    },
+    "budget": "232.53",
+    "limit": "0.77",
+    "at": "2026-10-29T00:00:00+00:00",
+    "expected": {
+      "status": "REJECTED",
+      "reason": "PRICE_LIMIT",
+      "quantity": "0",
+      "gross": "0",
+      "fees": "0",
+      "spent": "0",
+      "fills": []
+    }
+  },
+  {
+    "book": {
+      "asset_id": "reference",
+      "observed_at": "2026-10-29T00:00:00Z",
+      "bids": [
+        {
+          "price": "0.05",
+          "size": "100"
+        }
+      ],
+      "asks": [
+        {
+          "price": "0.06",
+          "size": "81"
+        },
+        {
+          "price": "0.08",
+          "size": "105"
+        },
+        {
+          "price": "0.12",
+          "size": "77"
+        }
+      ],
+      "minimum": "10",
+      "tick": "0.01",
+      "fee_rate": "0",
+      "fee_exponent": "1",
+      "evidence": "reference-38"
+    },
+    "budget": "205.78",
+    "limit": "0.16",
+    "at": "2026-10-29T00:00:00+00:00",
+    "expected": {
+      "status": "PARTIAL",
+      "reason": "",
+      "quantity": "263.00",
+      "gross": "22.5000",
+      "fees": "0.00000",
+      "spent": "22.50000",
+      "fills": [
+        {
+          "price": "0.06",
+          "quantity": "81.00",
+          "fee": "0.00000"
+        },
+        {
+          "price": "0.08",
+          "quantity": "105.00",
+          "fee": "0.00000"
+        },
+        {
+          "price": "0.12",
+          "quantity": "77.00",
+          "fee": "0.00000"
+        }
+      ]
+    }
+  },
+  {
+    "book": {
+      "asset_id": "reference",
+      "observed_at": "2026-10-29T00:00:00Z",
+      "bids": [
+        {
+          "price": "0.2",
+          "size": "100"
+        }
+      ],
+      "asks": [
+        {
+          "price": "0.21",
+          "size": "341"
+        },
+        {
+          "price": "0.23",
+          "size": "311"
+        },
+        {
+          "price": "0.27",
+          "size": "88"
+        }
+      ],
+      "minimum": "5",
+      "tick": "0.01",
+      "fee_rate": "0",
+      "fee_exponent": "1",
+      "evidence": "reference-39"
+    },
+    "budget": "193.17",
+    "limit": "0.24",
+    "at": "2026-10-29T00:00:00+00:00",
+    "expected": {
+      "status": "PARTIAL",
+      "reason": "",
+      "quantity": "652.00",
+      "gross": "143.1400",
+      "fees": "0.00000",
+      "spent": "143.14000",
+      "fills": [
+        {
+          "price": "0.21",
+          "quantity": "341.00",
+          "fee": "0.00000"
+        },
+        {
+          "price": "0.23",
+          "quantity": "311.00",
+          "fee": "0.00000"
+        }
+      ]
+    }
+  },
+  {
+    "book": {
+      "asset_id": "reference",
+      "observed_at": "2026-10-29T00:00:00Z",
+      "bids": [
+        {
+          "price": "0.54",
+          "size": "100"
+        }
+      ],
+      "asks": [
+        {
+          "price": "0.55",
+          "size": "175"
+        },
+        {
+          "price": "0.57",
+          "size": "121"
+        },
+        {
+          "price": "0.61",
+          "size": "1"
+        }
+      ],
+      "minimum": "1",
+      "tick": "0.01",
+      "fee_rate": "0.02",
+      "fee_exponent": "2",
+      "evidence": "reference-40"
+    },
+    "budget": "163.12",
+    "limit": "0.65",
+    "at": "2026-10-29T00:00:00+00:00",
+    "expected": {
+      "status": "PARTIAL",
+      "reason": "",
+      "quantity": "291.69",
+      "gross": "162.7633",
+      "fees": "0.35460",
+      "spent": "163.11790",
+      "fills": [
+        {
+          "price": "0.55",
+          "quantity": "175.00",
+          "fee": "0.21440"
+        },
+        {
+          "price": "0.57",
+          "quantity": "116.69",
+          "fee": "0.14020"
+        }
+      ]
+    }
+  },
+  {
+    "book": {
+      "asset_id": "reference",
+      "observed_at": "2026-10-29T00:00:00Z",
+      "bids": [
+        {
+          "price": "0.33",
+          "size": "100"
+        }
+      ],
+      "asks": [
+        {
+          "price": "0.34",
+          "size": "45"
+        },
+        {
+          "price": "0.36",
+          "size": "151"
+        },
+        {
+          "price": "0.4",
+          "size": "31"
+        }
+      ],
+      "minimum": "10",
+      "tick": "0.01",
+      "fee_rate": "0.1",
+      "fee_exponent": "0",
+      "evidence": "reference-41"
+    },
+    "budget": "13.43",
+    "limit": "0.44",
+    "at": "2026-10-29T00:00:00+00:00",
+    "expected": {
+      "status": "FILLED",
+      "reason": "",
+      "quantity": "30.52",
+      "gross": "10.3768",
+      "fees": "3.05200",
+      "spent": "13.42880",
+      "fills": [
+        {
+          "price": "0.34",
+          "quantity": "30.52",
+          "fee": "3.05200"
+        }
+      ]
+    }
+  },
+  {
+    "book": {
+      "asset_id": "reference",
+      "observed_at": "2026-10-29T00:00:00Z",
+      "bids": [
+        {
+          "price": "0.46",
+          "size": "100"
+        }
+      ],
+      "asks": [
+        {
+          "price": "0.47",
+          "size": "60"
+        },
+        {
+          "price": "0.49",
+          "size": "106"
+        },
+        {
+          "price": "0.53",
+          "size": "299"
+        }
+      ],
+      "minimum": "5",
+      "tick": "0.01",
+      "fee_rate": "0.02",
+      "fee_exponent": "1",
+      "evidence": "reference-42"
+    },
+    "budget": "27.56",
+    "limit": "0.46",
+    "at": "2026-10-29T00:00:00+00:00",
+    "expected": {
+      "status": "REJECTED",
+      "reason": "PRICE_LIMIT",
+      "quantity": "0",
+      "gross": "0",
+      "fees": "0",
+      "spent": "0",
+      "fills": []
+    }
+  },
+  {
+    "book": {
+      "asset_id": "reference",
+      "observed_at": "2026-10-29T00:00:00Z",
+      "bids": [
+        {
+          "price": "0.83",
+          "size": "100"
+        }
+      ],
+      "asks": [
+        {
+          "price": "0.84",
+          "size": "198"
+        },
+        {
+          "price": "0.86",
+          "size": "238"
+        },
+        {
+          "price": "0.9",
+          "size": "224"
+        }
+      ],
+      "minimum": "5",
+      "tick": "0.01",
+      "fee_rate": "0.1",
+      "fee_exponent": "2",
+      "evidence": "reference-43"
+    },
+    "budget": "108.56",
+    "limit": "0.83",
+    "at": "2026-10-29T00:00:00+00:00",
+    "expected": {
+      "status": "REJECTED",
+      "reason": "PRICE_LIMIT",
+      "quantity": "0",
+      "gross": "0",
+      "fees": "0",
+      "spent": "0",
+      "fills": []
+    }
+  },
+  {
+    "book": {
+      "asset_id": "reference",
+      "observed_at": "2026-10-29T00:00:00Z",
+      "bids": [
+        {
+          "price": "0.46",
+          "size": "100"
+        }
+      ],
+      "asks": [
+        {
+          "price": "0.47",
+          "size": "135"
+        },
+        {
+          "price": "0.49",
+          "size": "45"
+        },
+        {
+          "price": "0.53",
+          "size": "50"
+        }
+      ],
+      "minimum": "5",
+      "tick": "0.01",
+      "fee_rate": "0",
+      "fee_exponent": "2",
+      "evidence": "reference-44"
+    },
+    "budget": "43.65",
+    "limit": "0.57",
+    "at": "2026-10-29T00:00:00+00:00",
+    "expected": {
+      "status": "FILLED",
+      "reason": "",
+      "quantity": "92.87",
+      "gross": "43.6489",
+      "fees": "0.00000",
+      "spent": "43.64890",
+      "fills": [
+        {
+          "price": "0.47",
+          "quantity": "92.87",
+          "fee": "0.00000"
+        }
+      ]
+    }
+  },
+  {
+    "book": {
+      "asset_id": "reference",
+      "observed_at": "2026-10-29T00:00:00Z",
+      "bids": [
+        {
+          "price": "0.03",
+          "size": "100"
+        }
+      ],
+      "asks": [
+        {
+          "price": "0.04",
+          "size": "90"
+        },
+        {
+          "price": "0.06",
+          "size": "304"
+        },
+        {
+          "price": "0.1",
+          "size": "292"
+        }
+      ],
+      "minimum": "1",
+      "tick": "0.01",
+      "fee_rate": "0.1",
+      "fee_exponent": "2",
+      "evidence": "reference-45"
+    },
+    "budget": "243.84",
+    "limit": "0.14",
+    "at": "2026-10-29T00:00:00+00:00",
+    "expected": {
+      "status": "PARTIAL",
+      "reason": "",
+      "quantity": "686.00",
+      "gross": "51.0400",
+      "fees": "0.34649",
+      "spent": "51.38649",
+      "fills": [
+        {
+          "price": "0.04",
+          "quantity": "90.00",
+          "fee": "0.01327"
+        },
+        {
+          "price": "0.06",
+          "quantity": "304.00",
+          "fee": "0.09670"
+        },
+        {
+          "price": "0.1",
+          "quantity": "292.00",
+          "fee": "0.23652"
+        }
+      ]
+    }
+  },
+  {
+    "book": {
+      "asset_id": "reference",
+      "observed_at": "2026-10-29T00:00:00Z",
+      "bids": [
+        {
+          "price": "0.59",
+          "size": "100"
+        }
+      ],
+      "asks": [
+        {
+          "price": "0.6",
+          "size": "225"
+        },
+        {
+          "price": "0.62",
+          "size": "234"
+        },
+        {
+          "price": "0.66",
+          "size": "216"
+        }
+      ],
+      "minimum": "5",
+      "tick": "0.01",
+      "fee_rate": "0.03",
+      "fee_exponent": "0",
+      "evidence": "reference-46"
+    },
+    "budget": "100.13",
+    "limit": "0.6",
+    "at": "2026-10-29T00:00:00+00:00",
+    "expected": {
+      "status": "FILLED",
+      "reason": "",
+      "quantity": "158.93",
+      "gross": "95.358",
+      "fees": "4.76790",
+      "spent": "100.12590",
+      "fills": [
+        {
+          "price": "0.6",
+          "quantity": "158.93",
+          "fee": "4.76790"
+        }
+      ]
+    }
+  },
+  {
+    "book": {
+      "asset_id": "reference",
+      "observed_at": "2026-10-29T00:00:00Z",
+      "bids": [
+        {
+          "price": "0.54",
+          "size": "100"
+        }
+      ],
+      "asks": [
+        {
+          "price": "0.55",
+          "size": "259"
+        },
+        {
+          "price": "0.57",
+          "size": "257"
+        },
+        {
+          "price": "0.61",
+          "size": "158"
+        }
+      ],
+      "minimum": "1",
+      "tick": "0.01",
+      "fee_rate": "0",
+      "fee_exponent": "2",
+      "evidence": "reference-47"
+    },
+    "budget": "37.27",
+    "limit": "0.54",
+    "at": "2026-10-29T00:00:00+00:00",
+    "expected": {
+      "status": "REJECTED",
+      "reason": "PRICE_LIMIT",
+      "quantity": "0",
+      "gross": "0",
+      "fees": "0",
+      "spent": "0",
+      "fills": []
+    }
+  },
+  {
+    "book": {
+      "asset_id": "reference",
+      "observed_at": "2026-10-29T00:00:00Z",
+      "bids": [
+        {
+          "price": "0.39",
+          "size": "100"
+        }
+      ],
+      "asks": [
+        {
+          "price": "0.4",
+          "size": "212"
+        },
+        {
+          "price": "0.42",
+          "size": "144"
+        },
+        {
+          "price": "0.46",
+          "size": "345"
+        }
+      ],
+      "minimum": "1",
+      "tick": "0.01",
+      "fee_rate": "0.1",
+      "fee_exponent": "0",
+      "evidence": "reference-48"
+    },
+    "budget": "206.28",
+    "limit": "0.39",
+    "at": "2026-10-29T00:00:00+00:00",
+    "expected": {
+      "status": "REJECTED",
+      "reason": "PRICE_LIMIT",
+      "quantity": "0",
+      "gross": "0",
+      "fees": "0",
+      "spent": "0",
+      "fills": []
+    }
+  },
+  {
+    "book": {
+      "asset_id": "reference",
+      "observed_at": "2026-10-29T00:00:00Z",
+      "bids": [
+        {
+          "price": "0.66",
+          "size": "100"
+        }
+      ],
+      "asks": [
+        {
+          "price": "0.67",
+          "size": "49"
+        },
+        {
+          "price": "0.69",
+          "size": "212"
+        },
+        {
+          "price": "0.73",
+          "size": "203"
+        }
+      ],
+      "minimum": "1",
+      "tick": "0.01",
+      "fee_rate": "0.03",
+      "fee_exponent": "1",
+      "evidence": "reference-49"
+    },
+    "budget": "89.85",
+    "limit": "0.7",
+    "at": "2026-10-29T00:00:00+00:00",
+    "expected": {
+      "status": "PARTIAL",
+      "reason": "",
+      "quantity": "130.40",
+      "gross": "88.9960",
+      "fees": "0.84736",
+      "spent": "89.84336",
+      "fills": [
+        {
+          "price": "0.67",
+          "quantity": "49.00",
+          "fee": "0.32502"
+        },
+        {
+          "price": "0.69",
+          "quantity": "81.40",
+          "fee": "0.52234"
+        }
+      ]
+    }
+  },
+  {
+    "book": {
+      "asset_id": "reference",
+      "observed_at": "2026-10-29T00:00:00Z",
+      "bids": [
+        {
+          "price": "0.78",
+          "size": "100"
+        }
+      ],
+      "asks": [
+        {
+          "price": "0.79",
+          "size": "320"
+        },
+        {
+          "price": "0.81",
+          "size": "28"
+        },
+        {
+          "price": "0.85",
+          "size": "258"
+        }
+      ],
+      "minimum": "5",
+      "tick": "0.01",
+      "fee_rate": "0",
+      "fee_exponent": "1",
+      "evidence": "reference-50"
+    },
+    "budget": "119.33",
+    "limit": "0.89",
+    "at": "2026-10-29T00:00:00+00:00",
+    "expected": {
+      "status": "FILLED",
+      "reason": "",
+      "quantity": "151.05",
+      "gross": "119.3295",
+      "fees": "0.00000",
+      "spent": "119.32950",
+      "fills": [
+        {
+          "price": "0.79",
+          "quantity": "151.05",
+          "fee": "0.00000"
+        }
+      ]
+    }
+  },
+  {
+    "book": {
+      "asset_id": "reference",
+      "observed_at": "2026-10-29T00:00:00Z",
+      "bids": [
+        {
+          "price": "0.69",
+          "size": "100"
+        }
+      ],
+      "asks": [
+        {
+          "price": "0.7",
+          "size": "81"
+        },
+        {
+          "price": "0.72",
+          "size": "182"
+        },
+        {
+          "price": "0.76",
+          "size": "347"
+        }
+      ],
+      "minimum": "5",
+      "tick": "0.01",
+      "fee_rate": "0.1",
+      "fee_exponent": "0",
+      "evidence": "reference-51"
+    },
+    "budget": "23.12",
+    "limit": "0.73",
+    "at": "2026-10-29T00:00:00+00:00",
+    "expected": {
+      "status": "FILLED",
+      "reason": "",
+      "quantity": "28.90",
+      "gross": "20.230",
+      "fees": "2.89000",
+      "spent": "23.12000",
+      "fills": [
+        {
+          "price": "0.7",
+          "quantity": "28.90",
+          "fee": "2.89000"
+        }
+      ]
+    }
+  },
+  {
+    "book": {
+      "asset_id": "reference",
+      "observed_at": "2026-10-29T00:00:00Z",
+      "bids": [
+        {
+          "price": "0.24",
+          "size": "100"
+        }
+      ],
+      "asks": [
+        {
+          "price": "0.25",
+          "size": "216"
+        },
+        {
+          "price": "0.27",
+          "size": "165"
+        },
+        {
+          "price": "0.31",
+          "size": "230"
+        }
+      ],
+      "minimum": "1",
+      "tick": "0.01",
+      "fee_rate": "0.1",
+      "fee_exponent": "2",
+      "evidence": "reference-52"
+    },
+    "budget": "186.86",
+    "limit": "0.28",
+    "at": "2026-10-29T00:00:00+00:00",
+    "expected": {
+      "status": "PARTIAL",
+      "reason": "",
+      "quantity": "381.00",
+      "gross": "98.5500",
+      "fees": "1.40038",
+      "spent": "99.95038",
+      "fills": [
+        {
+          "price": "0.25",
+          "quantity": "216.00",
+          "fee": "0.75938"
+        },
+        {
+          "price": "0.27",
+          "quantity": "165.00",
+          "fee": "0.64100"
+        }
+      ]
+    }
+  },
+  {
+    "book": {
+      "asset_id": "reference",
+      "observed_at": "2026-10-29T00:00:00Z",
+      "bids": [
+        {
+          "price": "0.9",
+          "size": "100"
+        }
+      ],
+      "asks": [
+        {
+          "price": "0.91",
+          "size": "157"
+        },
+        {
+          "price": "0.93",
+          "size": "98"
+        },
+        {
+          "price": "0.97",
+          "size": "71"
+        }
+      ],
+      "minimum": "10",
+      "tick": "0.01",
+      "fee_rate": "0.1",
+      "fee_exponent": "2",
+      "evidence": "reference-53"
+    },
+    "budget": "77.72",
+    "limit": "0.91",
+    "at": "2026-10-29T00:00:00+00:00",
+    "expected": {
+      "status": "FILLED",
+      "reason": "",
+      "quantity": "85.34",
+      "gross": "77.6594",
+      "fees": "0.05724",
+      "spent": "77.71664",
+      "fills": [
+        {
+          "price": "0.91",
+          "quantity": "85.34",
+          "fee": "0.05724"
+        }
+      ]
+    }
+  },
+  {
+    "book": {
+      "asset_id": "reference",
+      "observed_at": "2026-10-29T00:00:00Z",
+      "bids": [
+        {
+          "price": "0.21",
+          "size": "100"
+        }
+      ],
+      "asks": [
+        {
+          "price": "0.22",
+          "size": "8"
+        },
+        {
+          "price": "0.24",
+          "size": "52"
+        },
+        {
+          "price": "0.28",
+          "size": "326"
+        }
+      ],
+      "minimum": "1",
+      "tick": "0.01",
+      "fee_rate": "0.03",
+      "fee_exponent": "0",
+      "evidence": "reference-54"
+    },
+    "budget": "233.74",
+    "limit": "0.32",
+    "at": "2026-10-29T00:00:00+00:00",
+    "expected": {
+      "status": "PARTIAL",
+      "reason": "",
+      "quantity": "386.00",
+      "gross": "105.5200",
+      "fees": "11.58000",
+      "spent": "117.10000",
+      "fills": [
+        {
+          "price": "0.22",
+          "quantity": "8.00",
+          "fee": "0.24000"
+        },
+        {
+          "price": "0.24",
+          "quantity": "52.00",
+          "fee": "1.56000"
+        },
+        {
+          "price": "0.28",
+          "quantity": "326.00",
+          "fee": "9.78000"
+        }
+      ]
+    }
+  },
+  {
+    "book": {
+      "asset_id": "reference",
+      "observed_at": "2026-10-29T00:00:00Z",
+      "bids": [
+        {
+          "price": "0.78",
+          "size": "100"
+        }
+      ],
+      "asks": [
+        {
+          "price": "0.79",
+          "size": "41"
+        },
+        {
+          "price": "0.81",
+          "size": "314"
+        },
+        {
+          "price": "0.85",
+          "size": "261"
+        }
+      ],
+      "minimum": "1",
+      "tick": "0.01",
+      "fee_rate": "0.02",
+      "fee_exponent": "2",
+      "evidence": "reference-55"
+    },
+    "budget": "192.58",
+    "limit": "0.79",
+    "at": "2026-10-29T00:00:00+00:00",
+    "expected": {
+      "status": "PARTIAL",
+      "reason": "",
+      "quantity": "41.00",
+      "gross": "32.3900",
+      "fees": "0.02257",
+      "spent": "32.41257",
+      "fills": [
+        {
+          "price": "0.79",
+          "quantity": "41.00",
+          "fee": "0.02257"
+        }
+      ]
+    }
+  },
+  {
+    "book": {
+      "asset_id": "reference",
+      "observed_at": "2026-10-29T00:00:00Z",
+      "bids": [
+        {
+          "price": "0.72",
+          "size": "100"
+        }
+      ],
+      "asks": [
+        {
+          "price": "0.73",
+          "size": "95"
+        },
+        {
+          "price": "0.75",
+          "size": "169"
+        },
+        {
+          "price": "0.79",
+          "size": "55"
+        }
+      ],
+      "minimum": "10",
+      "tick": "0.01",
+      "fee_rate": "0.03",
+      "fee_exponent": "2",
+      "evidence": "reference-56"
+    },
+    "budget": "170.12",
+    "limit": "0.72",
+    "at": "2026-10-29T00:00:00+00:00",
+    "expected": {
+      "status": "REJECTED",
+      "reason": "PRICE_LIMIT",
+      "quantity": "0",
+      "gross": "0",
+      "fees": "0",
+      "spent": "0",
+      "fills": []
+    }
+  },
+  {
+    "book": {
+      "asset_id": "reference",
+      "observed_at": "2026-10-29T00:00:00Z",
+      "bids": [
+        {
+          "price": "0.52",
+          "size": "100"
+        }
+      ],
+      "asks": [
+        {
+          "price": "0.53",
+          "size": "272"
+        },
+        {
+          "price": "0.55",
+          "size": "46"
+        },
+        {
+          "price": "0.59",
+          "size": "280"
+        }
+      ],
+      "minimum": "1",
+      "tick": "0.01",
+      "fee_rate": "0.03",
+      "fee_exponent": "2",
+      "evidence": "reference-57"
+    },
+    "budget": "74.5",
+    "limit": "0.63",
+    "at": "2026-10-29T00:00:00+00:00",
+    "expected": {
+      "status": "FILLED",
+      "reason": "",
+      "quantity": "140.07",
+      "gross": "74.2371",
+      "fees": "0.26074",
+      "spent": "74.49784",
+      "fills": [
+        {
+          "price": "0.53",
+          "quantity": "140.07",
+          "fee": "0.26074"
+        }
+      ]
+    }
+  },
+  {
+    "book": {
+      "asset_id": "reference",
+      "observed_at": "2026-10-29T00:00:00Z",
+      "bids": [
+        {
+          "price": "0.5",
+          "size": "100"
+        }
+      ],
+      "asks": [
+        {
+          "price": "0.51",
+          "size": "10"
+        },
+        {
+          "price": "0.53",
+          "size": "210"
+        },
+        {
+          "price": "0.57",
+          "size": "5"
+        }
+      ],
+      "minimum": "1",
+      "tick": "0.01",
+      "fee_rate": "0.03",
+      "fee_exponent": "1",
+      "evidence": "reference-58"
+    },
+    "budget": "108.4",
+    "limit": "0.54",
+    "at": "2026-10-29T00:00:00+00:00",
+    "expected": {
+      "status": "PARTIAL",
+      "reason": "",
+      "quantity": "202.05",
+      "gross": "106.8865",
+      "fees": "1.51016",
+      "spent": "108.39666",
+      "fills": [
+        {
+          "price": "0.51",
+          "quantity": "10.00",
+          "fee": "0.07497"
+        },
+        {
+          "price": "0.53",
+          "quantity": "192.05",
+          "fee": "1.43519"
+        }
+      ]
+    }
+  },
+  {
+    "book": {
+      "asset_id": "reference",
+      "observed_at": "2026-10-29T00:00:00Z",
+      "bids": [
+        {
+          "price": "0.27",
+          "size": "100"
+        }
+      ],
+      "asks": [
+        {
+          "price": "0.28",
+          "size": "314"
+        },
+        {
+          "price": "0.3",
+          "size": "102"
+        },
+        {
+          "price": "0.34",
+          "size": "136"
+        }
+      ],
+      "minimum": "5",
+      "tick": "0.01",
+      "fee_rate": "0",
+      "fee_exponent": "0",
+      "evidence": "reference-59"
+    },
+    "budget": "112.72",
+    "limit": "0.38",
+    "at": "2026-10-29T00:00:00+00:00",
+    "expected": {
+      "status": "PARTIAL",
+      "reason": "",
+      "quantity": "396.66",
+      "gross": "112.7180",
+      "fees": "0.00000",
+      "spent": "112.71800",
+      "fills": [
+        {
+          "price": "0.28",
+          "quantity": "314.00",
+          "fee": "0.00000"
+        },
+        {
+          "price": "0.3",
+          "quantity": "82.66",
+          "fee": "0.00000"
+        }
+      ]
+    }
+  },
+  {
+    "book": {
+      "asset_id": "reference",
+      "observed_at": "2026-10-29T00:00:00Z",
+      "bids": [
+        {
+          "price": "0.5",
+          "size": "100"
+        }
+      ],
+      "asks": [
+        {
+          "price": "0.51",
+          "size": "140"
+        },
+        {
+          "price": "0.53",
+          "size": "56"
+        },
+        {
+          "price": "0.57",
+          "size": "231"
+        }
+      ],
+      "minimum": "10",
+      "tick": "0.01",
+      "fee_rate": "0",
+      "fee_exponent": "2",
+      "evidence": "reference-60"
+    },
+    "budget": "57.18",
+    "limit": "0.54",
+    "at": "2026-10-29T00:00:00+00:00",
+    "expected": {
+      "status": "FILLED",
+      "reason": "",
+      "quantity": "112.11",
+      "gross": "57.1761",
+      "fees": "0.00000",
+      "spent": "57.17610",
+      "fills": [
+        {
+          "price": "0.51",
+          "quantity": "112.11",
+          "fee": "0.00000"
+        }
+      ]
+    }
+  },
+  {
+    "book": {
+      "asset_id": "reference",
+      "observed_at": "2026-10-29T00:00:00Z",
+      "bids": [
+        {
+          "price": "0.36",
+          "size": "100"
+        }
+      ],
+      "asks": [
+        {
+          "price": "0.37",
+          "size": "66"
+        },
+        {
+          "price": "0.39",
+          "size": "110"
+        },
+        {
+          "price": "0.43",
+          "size": "212"
+        }
+      ],
+      "minimum": "5",
+      "tick": "0.01",
+      "fee_rate": "0",
+      "fee_exponent": "0",
+      "evidence": "reference-61"
+    },
+    "budget": "3.81",
+    "limit": "0.37",
+    "at": "2026-10-29T00:00:00+00:00",
+    "expected": {
+      "status": "FILLED",
+      "reason": "",
+      "quantity": "10.29",
+      "gross": "3.8073",
+      "fees": "0.00000",
+      "spent": "3.80730",
+      "fills": [
+        {
+          "price": "0.37",
+          "quantity": "10.29",
+          "fee": "0.00000"
+        }
+      ]
+    }
+  },
+  {
+    "book": {
+      "asset_id": "reference",
+      "observed_at": "2026-10-29T00:00:00Z",
+      "bids": [
+        {
+          "price": "0.3",
+          "size": "100"
+        }
+      ],
+      "asks": [
+        {
+          "price": "0.31",
+          "size": "338"
+        },
+        {
+          "price": "0.33",
+          "size": "195"
+        },
+        {
+          "price": "0.37",
+          "size": "247"
+        }
+      ],
+      "minimum": "1",
+      "tick": "0.01",
+      "fee_rate": "0.03",
+      "fee_exponent": "1",
+      "evidence": "reference-62"
+    },
+    "budget": "193.05",
+    "limit": "0.31",
+    "at": "2026-10-29T00:00:00+00:00",
+    "expected": {
+      "status": "PARTIAL",
+      "reason": "",
+      "quantity": "338.00",
+      "gross": "104.7800",
+      "fees": "2.16895",
+      "spent": "106.94895",
+      "fills": [
+        {
+          "price": "0.31",
+          "quantity": "338.00",
+          "fee": "2.16895"
+        }
+      ]
+    }
+  },
+  {
+    "book": {
+      "asset_id": "reference",
+      "observed_at": "2026-10-29T00:00:00Z",
+      "bids": [
+        {
+          "price": "0.52",
+          "size": "100"
+        }
+      ],
+      "asks": [
+        {
+          "price": "0.53",
+          "size": "103"
+        },
+        {
+          "price": "0.55",
+          "size": "200"
+        },
+        {
+          "price": "0.59",
+          "size": "255"
+        }
+      ],
+      "minimum": "1",
+      "tick": "0.01",
+      "fee_rate": "0.1",
+      "fee_exponent": "0",
+      "evidence": "reference-63"
+    },
+    "budget": "65",
+    "limit": "0.56",
+    "at": "2026-10-29T00:00:00+00:00",
+    "expected": {
+      "status": "PARTIAL",
+      "reason": "",
+      "quantity": "103.16",
+      "gross": "54.6780",
+      "fees": "10.31600",
+      "spent": "64.99400",
+      "fills": [
+        {
+          "price": "0.53",
+          "quantity": "103.00",
+          "fee": "10.30000"
+        },
+        {
+          "price": "0.55",
+          "quantity": "0.16",
+          "fee": "0.01600"
+        }
+      ]
+    }
+  },
+  {
+    "book": {
+      "asset_id": "reference",
+      "observed_at": "2026-10-29T00:00:00Z",
+      "bids": [
+        {
+          "price": "0.56",
+          "size": "100"
+        }
+      ],
+      "asks": [
+        {
+          "price": "0.57",
+          "size": "338"
+        },
+        {
+          "price": "0.59",
+          "size": "24"
+        },
+        {
+          "price": "0.63",
+          "size": "73"
+        }
+      ],
+      "minimum": "10",
+      "tick": "0.01",
+      "fee_rate": "0.1",
+      "fee_exponent": "1",
+      "evidence": "reference-64"
+    },
+    "budget": "125.66",
+    "limit": "0.56",
+    "at": "2026-10-29T00:00:00+00:00",
+    "expected": {
+      "status": "REJECTED",
+      "reason": "PRICE_LIMIT",
+      "quantity": "0",
+      "gross": "0",
+      "fees": "0",
+      "spent": "0",
+      "fills": []
+    }
+  },
+  {
+    "book": {
+      "asset_id": "reference",
+      "observed_at": "2026-10-29T00:00:00Z",
+      "bids": [
+        {
+          "price": "0.74",
+          "size": "100"
+        }
+      ],
+      "asks": [
+        {
+          "price": "0.75",
+          "size": "164"
+        },
+        {
+          "price": "0.77",
+          "size": "277"
+        },
+        {
+          "price": "0.81",
+          "size": "280"
+        }
+      ],
+      "minimum": "5",
+      "tick": "0.01",
+      "fee_rate": "0",
+      "fee_exponent": "0",
+      "evidence": "reference-65"
+    },
+    "budget": "107.94",
+    "limit": "0.78",
+    "at": "2026-10-29T00:00:00+00:00",
+    "expected": {
+      "status": "FILLED",
+      "reason": "",
+      "quantity": "143.92",
+      "gross": "107.9400",
+      "fees": "0.00000",
+      "spent": "107.94000",
+      "fills": [
+        {
+          "price": "0.75",
+          "quantity": "143.92",
+          "fee": "0.00000"
+        }
+      ]
+    }
+  },
+  {
+    "book": {
+      "asset_id": "reference",
+      "observed_at": "2026-10-29T00:00:00Z",
+      "bids": [
+        {
+          "price": "0.22",
+          "size": "100"
+        }
+      ],
+      "asks": [
+        {
+          "price": "0.23",
+          "size": "84"
+        },
+        {
+          "price": "0.25",
+          "size": "43"
+        },
+        {
+          "price": "0.29",
+          "size": "218"
+        }
+      ],
+      "minimum": "5",
+      "tick": "0.01",
+      "fee_rate": "0.1",
+      "fee_exponent": "2",
+      "evidence": "reference-66"
+    },
+    "budget": "162.82",
+    "limit": "0.22",
+    "at": "2026-10-29T00:00:00+00:00",
+    "expected": {
+      "status": "REJECTED",
+      "reason": "PRICE_LIMIT",
+      "quantity": "0",
+      "gross": "0",
+      "fees": "0",
+      "spent": "0",
+      "fills": []
+    }
+  },
+  {
+    "book": {
+      "asset_id": "reference",
+      "observed_at": "2026-10-29T00:00:00Z",
+      "bids": [
+        {
+          "price": "0.11",
+          "size": "100"
+        }
+      ],
+      "asks": [
+        {
+          "price": "0.12",
+          "size": "299"
+        },
+        {
+          "price": "0.14",
+          "size": "299"
+        },
+        {
+          "price": "0.18",
+          "size": "289"
+        }
+      ],
+      "minimum": "10",
+      "tick": "0.01",
+      "fee_rate": "0.03",
+      "fee_exponent": "1",
+      "evidence": "reference-67"
+    },
+    "budget": "12.26",
+    "limit": "0.22",
+    "at": "2026-10-29T00:00:00+00:00",
+    "expected": {
+      "status": "FILLED",
+      "reason": "",
+      "quantity": "99.53",
+      "gross": "11.9436",
+      "fees": "0.31531",
+      "spent": "12.25891",
+      "fills": [
+        {
+          "price": "0.12",
+          "quantity": "99.53",
+          "fee": "0.31531"
+        }
+      ]
+    }
+  },
+  {
+    "book": {
+      "asset_id": "reference",
+      "observed_at": "2026-10-29T00:00:00Z",
+      "bids": [
+        {
+          "price": "0.89",
+          "size": "100"
+        }
+      ],
+      "asks": [
+        {
+          "price": "0.9",
+          "size": "140"
+        },
+        {
+          "price": "0.92",
+          "size": "272"
+        },
+        {
+          "price": "0.96",
+          "size": "3"
+        }
+      ],
+      "minimum": "5",
+      "tick": "0.01",
+      "fee_rate": "0.02",
+      "fee_exponent": "1",
+      "evidence": "reference-68"
+    },
+    "budget": "210.77",
+    "limit": "0.89",
+    "at": "2026-10-29T00:00:00+00:00",
+    "expected": {
+      "status": "REJECTED",
+      "reason": "PRICE_LIMIT",
+      "quantity": "0",
+      "gross": "0",
+      "fees": "0",
+      "spent": "0",
+      "fills": []
+    }
+  },
+  {
+    "book": {
+      "asset_id": "reference",
+      "observed_at": "2026-10-29T00:00:00Z",
+      "bids": [
+        {
+          "price": "0.19",
+          "size": "100"
+        }
+      ],
+      "asks": [
+        {
+          "price": "0.2",
+          "size": "260"
+        },
+        {
+          "price": "0.22",
+          "size": "214"
+        },
+        {
+          "price": "0.26",
+          "size": "93"
+        }
+      ],
+      "minimum": "5",
+      "tick": "0.01",
+      "fee_rate": "0.1",
+      "fee_exponent": "0",
+      "evidence": "reference-69"
+    },
+    "budget": "104.22",
+    "limit": "0.3",
+    "at": "2026-10-29T00:00:00+00:00",
+    "expected": {
+      "status": "PARTIAL",
+      "reason": "",
+      "quantity": "341.93",
+      "gross": "70.0246",
+      "fees": "34.19300",
+      "spent": "104.21760",
+      "fills": [
+        {
+          "price": "0.2",
+          "quantity": "260.00",
+          "fee": "26.00000"
+        },
+        {
+          "price": "0.22",
+          "quantity": "81.93",
+          "fee": "8.19300"
+        }
+      ]
+    }
+  },
+  {
+    "book": {
+      "asset_id": "reference",
+      "observed_at": "2026-10-29T00:00:00Z",
+      "bids": [
+        {
+          "price": "0.72",
+          "size": "100"
+        }
+      ],
+      "asks": [
+        {
+          "price": "0.73",
+          "size": "6"
+        },
+        {
+          "price": "0.75",
+          "size": "189"
+        },
+        {
+          "price": "0.79",
+          "size": "38"
+        }
+      ],
+      "minimum": "1",
+      "tick": "0.01",
+      "fee_rate": "0.1",
+      "fee_exponent": "2",
+      "evidence": "reference-70"
+    },
+    "budget": "80.23",
+    "limit": "0.76",
+    "at": "2026-10-29T00:00:00+00:00",
+    "expected": {
+      "status": "PARTIAL",
+      "reason": "",
+      "quantity": "106.63",
+      "gross": "79.8525",
+      "fees": "0.37709",
+      "spent": "80.22959",
+      "fills": [
+        {
+          "price": "0.73",
+          "quantity": "6.00",
+          "fee": "0.02331"
+        },
+        {
+          "price": "0.75",
+          "quantity": "100.63",
+          "fee": "0.35378"
+        }
+      ]
+    }
+  },
+  {
+    "book": {
+      "asset_id": "reference",
+      "observed_at": "2026-10-29T00:00:00Z",
+      "bids": [
+        {
+          "price": "0.43",
+          "size": "100"
+        }
+      ],
+      "asks": [
+        {
+          "price": "0.44",
+          "size": "304"
+        },
+        {
+          "price": "0.46",
+          "size": "94"
+        },
+        {
+          "price": "0.5",
+          "size": "139"
+        }
+      ],
+      "minimum": "5",
+      "tick": "0.01",
+      "fee_rate": "0.03",
+      "fee_exponent": "1",
+      "evidence": "reference-71"
+    },
+    "budget": "155.33",
+    "limit": "0.54",
+    "at": "2026-10-29T00:00:00+00:00",
+    "expected": {
+      "status": "PARTIAL",
+      "reason": "",
+      "quantity": "345.33",
+      "gross": "152.7718",
+      "fees": "2.55516",
+      "spent": "155.32696",
+      "fills": [
+        {
+          "price": "0.44",
+          "quantity": "304.00",
+          "fee": "2.24717"
+        },
+        {
+          "price": "0.46",
+          "quantity": "41.33",
+          "fee": "0.30799"
+        }
+      ]
+    }
+  },
+  {
+    "book": {
+      "asset_id": "reference",
+      "observed_at": "2026-10-29T00:00:00Z",
+      "bids": [
+        {
+          "price": "0.78",
+          "size": "100"
+        }
+      ],
+      "asks": [
+        {
+          "price": "0.79",
+          "size": "88"
+        },
+        {
+          "price": "0.81",
+          "size": "79"
+        },
+        {
+          "price": "0.85",
+          "size": "24"
+        }
+      ],
+      "minimum": "10",
+      "tick": "0.01",
+      "fee_rate": "0",
+      "fee_exponent": "1",
+      "evidence": "reference-72"
+    },
+    "budget": "86.16",
+    "limit": "0.78",
+    "at": "2026-10-29T00:00:00+00:00",
+    "expected": {
+      "status": "REJECTED",
+      "reason": "PRICE_LIMIT",
+      "quantity": "0",
+      "gross": "0",
+      "fees": "0",
+      "spent": "0",
+      "fills": []
+    }
+  },
+  {
+    "book": {
+      "asset_id": "reference",
+      "observed_at": "2026-10-29T00:00:00Z",
+      "bids": [
+        {
+          "price": "0.79",
+          "size": "100"
+        }
+      ],
+      "asks": [
+        {
+          "price": "0.8",
+          "size": "96"
+        },
+        {
+          "price": "0.82",
+          "size": "289"
+        },
+        {
+          "price": "0.86",
+          "size": "72"
+        }
+      ],
+      "minimum": "5",
+      "tick": "0.01",
+      "fee_rate": "0.03",
+      "fee_exponent": "1",
+      "evidence": "reference-73"
+    },
+    "budget": "112.53",
+    "limit": "0.8",
+    "at": "2026-10-29T00:00:00+00:00",
+    "expected": {
+      "status": "PARTIAL",
+      "reason": "",
+      "quantity": "96.00",
+      "gross": "76.800",
+      "fees": "0.46080",
+      "spent": "77.26080",
+      "fills": [
+        {
+          "price": "0.8",
+          "quantity": "96.00",
+          "fee": "0.46080"
+        }
+      ]
+    }
+  },
+  {
+    "book": {
+      "asset_id": "reference",
+      "observed_at": "2026-10-29T00:00:00Z",
+      "bids": [
+        {
+          "price": "0.5",
+          "size": "100"
+        }
+      ],
+      "asks": [
+        {
+          "price": "0.51",
+          "size": "59"
+        },
+        {
+          "price": "0.53",
+          "size": "332"
+        },
+        {
+          "price": "0.57",
+          "size": "304"
+        }
+      ],
+      "minimum": "5",
+      "tick": "0.01",
+      "fee_rate": "0.02",
+      "fee_exponent": "1",
+      "evidence": "reference-74"
+    },
+    "budget": "62.05",
+    "limit": "0.51",
+    "at": "2026-10-29T00:00:00+00:00",
+    "expected": {
+      "status": "PARTIAL",
+      "reason": "",
+      "quantity": "59.00",
+      "gross": "30.0900",
+      "fees": "0.29488",
+      "spent": "30.38488",
+      "fills": [
+        {
+          "price": "0.51",
+          "quantity": "59.00",
+          "fee": "0.29488"
+        }
+      ]
+    }
+  },
+  {
+    "book": {
+      "asset_id": "reference",
+      "observed_at": "2026-10-29T00:00:00Z",
+      "bids": [
+        {
+          "price": "0.21",
+          "size": "100"
+        }
+      ],
+      "asks": [
+        {
+          "price": "0.22",
+          "size": "40"
+        },
+        {
+          "price": "0.24",
+          "size": "41"
+        },
+        {
+          "price": "0.28",
+          "size": "191"
+        }
+      ],
+      "minimum": "10",
+      "tick": "0.01",
+      "fee_rate": "0.03",
+      "fee_exponent": "2",
+      "evidence": "reference-75"
+    },
+    "budget": "104.19",
+    "limit": "0.32",
+    "at": "2026-10-29T00:00:00+00:00",
+    "expected": {
+      "status": "PARTIAL",
+      "reason": "",
+      "quantity": "272.00",
+      "gross": "72.1200",
+      "fees": "0.30914",
+      "spent": "72.42914",
+      "fills": [
+        {
+          "price": "0.22",
+          "quantity": "40.00",
+          "fee": "0.03534"
+        },
+        {
+          "price": "0.24",
+          "quantity": "41.00",
+          "fee": "0.04092"
+        },
+        {
+          "price": "0.28",
+          "quantity": "191.00",
+          "fee": "0.23288"
+        }
+      ]
+    }
+  },
+  {
+    "book": {
+      "asset_id": "reference",
+      "observed_at": "2026-10-29T00:00:00Z",
+      "bids": [
+        {
+          "price": "0.66",
+          "size": "100"
+        }
+      ],
+      "asks": [
+        {
+          "price": "0.67",
+          "size": "121"
+        },
+        {
+          "price": "0.69",
+          "size": "204"
+        },
+        {
+          "price": "0.73",
+          "size": "146"
+        }
+      ],
+      "minimum": "1",
+      "tick": "0.01",
+      "fee_rate": "0.03",
+      "fee_exponent": "0",
+      "evidence": "reference-76"
+    },
+    "budget": "18.91",
+    "limit": "0.66",
+    "at": "2026-10-29T00:00:00+00:00",
+    "expected": {
+      "status": "REJECTED",
+      "reason": "PRICE_LIMIT",
+      "quantity": "0",
+      "gross": "0",
+      "fees": "0",
+      "spent": "0",
+      "fills": []
+    }
+  },
+  {
+    "book": {
+      "asset_id": "reference",
+      "observed_at": "2026-10-29T00:00:00Z",
+      "bids": [
+        {
+          "price": "0.1",
+          "size": "100"
+        }
+      ],
+      "asks": [
+        {
+          "price": "0.11",
+          "size": "26"
+        },
+        {
+          "price": "0.13",
+          "size": "334"
+        },
+        {
+          "price": "0.17",
+          "size": "210"
+        }
+      ],
+      "minimum": "5",
+      "tick": "0.01",
+      "fee_rate": "0.02",
+      "fee_exponent": "2",
+      "evidence": "reference-77"
+    },
+    "budget": "205.41",
+    "limit": "0.1",
+    "at": "2026-10-29T00:00:00+00:00",
+    "expected": {
+      "status": "REJECTED",
+      "reason": "PRICE_LIMIT",
+      "quantity": "0",
+      "gross": "0",
+      "fees": "0",
+      "spent": "0",
+      "fills": []
+    }
+  },
+  {
+    "book": {
+      "asset_id": "reference",
+      "observed_at": "2026-10-29T00:00:00Z",
+      "bids": [
+        {
+          "price": "0.21",
+          "size": "100"
+        }
+      ],
+      "asks": [
+        {
+          "price": "0.22",
+          "size": "294"
+        },
+        {
+          "price": "0.24",
+          "size": "13"
+        },
+        {
+          "price": "0.28",
+          "size": "178"
+        }
+      ],
+      "minimum": "1",
+      "tick": "0.01",
+      "fee_rate": "0.1",
+      "fee_exponent": "2",
+      "evidence": "reference-78"
+    },
+    "budget": "48.61",
+    "limit": "0.32",
+    "at": "2026-10-29T00:00:00+00:00",
+    "expected": {
+      "status": "FILLED",
+      "reason": "",
+      "quantity": "218.03",
+      "gross": "47.9666",
+      "fees": "0.64202",
+      "spent": "48.60862",
+      "fills": [
+        {
+          "price": "0.22",
+          "quantity": "218.03",
+          "fee": "0.64202"
+        }
+      ]
+    }
+  },
+  {
+    "book": {
+      "asset_id": "reference",
+      "observed_at": "2026-10-29T00:00:00Z",
+      "bids": [
+        {
+          "price": "0.26",
+          "size": "100"
+        }
+      ],
+      "asks": [
+        {
+          "price": "0.27",
+          "size": "19"
+        },
+        {
+          "price": "0.29",
+          "size": "175"
+        },
+        {
+          "price": "0.33",
+          "size": "287"
+        }
+      ],
+      "minimum": "1",
+      "tick": "0.01",
+      "fee_rate": "0.03",
+      "fee_exponent": "1",
+      "evidence": "reference-79"
+    },
+    "budget": "89.29",
+    "limit": "0.27",
+    "at": "2026-10-29T00:00:00+00:00",
+    "expected": {
+      "status": "PARTIAL",
+      "reason": "",
+      "quantity": "19.00",
+      "gross": "5.1300",
+      "fees": "0.11235",
+      "spent": "5.24235",
+      "fills": [
+        {
+          "price": "0.27",
+          "quantity": "19.00",
+          "fee": "0.11235"
+        }
+      ]
+    }
+  },
+  {
+    "book": {
+      "asset_id": "reference",
+      "observed_at": "2026-10-29T00:00:00Z",
+      "bids": [
+        {
+          "price": "0.86",
+          "size": "100"
+        }
+      ],
+      "asks": [
+        {
+          "price": "0.87",
+          "size": "1"
+        },
+        {
+          "price": "0.89",
+          "size": "74"
+        },
+        {
+          "price": "0.93",
+          "size": "75"
+        }
+      ],
+      "minimum": "10",
+      "tick": "0.01",
+      "fee_rate": "0.03",
+      "fee_exponent": "0",
+      "evidence": "reference-80"
+    },
+    "budget": "72.91",
+    "limit": "0.9",
+    "at": "2026-10-29T00:00:00+00:00",
+    "expected": {
+      "status": "PARTIAL",
+      "reason": "",
+      "quantity": "75.00",
+      "gross": "66.7300",
+      "fees": "2.25000",
+      "spent": "68.98000",
+      "fills": [
+        {
+          "price": "0.87",
+          "quantity": "1.00",
+          "fee": "0.03000"
+        },
+        {
+          "price": "0.89",
+          "quantity": "74.00",
+          "fee": "2.22000"
+        }
+      ]
+    }
+  },
+  {
+    "book": {
+      "asset_id": "reference",
+      "observed_at": "2026-10-29T00:00:00Z",
+      "bids": [
+        {
+          "price": "0.64",
+          "size": "100"
+        }
+      ],
+      "asks": [
+        {
+          "price": "0.65",
+          "size": "341"
+        },
+        {
+          "price": "0.67",
+          "size": "50"
+        },
+        {
+          "price": "0.71",
+          "size": "89"
+        }
+      ],
+      "minimum": "1",
+      "tick": "0.01",
+      "fee_rate": "0.1",
+      "fee_exponent": "1",
+      "evidence": "reference-81"
+    },
+    "budget": "22.5",
+    "limit": "0.68",
+    "at": "2026-10-29T00:00:00+00:00",
+    "expected": {
+      "status": "FILLED",
+      "reason": "",
+      "quantity": "33.44",
+      "gross": "21.7360",
+      "fees": "0.76076",
+      "spent": "22.49676",
+      "fills": [
+        {
+          "price": "0.65",
+          "quantity": "33.44",
+          "fee": "0.76076"
+        }
+      ]
+    }
+  },
+  {
+    "book": {
+      "asset_id": "reference",
+      "observed_at": "2026-10-29T00:00:00Z",
+      "bids": [
+        {
+          "price": "0.04",
+          "size": "100"
+        }
+      ],
+      "asks": [
+        {
+          "price": "0.05",
+          "size": "190"
+        },
+        {
+          "price": "0.07",
+          "size": "244"
+        },
+        {
+          "price": "0.11",
+          "size": "206"
+        }
+      ],
+      "minimum": "10",
+      "tick": "0.01",
+      "fee_rate": "0",
+      "fee_exponent": "2",
+      "evidence": "reference-82"
+    },
+    "budget": "221.16",
+    "limit": "0.08",
+    "at": "2026-10-29T00:00:00+00:00",
+    "expected": {
+      "status": "PARTIAL",
+      "reason": "",
+      "quantity": "434.00",
+      "gross": "26.5800",
+      "fees": "0.00000",
+      "spent": "26.58000",
+      "fills": [
+        {
+          "price": "0.05",
+          "quantity": "190.00",
+          "fee": "0.00000"
+        },
+        {
+          "price": "0.07",
+          "quantity": "244.00",
+          "fee": "0.00000"
+        }
+      ]
+    }
+  },
+  {
+    "book": {
+      "asset_id": "reference",
+      "observed_at": "2026-10-29T00:00:00Z",
+      "bids": [
+        {
+          "price": "0.8",
+          "size": "100"
+        }
+      ],
+      "asks": [
+        {
+          "price": "0.81",
+          "size": "106"
+        },
+        {
+          "price": "0.83",
+          "size": "114"
+        },
+        {
+          "price": "0.87",
+          "size": "121"
+        }
+      ],
+      "minimum": "1",
+      "tick": "0.01",
+      "fee_rate": "0.1",
+      "fee_exponent": "0",
+      "evidence": "reference-83"
+    },
+    "budget": "30.7",
+    "limit": "0.81",
+    "at": "2026-10-29T00:00:00+00:00",
+    "expected": {
+      "status": "FILLED",
+      "reason": "",
+      "quantity": "33.73",
+      "gross": "27.3213",
+      "fees": "3.37300",
+      "spent": "30.69430",
+      "fills": [
+        {
+          "price": "0.81",
+          "quantity": "33.73",
+          "fee": "3.37300"
+        }
+      ]
+    }
+  },
+  {
+    "book": {
+      "asset_id": "reference",
+      "observed_at": "2026-10-29T00:00:00Z",
+      "bids": [
+        {
+          "price": "0.84",
+          "size": "100"
+        }
+      ],
+      "asks": [
+        {
+          "price": "0.85",
+          "size": "85"
+        },
+        {
+          "price": "0.87",
+          "size": "79"
+        },
+        {
+          "price": "0.91",
+          "size": "326"
+        }
+      ],
+      "minimum": "5",
+      "tick": "0.01",
+      "fee_rate": "0.02",
+      "fee_exponent": "0",
+      "evidence": "reference-84"
+    },
+    "budget": "175.5",
+    "limit": "0.95",
+    "at": "2026-10-29T00:00:00+00:00",
+    "expected": {
+      "status": "PARTIAL",
+      "reason": "",
+      "quantity": "197.59",
+      "gross": "171.5469",
+      "fees": "3.95180",
+      "spent": "175.49870",
+      "fills": [
+        {
+          "price": "0.85",
+          "quantity": "85.00",
+          "fee": "1.70000"
+        },
+        {
+          "price": "0.87",
+          "quantity": "79.00",
+          "fee": "1.58000"
+        },
+        {
+          "price": "0.91",
+          "quantity": "33.59",
+          "fee": "0.67180"
+        }
+      ]
+    }
+  },
+  {
+    "book": {
+      "asset_id": "reference",
+      "observed_at": "2026-10-29T00:00:00Z",
+      "bids": [
+        {
+          "price": "0.45",
+          "size": "100"
+        }
+      ],
+      "asks": [
+        {
+          "price": "0.46",
+          "size": "281"
+        },
+        {
+          "price": "0.48",
+          "size": "300"
+        },
+        {
+          "price": "0.52",
+          "size": "102"
+        }
+      ],
+      "minimum": "10",
+      "tick": "0.01",
+      "fee_rate": "0.1",
+      "fee_exponent": "0",
+      "evidence": "reference-85"
+    },
+    "budget": "242.13",
+    "limit": "0.49",
+    "at": "2026-10-29T00:00:00+00:00",
+    "expected": {
+      "status": "PARTIAL",
+      "reason": "",
+      "quantity": "427.15",
+      "gross": "199.4120",
+      "fees": "42.71500",
+      "spent": "242.12700",
+      "fills": [
+        {
+          "price": "0.46",
+          "quantity": "281.00",
+          "fee": "28.10000"
+        },
+        {
+          "price": "0.48",
+          "quantity": "146.15",
+          "fee": "14.61500"
+        }
+      ]
+    }
+  },
+  {
+    "book": {
+      "asset_id": "reference",
+      "observed_at": "2026-10-29T00:00:00Z",
+      "bids": [
+        {
+          "price": "0.04",
+          "size": "100"
+        }
+      ],
+      "asks": [
+        {
+          "price": "0.05",
+          "size": "59"
+        },
+        {
+          "price": "0.07",
+          "size": "70"
+        },
+        {
+          "price": "0.11",
+          "size": "32"
+        }
+      ],
+      "minimum": "1",
+      "tick": "0.01",
+      "fee_rate": "0.03",
+      "fee_exponent": "1",
+      "evidence": "reference-86"
+    },
+    "budget": "15.94",
+    "limit": "0.05",
+    "at": "2026-10-29T00:00:00+00:00",
+    "expected": {
+      "status": "PARTIAL",
+      "reason": "",
+      "quantity": "59.00",
+      "gross": "2.9500",
+      "fees": "0.08408",
+      "spent": "3.03408",
+      "fills": [
+        {
+          "price": "0.05",
+          "quantity": "59.00",
+          "fee": "0.08408"
+        }
+      ]
+    }
+  },
+  {
+    "book": {
+      "asset_id": "reference",
+      "observed_at": "2026-10-29T00:00:00Z",
+      "bids": [
+        {
+          "price": "0.09",
+          "size": "100"
+        }
+      ],
+      "asks": [
+        {
+          "price": "0.1",
+          "size": "122"
+        },
+        {
+          "price": "0.12",
+          "size": "276"
+        },
+        {
+          "price": "0.16",
+          "size": "170"
+        }
+      ],
+      "minimum": "10",
+      "tick": "0.01",
+      "fee_rate": "0.03",
+      "fee_exponent": "2",
+      "evidence": "reference-87"
+    },
+    "budget": "100.4",
+    "limit": "0.09",
+    "at": "2026-10-29T00:00:00+00:00",
+    "expected": {
+      "status": "REJECTED",
+      "reason": "PRICE_LIMIT",
+      "quantity": "0",
+      "gross": "0",
+      "fees": "0",
+      "spent": "0",
+      "fills": []
+    }
+  },
+  {
+    "book": {
+      "asset_id": "reference",
+      "observed_at": "2026-10-29T00:00:00Z",
+      "bids": [
+        {
+          "price": "0.01",
+          "size": "100"
+        }
+      ],
+      "asks": [
+        {
+          "price": "0.02",
+          "size": "276"
+        },
+        {
+          "price": "0.04",
+          "size": "300"
+        },
+        {
+          "price": "0.08",
+          "size": "81"
+        }
+      ],
+      "minimum": "10",
+      "tick": "0.01",
+      "fee_rate": "0.1",
+      "fee_exponent": "1",
+      "evidence": "reference-88"
+    },
+    "budget": "133.76",
+    "limit": "0.01",
+    "at": "2026-10-29T00:00:00+00:00",
+    "expected": {
+      "status": "REJECTED",
+      "reason": "PRICE_LIMIT",
+      "quantity": "0",
+      "gross": "0",
+      "fees": "0",
+      "spent": "0",
+      "fills": []
+    }
+  },
+  {
+    "book": {
+      "asset_id": "reference",
+      "observed_at": "2026-10-29T00:00:00Z",
+      "bids": [
+        {
+          "price": "0.05",
+          "size": "100"
+        }
+      ],
+      "asks": [
+        {
+          "price": "0.06",
+          "size": "141"
+        },
+        {
+          "price": "0.08",
+          "size": "70"
+        },
+        {
+          "price": "0.12",
+          "size": "293"
+        }
+      ],
+      "minimum": "1",
+      "tick": "0.01",
+      "fee_rate": "0.02",
+      "fee_exponent": "1",
+      "evidence": "reference-89"
+    },
+    "budget": "84.32",
+    "limit": "0.05",
+    "at": "2026-10-29T00:00:00+00:00",
+    "expected": {
+      "status": "REJECTED",
+      "reason": "PRICE_LIMIT",
+      "quantity": "0",
+      "gross": "0",
+      "fees": "0",
+      "spent": "0",
+      "fills": []
+    }
+  },
+  {
+    "book": {
+      "asset_id": "reference",
+      "observed_at": "2026-10-29T00:00:00Z",
+      "bids": [
+        {
+          "price": "0.39",
+          "size": "100"
+        }
+      ],
+      "asks": [
+        {
+          "price": "0.4",
+          "size": "311"
+        },
+        {
+          "price": "0.42",
+          "size": "320"
+        },
+        {
+          "price": "0.46",
+          "size": "158"
+        }
+      ],
+      "minimum": "10",
+      "tick": "0.01",
+      "fee_rate": "0.1",
+      "fee_exponent": "2",
+      "evidence": "reference-90"
+    },
+    "budget": "54.45",
+    "limit": "0.5",
+    "at": "2026-10-29T00:00:00+00:00",
+    "expected": {
+      "status": "FILLED",
+      "reason": "",
+      "quantity": "134.19",
+      "gross": "53.676",
+      "fees": "0.77293",
+      "spent": "54.44893",
+      "fills": [
+        {
+          "price": "0.4",
+          "quantity": "134.19",
+          "fee": "0.77293"
+        }
+      ]
+    }
+  },
+  {
+    "book": {
+      "asset_id": "reference",
+      "observed_at": "2026-10-29T00:00:00Z",
+      "bids": [
+        {
+          "price": "0.81",
+          "size": "100"
+        }
+      ],
+      "asks": [
+        {
+          "price": "0.82",
+          "size": "161"
+        },
+        {
+          "price": "0.84",
+          "size": "225"
+        },
+        {
+          "price": "0.88",
+          "size": "282"
+        }
+      ],
+      "minimum": "10",
+      "tick": "0.01",
+      "fee_rate": "0.03",
+      "fee_exponent": "1",
+      "evidence": "reference-91"
+    },
+    "budget": "116.58",
+    "limit": "0.81",
+    "at": "2026-10-29T00:00:00+00:00",
+    "expected": {
+      "status": "REJECTED",
+      "reason": "PRICE_LIMIT",
+      "quantity": "0",
+      "gross": "0",
+      "fees": "0",
+      "spent": "0",
+      "fills": []
+    }
+  },
+  {
+    "book": {
+      "asset_id": "reference",
+      "observed_at": "2026-10-29T00:00:00Z",
+      "bids": [
+        {
+          "price": "0.83",
+          "size": "100"
+        }
+      ],
+      "asks": [
+        {
+          "price": "0.84",
+          "size": "209"
+        },
+        {
+          "price": "0.86",
+          "size": "53"
+        },
+        {
+          "price": "0.9",
+          "size": "2"
+        }
+      ],
+      "minimum": "5",
+      "tick": "0.01",
+      "fee_rate": "0.1",
+      "fee_exponent": "0",
+      "evidence": "reference-92"
+    },
+    "budget": "128.26",
+    "limit": "0.83",
+    "at": "2026-10-29T00:00:00+00:00",
+    "expected": {
+      "status": "REJECTED",
+      "reason": "PRICE_LIMIT",
+      "quantity": "0",
+      "gross": "0",
+      "fees": "0",
+      "spent": "0",
+      "fills": []
+    }
+  },
+  {
+    "book": {
+      "asset_id": "reference",
+      "observed_at": "2026-10-29T00:00:00Z",
+      "bids": [
+        {
+          "price": "0.26",
+          "size": "100"
+        }
+      ],
+      "asks": [
+        {
+          "price": "0.27",
+          "size": "201"
+        },
+        {
+          "price": "0.29",
+          "size": "245"
+        },
+        {
+          "price": "0.33",
+          "size": "93"
+        }
+      ],
+      "minimum": "10",
+      "tick": "0.01",
+      "fee_rate": "0.1",
+      "fee_exponent": "0",
+      "evidence": "reference-93"
+    },
+    "budget": "100.88",
+    "limit": "0.37",
+    "at": "2026-10-29T00:00:00+00:00",
+    "expected": {
+      "status": "PARTIAL",
+      "reason": "",
+      "quantity": "268.97",
+      "gross": "73.9813",
+      "fees": "26.89700",
+      "spent": "100.87830",
+      "fills": [
+        {
+          "price": "0.27",
+          "quantity": "201.00",
+          "fee": "20.10000"
+        },
+        {
+          "price": "0.29",
+          "quantity": "67.97",
+          "fee": "6.79700"
+        }
+      ]
+    }
+  },
+  {
+    "book": {
+      "asset_id": "reference",
+      "observed_at": "2026-10-29T00:00:00Z",
+      "bids": [
+        {
+          "price": "0.57",
+          "size": "100"
+        }
+      ],
+      "asks": [
+        {
+          "price": "0.58",
+          "size": "214"
+        },
+        {
+          "price": "0.6",
+          "size": "211"
+        },
+        {
+          "price": "0.64",
+          "size": "219"
+        }
+      ],
+      "minimum": "1",
+      "tick": "0.01",
+      "fee_rate": "0.1",
+      "fee_exponent": "1",
+      "evidence": "reference-94"
+    },
+    "budget": "180.74",
+    "limit": "0.68",
+    "at": "2026-10-29T00:00:00+00:00",
+    "expected": {
+      "status": "PARTIAL",
+      "reason": "",
+      "quantity": "296.38",
+      "gross": "173.5480",
+      "fees": "7.19016",
+      "spent": "180.73816",
+      "fills": [
+        {
+          "price": "0.58",
+          "quantity": "214.00",
+          "fee": "5.21304"
+        },
+        {
+          "price": "0.6",
+          "quantity": "82.38",
+          "fee": "1.97712"
+        }
+      ]
+    }
+  },
+  {
+    "book": {
+      "asset_id": "reference",
+      "observed_at": "2026-10-29T00:00:00Z",
+      "bids": [
+        {
+          "price": "0.38",
+          "size": "100"
+        }
+      ],
+      "asks": [
+        {
+          "price": "0.39",
+          "size": "226"
+        },
+        {
+          "price": "0.41",
+          "size": "338"
+        },
+        {
+          "price": "0.45",
+          "size": "136"
+        }
+      ],
+      "minimum": "5",
+      "tick": "0.01",
+      "fee_rate": "0.02",
+      "fee_exponent": "2",
+      "evidence": "reference-95"
+    },
+    "budget": "216.46",
+    "limit": "0.49",
+    "at": "2026-10-29T00:00:00+00:00",
+    "expected": {
+      "status": "PARTIAL",
+      "reason": "",
+      "quantity": "537.46",
+      "gross": "215.8386",
+      "fees": "0.62033",
+      "spent": "216.45893",
+      "fills": [
+        {
+          "price": "0.39",
+          "quantity": "226.00",
+          "fee": "0.25582"
+        },
+        {
+          "price": "0.41",
+          "quantity": "311.46",
+          "fee": "0.36451"
+        }
+      ]
+    }
+  },
+  {
+    "book": {
+      "asset_id": "reference",
+      "observed_at": "2026-10-29T00:00:00Z",
+      "bids": [
+        {
+          "price": "0.07",
+          "size": "100"
+        }
+      ],
+      "asks": [
+        {
+          "price": "0.08",
+          "size": "17"
+        },
+        {
+          "price": "0.1",
+          "size": "75"
+        },
+        {
+          "price": "0.14",
+          "size": "104"
+        }
+      ],
+      "minimum": "10",
+      "tick": "0.01",
+      "fee_rate": "0.02",
+      "fee_exponent": "1",
+      "evidence": "reference-96"
+    },
+    "budget": "168.35",
+    "limit": "0.11",
+    "at": "2026-10-29T00:00:00+00:00",
+    "expected": {
+      "status": "PARTIAL",
+      "reason": "",
+      "quantity": "92.00",
+      "gross": "8.8600",
+      "fees": "0.16002",
+      "spent": "9.02002",
+      "fills": [
+        {
+          "price": "0.08",
+          "quantity": "17.00",
+          "fee": "0.02502"
+        },
+        {
+          "price": "0.1",
+          "quantity": "75.00",
+          "fee": "0.13500"
+        }
+      ]
+    }
+  },
+  {
+    "book": {
+      "asset_id": "reference",
+      "observed_at": "2026-10-29T00:00:00Z",
+      "bids": [
+        {
+          "price": "0.74",
+          "size": "100"
+        }
+      ],
+      "asks": [
+        {
+          "price": "0.75",
+          "size": "299"
+        },
+        {
+          "price": "0.77",
+          "size": "48"
+        },
+        {
+          "price": "0.81",
+          "size": "162"
+        }
+      ],
+      "minimum": "5",
+      "tick": "0.01",
+      "fee_rate": "0.1",
+      "fee_exponent": "0",
+      "evidence": "reference-97"
+    },
+    "budget": "120.57",
+    "limit": "0.78",
+    "at": "2026-10-29T00:00:00+00:00",
+    "expected": {
+      "status": "FILLED",
+      "reason": "",
+      "quantity": "141.84",
+      "gross": "106.3800",
+      "fees": "14.18400",
+      "spent": "120.56400",
+      "fills": [
+        {
+          "price": "0.75",
+          "quantity": "141.84",
+          "fee": "14.18400"
+        }
+      ]
+    }
+  },
+  {
+    "book": {
+      "asset_id": "reference",
+      "observed_at": "2026-10-29T00:00:00Z",
+      "bids": [
+        {
+          "price": "0.38",
+          "size": "100"
+        }
+      ],
+      "asks": [
+        {
+          "price": "0.39",
+          "size": "45"
+        },
+        {
+          "price": "0.41",
+          "size": "332"
+        },
+        {
+          "price": "0.45",
+          "size": "77"
+        }
+      ],
+      "minimum": "1",
+      "tick": "0.01",
+      "fee_rate": "0",
+      "fee_exponent": "1",
+      "evidence": "reference-98"
+    },
+    "budget": "228.68",
+    "limit": "0.39",
+    "at": "2026-10-29T00:00:00+00:00",
+    "expected": {
+      "status": "PARTIAL",
+      "reason": "",
+      "quantity": "45.00",
+      "gross": "17.5500",
+      "fees": "0.00000",
+      "spent": "17.55000",
+      "fills": [
+        {
+          "price": "0.39",
+          "quantity": "45.00",
+          "fee": "0.00000"
+        }
+      ]
+    }
+  },
+  {
+    "book": {
+      "asset_id": "reference",
+      "observed_at": "2026-10-29T00:00:00Z",
+      "bids": [
+        {
+          "price": "0.22",
+          "size": "100"
+        }
+      ],
+      "asks": [
+        {
+          "price": "0.23",
+          "size": "144"
+        },
+        {
+          "price": "0.25",
+          "size": "18"
+        },
+        {
+          "price": "0.29",
+          "size": "315"
+        }
+      ],
+      "minimum": "5",
+      "tick": "0.01",
+      "fee_rate": "0",
+      "fee_exponent": "0",
+      "evidence": "reference-99"
+    },
+    "budget": "133.4",
+    "limit": "0.26",
+    "at": "2026-10-29T00:00:00+00:00",
+    "expected": {
+      "status": "PARTIAL",
+      "reason": "",
+      "quantity": "162.00",
+      "gross": "37.6200",
+      "fees": "0.00000",
+      "spent": "37.62000",
+      "fills": [
+        {
+          "price": "0.23",
+          "quantity": "144.00",
+          "fee": "0.00000"
+        },
+        {
+          "price": "0.25",
+          "quantity": "18.00",
+          "fee": "0.00000"
+        }
+      ]
+    }
+  }
+]

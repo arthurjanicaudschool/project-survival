@@ -5,6 +5,7 @@ import {Markets,normalize,hash,coveragePreference} from './markets';
 import {Azure,ProviderError,usageCost} from './azure';
 import {D,execute,tally,arbitrate} from './finance';
 import {nextSlots,parisDay} from './schedule';
+import {report as buildReport} from './report';
 
 type MarketService=Pick<Markets,'catalog'|'inspect'|'evidence'|'fx'>&{synthetic?:boolean};
 type AgentService=Pick<Azure,'ask'>&{synthetic?:boolean};
@@ -33,7 +34,10 @@ export class Engine {
     });return s;
   }
   tick(){
-    const s=this.repo.state();if(!s||s.status==='READY'||s.status==='FINISHED')return;
+    const s=this.repo.state();if(!s||s.mode==='validation')return;
+    if(['READY','RUNNING'].includes(s.status)&&this.env.GITHUB_NOTIFIER_TOKEN){const feed=this.repo.get<any>('research_collector'),dispatch=this.repo.get<any>('research_dispatch');if((!feed?.at||Date.now()-Date.parse(feed.at)>=25*60000)&&(!dispatch?.dispatched_at||Date.now()-Date.parse(dispatch.dispatched_at)>=5*60000))this.repo.enqueue('research-dispatch:'+Math.floor(Date.now()/300000),'RESEARCH_DISPATCH',{});}
+    if(s.status==='READY')return;
+    if(s.status==='FINISHED'){if(this.repo.one("SELECT id FROM counterfactuals WHERE status IN ('PENDING','DATA_UNAVAILABLE','NON_EXECUTABLE') LIMIT 1"))this.repo.enqueue('settle-followup:'+Math.floor(Date.now()/3600000),'SETTLE',{});return;}
     const at=now(),bucket=Math.floor(Date.now()/(CONFIG.scanMinutes*60000));
     if(Date.now()<Date.parse(s.betting_deadline!))for(const category of CATEGORIES)this.repo.enqueue(`scan:${bucket}:${category}`,'SCAN',{category});
     this.repo.enqueue('settle:'+bucket,'SETTLE',{});
@@ -53,7 +57,7 @@ export class Engine {
     if(!r)return;
       try{
         const candidates=await this.markets.catalog(category,deadline);let checked=0,usable=0,sourceCount=0;const failures:string[]=[];
-        const admissible=candidates.filter(raw=>{try{const m=normalize(raw,category);return m.active&&m.start_at&&Date.parse(m.start_at)>Date.now()&&Date.parse(m.event_end_at)<=Date.parse(deadline);}catch{return false;}}).sort((a,b)=>coveragePreference(normalize(b,category))-coveragePreference(normalize(a,category)));
+        const admissible=candidates.filter(raw=>{try{const m=normalize(raw,category);return m.active&&Date.parse(m.event_end_at)>Date.now()&&Date.parse(m.event_end_at)<=Date.parse(deadline);}catch{return false;}}).sort((a,b)=>coveragePreference(normalize(b,category))-coveragePreference(normalize(a,category)));
         const seenGroups=new Set();const diverse=admissible.filter(raw=>{const group=String(raw.events?.[0]?.id||raw.id);if(seenGroups.has(group))return false;seenGroups.add(group);return true;});
         for(const raw of diverse.slice(0,3)){
           try{this.repo.putMarket(normalize(raw,category));const m=await this.markets.inspect(String(raw.id));checked++;const sources=await this.markets.evidence(m);const independent=sources.filter(s=>s.status==='VERIFIED'&&s.provider!=='Polymarket');if(independent.length){usable++;sourceCount+=independent.length;}this.repo.putMarket(m);for(const source of sources)if(source.status==='VERIFIED')this.repo.document(source);}catch(e){failures.push(this.errorCode(e));}
@@ -68,6 +72,12 @@ export class Engine {
     if(job.kind==='SCAN')await this.scan(job.payload.category);
     else if(job.kind==='PREFLIGHT_CATEGORY')await this.preflightCategory(job.payload.category);
     else if(job.kind==='NOTIFY')await this.notifications(job.payload.id);
+    else if(job.kind==='NOTIFY_RELAY')await this.dispatchNotifications();
+    else if(job.kind==='RESEARCH_DISPATCH')await this.dispatchResearch();
+    else if(job.kind==='REHEARSAL'){
+      if(this.repo.state()!.mode!=='validation')throw Error('REHEARSAL_REQUIRES_ISOLATION');
+      await this.analyze(job.payload.id);await this.slot('rehearsal:'+job.payload.id,'EXTRAORDINARY',job.payload.id);
+    }
     else if(job.kind==='ANALYZE')await this.analyze(job.payload.id);
     else if(job.kind==='SLOT')await this.slot(job.payload.slot,'ORDINARY');
     else if(job.kind==='EMERGENCY')await this.slot(job.payload.slot,'EXTRAORDINARY',job.payload.id);
@@ -83,11 +93,11 @@ export class Engine {
       try{
         const m=normalize(r,category);
         if(!m.active||!m.description||!m.resolution_source)throw Error('MISSING_RULES_OR_CLOSED');
-        if(!m.start_at||Date.parse(m.start_at)<=Date.now())throw Error('EVENT_ALREADY_STARTED');
+        if(Date.parse(m.event_end_at)<=Date.now())throw Error('EVENT_ALREADY_ENDED');
         if(Date.parse(m.event_end_at)>Date.parse(s.betting_deadline!))throw Error('OUTSIDE_WINDOW');
         if(this.repo.one('SELECT id FROM positions WHERE market_id=?',m.id))continue;
         const previous=this.repo.dossier(m.id);if(previous&&['INVESTED','IN_MEETING'].includes(previous.status))continue;
-        const hours=(Date.parse(m.start_at)-Date.now())/3600000;
+        const hours=(Date.parse(m.start_at||m.event_end_at)-Date.now())/3600000;
         const priority=Math.log10(Math.max(1,Number(m.liquidity)))*10+Math.max(0,20-hours)+(previous?-8:10)+coveragePreference(m);
         candidates.push({m,priority,previous});
       }catch(e){const c=this.errorCode(e);exclusions[c]=(exclusions[c]||0)+1;}
@@ -115,6 +125,7 @@ export class Engine {
     this.repo.set('scan:'+category,{at:now(),discovered:raw.length,eligible:candidates.length,prepared,exclusions,errors:failures});
     s.last_scan=now();this.repo.save(s);
     this.repo.event(`scan:${category}:${Math.floor(Date.now()/600000)}`,'SCAN',`${category} : ${raw.length} marchés détectés, ${candidates.length} admissibles, ${prepared} dossiers actualisés.`,'SECRETARY',null,{category,exclusions,errors:failures});
+    if(diversified.slice(0,3).length&&failures.length===diversified.slice(0,3).length)throw Error('MARKET_BOOK_PROVIDER_UNAVAILABLE');
   }
   sources(ids:string[]):Source[]{return ids.map(id=>this.repo.one('SELECT * FROM documents WHERE id=?',id)).filter(Boolean);}
   context(d:any,meeting?:any,p?:Proposal){
@@ -137,7 +148,9 @@ export class Engine {
     if(value.document_requests?.length){
       const found:Source[]=[];
       for(const query of value.document_requests){const documents=this.repo.retrieve(query);found.push(...documents);this.repo.event(id+':document:'+await hash(query),'DOCUMENT',documents.length?`Le secrétaire retrouve ${documents.length} document(s) pour « ${query} ».`:`Le secrétaire ne trouve pas de document pertinent pour « ${query} ».`, 'SECRETARY',meeting,{query,documents:documents.map(d=>({id:d.id,title:d.title,url:d.url}))});}
-      value=await this.azure.ask(id+':documents',actor,phase,{...context,secretary_results:found.map(d=>({...d,text:d.text.slice(0,1800)})),instruction:'Voici les résultats de ta demande. Termine ta réponse sans nouvelle demande documentaire.'},schema,meeting);
+      const existing=new Set((context.sources||[]).map((s:Source)=>s.id));
+      const fresh=[...new Map(found.filter(s=>!existing.has(s.id)).map(s=>[s.id,s])).values()];
+      if(fresh.length)value=await this.azure.ask(id+':documents',actor,phase,{...context,secretary_results:fresh.map(d=>({...d,text:d.text.slice(0,1800)})),instruction:'Voici les documents retrouvés, pas nécessairement la réponse à ta question. Termine sans nouvelle demande. Les archives du conseil ne sont pas une source indépendante sur les événements.'},schema,meeting);
       this.citations(value,[...(context.sources||[]),...found]);
     }else this.citations(value,context.sources||[]);
     return value;
@@ -149,6 +162,7 @@ export class Engine {
     try{
       const analysis=await this.ask(`analysis:${d.id}:${d.hash}`,actor,'independent_analysis',this.context(d),AnalysisSchema);
       if(analysis.recommendation==='PROPOSE'&&(!analysis.side||!analysis.amount||!analysis.max_price||analysis.estimated_yes_probability===null))throw Error('INCOMPLETE_INVESTMENT_PROPOSAL');
+      if(analysis.recommendation==='PROPOSE'&&(D(analysis.amount!).lte(0)||D(analysis.max_price!).lte(0)||D(analysis.max_price!).gte(1)))throw Error('INVALID_INVESTMENT_PROPOSAL');
       d.payload.analysis=analysis;d.payload.analyzed_at=now();d.status=analysis.recommendation==='PROPOSE'?'PROPOSED':'WAIT';this.repo.putDossier(d);
       this.repo.event(`analysis:${d.id}:${d.hash}:speech`,'ANALYSIS',analysis.speech,actor,null,{market_id:d.market_id,recommendation:analysis.recommendation,estimated_yes_probability:analysis.estimated_yes_probability});
       if(analysis.lesson)this.repo.event(`analysis:${d.id}:${d.hash}:lesson`,'LESSON',analysis.lesson,actor,null,{market_id:d.market_id});
@@ -173,10 +187,11 @@ export class Engine {
       if(kind==='ORDINARY'&&Date.now()-Date.parse(slot)<300000)throw new ProviderError('MEETING_BUSY');
       this.repo.event(id+':missed','SLOT_MISSED','Créneau reporté : une réunion précédente est encore active.','SECRETARY',null,{slot,kind});return;
     }
-    const list=(onlyId?[this.repo.dossier(onlyId)]:this.repo.rows("SELECT * FROM dossiers WHERE status='PROPOSED' ORDER BY priority DESC").map(r=>({...r,payload:JSON.parse(r.payload)}))).filter(Boolean);
+    const list=(onlyId?[this.repo.dossier(onlyId)]:this.repo.rows("SELECT * FROM dossiers WHERE status='PROPOSED' ORDER BY priority DESC").map(r=>({...r,payload:JSON.parse(r.payload)}))).filter(d=>d?.status==='PROPOSED');
     const agenda:any[]=[];const used=new Set();
-    for(const d of list){const m=this.repo.market(d.market_id);if(!m?.active||Date.parse(m.start_at)<=Date.now()||Date.parse(m.event_end_at)>Date.parse(s.betting_deadline!))continue;if(used.has(d.category)&&list.some(x=>!used.has(x.category)))continue;agenda.push(d);used.add(d.category);if(agenda.length>=CONFIG.maxAgenda)break;}
+    for(const d of list){const m=this.repo.market(d.market_id);if(!m?.active||Date.parse(m.event_end_at)<=Date.now()||Date.parse(m.event_end_at)>Date.parse(s.betting_deadline!))continue;if(used.has(d.category)&&list.some(x=>!used.has(x.category)))continue;agenda.push(d);used.add(d.category);if(agenda.length>=CONFIG.maxAgenda)break;}
     if(!agenda.length){
+      if(kind==='ORDINARY'&&Date.now()-Date.parse(slot)<240000&&this.repo.one("SELECT id FROM jobs WHERE kind='ANALYZE' AND status IN ('PENDING','RUNNING') LIMIT 1"))throw new ProviderError('MEETING_PENDING_DOSSIERS');
       const reasons=this.repo.rows('SELECT category,status,count(*) AS count FROM dossiers GROUP BY category,status');
       const late=Date.now()>=Date.parse(s.betting_deadline!);
       this.repo.putMeeting({id,slot,kind,status:'NO_AGENDA',stage:'DONE',created_at:now(),started_at:null,finished_at:now(),payload:{reasons,summary:late?'La fenêtre de nouveaux paris est fermée. Le suivi des règlements continue.':'Aucune proposition exploitable disponible. Les attentes et erreurs restent distinctes ; les recherches continuent.',next_research:CATEGORIES}});
@@ -190,7 +205,7 @@ export class Engine {
     this.repo.notify(id+':start',kind==='ORDINARY'?'Le conseil commence':'Conseil extraordinaire',`${agenda.length} dossier(s) à examiner.`,this.link(id));
     this.enqueueMeeting(m);
   }
-  enqueueMeeting(m:any,delay=0){this.repo.enqueue(`${m.id}:${m.payload.index}:${m.stage}:${m.payload.retried?'retry':''}:${m.payload.abstention_reviewed?'review':''}`,'MEETING',{id:m.id},new Date(Date.now()+delay).toISOString());}
+  enqueueMeeting(m:any,delay=0){this.repo.enqueue(`${m.id}:${m.payload.index}:${m.payload.agenda[m.payload.index]||'end'}:${m.stage}:${m.payload.retried?'retry':''}:${m.payload.abstention_reviewed?'review':''}`,'MEETING',{id:m.id},new Date(Date.now()+delay).toISOString());}
   speech(id:string,meeting:any,actor:MemberId,value:any){this.repo.event(id,'SPEECH',value.speech,actor,meeting.id,{estimated_yes_probability:value.estimated_yes_probability??null,objection:value.objection||null,citations:value.citations||[]});}
   async advance(id:string){
     const meeting=this.repo.meeting(id);if(!meeting||!['RUNNING','PAUSED'].includes(meeting.status))return;
@@ -198,6 +213,7 @@ export class Engine {
     if(Date.now()>Date.parse(meeting.payload.deadline)||Date.now()>=Date.parse(s.betting_deadline!)){this.endMeeting(meeting,'CANCELLED','Réunion interrompue : délai atteint. Aucun nouveau vote ou achat ne sera inventé.');return;}
     const market=this.repo.market(d.market_id);let p=this.repo.proposal(meeting.id+':'+d.id);
     if(!p){const a=d.payload.analysis; p={id:meeting.id+':'+d.id,meeting_id:meeting.id,market_id:d.market_id,version:1,side:a.side,amount:a.amount,max_price:a.max_price,status:'DISCUSSING',reason:a.reasoning,created_at:now()};this.repo.putProposal(p);this.repo.event(p.id+':initial','SPEECH',a.speech,d.category.toUpperCase(),meeting.id,{proposal:p,independent_analysis:true});}
+    if(!['YES','NO'].includes(p.side)||!p.amount||!p.max_price){await this.reject(meeting,d,p,'TECHNICAL_REJECTION','Proposition incomplète : aucun vote d’achat ni débit autorisé.');return;}
     const context=this.context(d,meeting,p),key=`${p.id}:v${p.version}`;
     if(meeting.stage==='DISCUSS'){
       const results=await Promise.allSettled((['QUANT','RISK','CONTRA'] as MemberId[]).map(async actor=>{
@@ -210,6 +226,7 @@ export class Engine {
       const value=await this.ask(key+':chair','CHAIR','chair_question_and_amendment',{...context,discussion:meeting.payload.discussion,instruction:'Pose une question contradictoire utile à un membre. Propose un amendement seulement s’il améliore le dossier ; ce n’est pas une décision d’achat.'},ChairSchema,meeting.id);
       this.speech(key+':chair:speech',meeting,'CHAIR',value);
       if(value.amendment)p=this.amend(meeting,d,p,value.amendment,'CHAIR');
+      if(meeting.payload.market_replaced){delete meeting.payload.market_replaced;this.repo.putMeeting(meeting);this.enqueueMeeting(meeting);return;}
       if(value.question&&panel(d.category).includes(value.question_to as MemberId)){
         meeting.payload.question=value.question;meeting.payload.question_to=value.question_to;
         this.repo.event(key+':question','QUESTION',value.question,'CHAIR',meeting.id,{to:value.question_to});meeting.stage='REBUT';
@@ -219,6 +236,7 @@ export class Engine {
       try{
         const value=await this.ask(key+':rebut',actor,'answer_objection',{...context,question:meeting.payload.question,instruction:'Réponds directement à la question. Tu peux défendre ou modifier ta position ; aucune répétition de prudence générique.'},SpeechSchema,meeting.id);
         this.speech(key+':rebut:speech',meeting,actor,value);if(value.amendment)p=this.amend(meeting,d,p,value.amendment,actor);
+        if(meeting.payload.market_replaced){delete meeting.payload.market_replaced;this.repo.putMeeting(meeting);this.enqueueMeeting(meeting);return;}
       }catch(e){meeting.payload.unavailable[actor]=this.errorCode(e);}
       meeting.stage='VOTE';
     }else if(meeting.stage==='VOTE'||meeting.stage==='VOTE_RETRY'||meeting.stage==='ABSTENTION'){
@@ -236,11 +254,12 @@ export class Engine {
         }catch(e){meeting.payload.unavailable[actor]=this.errorCode(e);}
       }));
       const votes=this.readVotes(p),missing=expected.filter(a=>!votes.some(v=>v.member_id===a));
-      if(missing.length&&!meeting.payload.retried&&Date.now()+90000<Date.parse(meeting.payload.deadline)){
+      const circuit=this.repo.get<any>('azure_circuit'),pause=Math.max(15000,circuit?.open_until?Date.parse(circuit.open_until)-Date.now()+1000:0);
+      if(missing.length&&!meeting.payload.retried&&Date.now()+pause+90000<Date.parse(meeting.payload.deadline)){
         meeting.payload.retried=true;meeting.stage='VOTE_RETRY';meeting.status='PAUSED';
         this.repo.event(key+':paused','INCIDENT','La réunion est suspendue pour tenter de rétablir la disponibilité des membres.','SECRETARY',meeting.id,{missing});
         this.repo.notify(key+':paused','Conseil suspendu',`${missing.length} membre(s) temporairement indisponible(s).`,this.link(meeting.id),4);
-        this.repo.putMeeting(meeting);this.enqueueMeeting(meeting,15000);return;
+        this.repo.putMeeting(meeting);this.enqueueMeeting(meeting,pause);return;
       }
       meeting.status='RUNNING';
       const result=tally(expected,votes,p,review||meeting.payload.abstention_reviewed);
@@ -248,36 +267,48 @@ export class Engine {
       if(result.decision==='REVIEW_ABSTENTION'){meeting.stage='ABSTENTION';meeting.payload.abstention_reviewed=true;}
       else if(result.decision==='TIE'){meeting.stage='ARBITRATE';meeting.payload.tally=result;}
       else if(result.decision==='APPROVE'){p.status='APPROVED';this.repo.putProposal(p);meeting.stage='EXECUTE';}
-      else {this.reject(meeting,d,p,result.decision,result.reason);return;}
+      else {await this.reject(meeting,d,p,result.decision,result.reason);return;}
     }else if(meeting.stage==='ARBITRATE'){
       const value=await this.ask(key+':arbitration','CHAIR','tie_arbitration',{...context,proposal:p,votes:this.readVotes(p),instruction:'Égalité persistante après réinterrogation des abstinents. Prends du recul. Tu peux APPROVE, REJECT ou CANCEL, même si cela contredit ton premier vote. Explique pourquoi.'},ArbitrationSchema,meeting.id);
       if(value.proposal_id!==p.id||value.proposal_version!==p.version)throw Error('ARBITRATION_WRONG_PROPOSAL');
       const decision=arbitrate(meeting.payload.tally,value.decision,true);this.speech(key+':arbitration:speech',meeting,'CHAIR',value);
       this.repo.event(key+':arbitration','ARBITRATION',value.speech,'CHAIR',meeting.id,{decision,proposal:p});
-      if(decision==='APPROVE'){p.status='APPROVED_BY_ARBITRATION';this.repo.putProposal(p);meeting.stage='EXECUTE';}else {this.reject(meeting,d,p,decision,value.speech);return;}
+      if(decision==='APPROVE'){p.status='APPROVED_BY_ARBITRATION';this.repo.putProposal(p);meeting.stage='EXECUTE';}else {await this.reject(meeting,d,p,decision,value.speech);return;}
     }else if(meeting.stage==='EXECUTE'){
       const positionId=`${p.id}:v${p.version}`;
-      if(this.repo.one('SELECT id FROM positions WHERE id=?',positionId)){d.status='INVESTED';this.repo.putDossier(d);this.nextDossier(meeting);return;}
+      if(this.repo.one('SELECT id FROM positions WHERE id=?',positionId)){p.status='INVESTED';this.repo.putProposal(p);d.status='INVESTED';this.repo.putDossier(d);this.nextDossier(meeting);return;}
       // Read-only public endpoints only. Delay markets are observed again after
       // their matching delay; no live-order API or wallet is used anywhere.
       let fresh=await this.markets.inspect(p.market_id);
-      if(fresh.delay_seconds>0){if(fresh.delay_seconds>30)throw Error('UNSUPPORTED_MATCH_DELAY');await new Promise(r=>setTimeout(r,fresh.delay_seconds*1000));fresh=await this.markets.inspect(p.market_id);}
+      if(fresh.delay_seconds>0){
+        if(!Number.isFinite(fresh.delay_seconds)||Date.now()+fresh.delay_seconds*1000+20000>Date.parse(meeting.payload.deadline)){await this.reject(meeting,d,p,'TECHNICAL_REJECTION','Le délai de matching ne peut pas être respecté avant la limite de cette réunion. Aucun fill immédiat n’est inventé.');return;}
+        await new Promise(r=>setTimeout(r,fresh.delay_seconds*1000));fresh=await this.markets.inspect(p.market_id);
+      }
       this.repo.putMarket(fresh);
       const error=this.repo.one('SELECT id FROM positions WHERE market_id=?',fresh.id)?'ALREADY_INVESTED':null;
       const {technicalCheck}=await import('./finance');
       const technical=error||technicalCheck(p,fresh,this.repo.cash(),s.betting_deadline!,now());
-      if(technical){this.repo.event(key+':technical','TECHNICAL_REJECTION',reasonLabel(technical),'SECRETARY',meeting.id,{code:technical,proposal:p});this.reject(meeting,d,p,'TECHNICAL_REJECTION',reasonLabel(technical));return;}
+      if(technical){this.repo.event(key+':technical','TECHNICAL_REJECTION',reasonLabel(technical),'SECRETARY',meeting.id,{code:technical,proposal:p});await this.reject(meeting,d,p,'TECHNICAL_REJECTION',reasonLabel(technical));return;}
       const book=fresh.books[p.side]!;
       const execution=execute(book,p.amount,p.max_price,now(),this.repo.consumed(book.asset_id,book.evidence));
-      if(!execution.fills.length){this.reject(meeting,d,p,'TECHNICAL_REJECTION',reasonLabel(execution.reason));return;}
+      if(!execution.fills.length){await this.reject(meeting,d,p,'TECHNICAL_REJECTION',reasonLabel(execution.reason));return;}
       this.repo.buy(p,fresh,execution,p.reason);p.status='INVESTED';this.repo.putProposal(p);d.status='INVESTED';this.repo.putDossier(d);
       this.nextDossier(meeting);return;
     }
     this.repo.putMeeting(meeting);this.enqueueMeeting(meeting);
   }
   amend(meeting:any,d:any,p:Proposal,a:any,actor:MemberId){
+    if(D(a.amount).lte(0)||D(a.max_price).lte(0)||D(a.max_price).gte(1))throw Error('INVALID_AMENDMENT');
     if(a.market_id!==p.market_id){
-      this.repo.event(p.id+':new-market','AMENDMENT_DEFERRED','Changer de marché exige un nouveau dossier et une analyse indépendante du bon spécialiste.',actor,meeting.id,{requested_market_id:a.market_id});return p;
+      const target=this.repo.dossier(a.market_id);
+      if(!target?.payload.analysis||!['PROPOSED','WAIT'].includes(target.status)){
+        this.repo.event(p.id+':new-market','AMENDMENT_DEFERRED','Le marché proposé nécessite encore l’analyse indépendante de son spécialiste. La proposition actuelle reste distincte.',actor,meeting.id,{requested_market_id:a.market_id});return p;
+      }
+      p.status='SUPERSEDED';this.repo.putProposal(p);d.status='PROPOSED';this.repo.putDossier(d);
+      target.status='IN_MEETING';this.repo.putDossier(target);meeting.payload.agenda[meeting.payload.index]=target.id;
+      const replacement={...p,id:meeting.id+':'+target.id,market_id:target.market_id,version:(this.repo.proposal(meeting.id+':'+target.id)?.version||0)+1,side:a.side,amount:a.amount,max_price:a.max_price,status:'DISCUSSING',reason:a.reason,created_at:now()};this.repo.putProposal(replacement);
+      meeting.payload.market_replaced=true;meeting.payload.unavailable={};meeting.payload.retried=false;meeting.payload.abstention_reviewed=false;meeting.stage='DISCUSS';
+      this.repo.event(replacement.id+':replacement:'+replacement.version,'AMENDMENT','Le conseil change de marché. Le spécialiste compétent et les membres indépendants reprennent l’examen avant un nouveau vote.',actor,meeting.id,{before:p,after:replacement,votes_invalidated:true});return replacement;
     }
     if(D(a.amount).lte(0)||D(a.max_price).lte(0)||D(a.max_price).gte(1))throw Error('INVALID_AMENDMENT');
     if(a.side===p.side&&D(a.amount).eq(p.amount)&&D(a.max_price).eq(p.max_price))return p;
@@ -287,14 +318,16 @@ export class Engine {
     return updated;
   }
   readVotes(p:Proposal):Vote[]{const all=this.repo.rows('SELECT * FROM votes WHERE proposal_id=? AND version=? ORDER BY round DESC',p.id,p.version),seen=new Set();return all.filter(r=>{if(seen.has(r.member_id))return false;seen.add(r.member_id);return true;}).map(r=>JSON.parse(r.payload));}
-  reject(meeting:any,d:any,p:Proposal,status:string,reason:string){p.status=status;this.repo.putProposal(p);d.status=status==='REJECT'?'REJECTED':status;d.payload.last_decision=reason;this.repo.putDossier(d);this.counterfactual(d,p,status,reason,p.side);this.repo.event(`${p.id}:v${p.version}:decision`,'DECISION',reason,'SECRETARY',meeting.id,{status,proposal:p});this.nextDossier(meeting);}
+  async reject(meeting:any,d:any,p:Proposal,status:string,reason:string){try{this.repo.putMarket(await this.markets.inspect(p.market_id));delete d.payload.counterfactual_error;}catch(e){d.payload.counterfactual_error=this.errorCode(e);}p.status=status;this.repo.putProposal(p);d.status=status==='REJECT'?'REJECTED':status;d.payload.last_decision=reason;this.repo.putDossier(d);this.counterfactual(d,p,status,reason,p.side);this.repo.event(`${p.id}:v${p.version}:decision`,'DECISION',reason,'SECRETARY',meeting.id,{status,proposal:p});this.nextDossier(meeting);}
   counterfactual(d:any,p:Proposal|null,status:string,reason:string,side:'YES'|'NO'){
-    const s=this.repo.state()!,m=this.repo.market(d.market_id);if(!s.fx||!m.books[side])return;
+    const s=this.repo.state()!,m=this.repo.market(d.market_id);if(!s.fx||!m)return;
     const id=p?`${p.id}:v${p.version}`:`wait:${d.id}:${d.hash}`;const book=m.books[side];
-    const reference=D(10).mul(s.fx.usd_per_eur).toFixed();const ex=execute(book,reference,'0.999999',now());const proof=this.repo.proof(book);
-    const payload={market_id:m.id,question:m.question,url:m.url,category:m.category,side,decision:status,reason,reference_eur:'10',reference_quote:reference,observed_at:book.observed_at,
-      execution:ex,book_proof:proof,side_basis:p||d.payload.analysis?.side?'Côté proposé par l’agent':'Référence OUI uniquement ; aucune recommandation de l’agent',estimated_yes_probability:d.payload.analysis?.estimated_yes_probability??null,quality_assessment:'Non évaluée ; résultat et pertinence initiale restent séparés.',official_result:null};
-    this.repo.run('INSERT OR IGNORE INTO counterfactuals VALUES(?,?,?,?)',id,m.id,ex.fills.length?'PENDING':'NON_EXECUTABLE',JSON.stringify(payload));
+    const reference=D(10).mul(s.fx.usd_per_eur).toFixed();const ex=book&&!d.payload.counterfactual_error?execute(book,reference,'0.999999',now()):{status:'REJECTED',reason:'NO_OBSERVABLE_BOOK',fills:[],quantity:'0',gross:'0',fees:'0',spent:'0'};const proof=book?this.repo.proof(book):null;
+    const probability=d.payload.analysis?.estimated_yes_probability??null,edge=probability===null||!ex.fills.length?null:D(ex.quantity).mul(side==='YES'?probability:D(1).minus(probability)).minus(ex.spent).toFixed();
+    const coherence=status==='TECHNICAL_REJECTION'?'Refus technique documenté : '+reason:edge===null?'Avantage non quantifiable avec les éléments disponibles ; le motif initial reste la référence.':D(edge).lte(0)?'Refus cohérent avec la probabilité subjective initiale et le coût observé.':'Écart positif selon l’estimation subjective initiale ; examiner les objections et risques archivés avant de qualifier ce refus d’erreur.';
+    const payload={market_id:m.id,question:m.question,url:m.url,category:m.category,side,decision:status,reason,reference_eur:'10',reference_quote:reference,observed_at:book?.observed_at||null,decision_at:now(),ex_ante_expected_profit:edge,ex_ante_review:coherence,
+      execution:ex,book_proof:proof,side_basis:p||d.payload.analysis?.side?'Côté proposé par l’agent':'Référence OUI uniquement ; aucune recommandation de l’agent',estimated_yes_probability:probability,quality_assessment:coherence,official_result:null};
+    this.repo.run('INSERT OR IGNORE INTO counterfactuals VALUES(?,?,?,?)',id,m.id,ex.fills.length?'PENDING':['STALE_BOOK','NO_OBSERVABLE_BOOK'].includes(ex.reason)?'DATA_UNAVAILABLE':'NON_EXECUTABLE',JSON.stringify(payload));
   }
   nextDossier(m:any){
     m.payload.index++;m.payload.unavailable={};m.payload.retried=false;m.payload.abstention_reviewed=false;
@@ -309,24 +342,28 @@ export class Engine {
     this.repo.notify(m.id+':end',status==='COMPLETED'?'Conseil terminé':'Incident au conseil',summary,this.link(m.id),status==='COMPLETED'?3:4);
   }
   async settlements(){
-    const ids=new Set<string>([...this.repo.rows("SELECT market_id FROM positions WHERE status='PENDING'"),...this.repo.rows("SELECT market_id FROM counterfactuals WHERE status='PENDING'")].map(r=>r.market_id));
-    const backlog=[...ids],cursor=this.repo.get<number>('settlement_cursor')||0;
+    const ids=new Set<string>([...this.repo.rows("SELECT market_id FROM positions WHERE status='PENDING'"),...this.repo.rows("SELECT market_id FROM counterfactuals WHERE status IN ('PENDING','DATA_UNAVAILABLE','NON_EXECUTABLE')")].map(r=>r.market_id));
+    const backlog=[...ids],storedCursor=this.repo.get<number>('settlement_cursor')||0,cursor=storedCursor>=backlog.length?0:storedCursor;
+    let checked=0,failed=0;
     for(const id of backlog.slice(cursor,cursor+10)){
       try{
-        const m=await this.markets.inspect(id,false);this.repo.putMarket(m);
+        const m=await this.markets.inspect(id,false);this.repo.putMarket(m);checked++;
         if(!m.resolved||!m.payouts)continue;
         for(const position of this.repo.rows("SELECT * FROM positions WHERE market_id=? AND status='PENDING'",id))this.repo.settle(position,m);
-        for(const row of this.repo.rows("SELECT * FROM counterfactuals WHERE market_id=? AND status='PENDING'",id)){
+        for(const row of this.repo.rows("SELECT * FROM counterfactuals WHERE market_id=? AND status IN ('PENDING','DATA_UNAVAILABLE','NON_EXECUTABLE')",id)){
           const c=JSON.parse(row.payload),payout=D(c.execution.quantity).mul(m.payouts[c.side as 'YES'|'NO']);
-          c.official_result=m.payouts;c.payout=payout.toFixed();c.profit=payout.minus(c.execution.spent).toFixed();c.settled_at=now();c.resolution_evidence=m.resolution_evidence;
-          c.brier_score=c.estimated_yes_probability===null?null:D(c.estimated_yes_probability).minus(m.payouts.YES).pow(2).toFixed();
-          c.quality_assessment='Résultat théorique connu. Pertinence initiale à examiner selon les sources, l’incertitude et les raisons archivées ; aucun jugement fondé seulement sur le gain.';
-          this.repo.run("UPDATE counterfactuals SET status='SETTLED',payload=? WHERE id=?",JSON.stringify(c),row.id);
-          this.repo.event(row.id+':review','LESSON',`Occasion non retenue : « ${c.question} ». Une mise théorique de 10 € aurait produit ${D(c.profit).div(this.repo.state()!.fx!.usd_per_eur).toDecimalPlaces(2)} € nets. Motif initial conservé : ${c.reason}. Ce résultat ne suffit pas à qualifier le refus d’erreur.`,'SECRETARY',null,{category:c.category,counterfactual_id:row.id,brier_score:c.brier_score,ex_ante_assessment:c.quality_assessment});
+          c.official_result=m.payouts;c.payout=c.execution.fills.length?payout.toFixed():null;c.profit=c.execution.fills.length?payout.minus(c.execution.spent).toFixed():null;c.settled_at=now();c.resolution_evidence=m.resolution_evidence;
+          c.brier_score=c.estimated_yes_probability===null||!['0','1'].includes(D(m.payouts.YES).toFixed())?null:D(c.estimated_yes_probability).minus(m.payouts.YES).pow(2).toFixed();
+          c.quality_assessment=c.ex_ante_review||'Pertinence évaluée selon les informations et motifs initiaux, séparément du résultat.';
+          this.repo.run('UPDATE counterfactuals SET status=?,payload=? WHERE id=?',c.profit===null?'OUTCOME_ONLY':'SETTLED',JSON.stringify(c),row.id);
+          const result=c.profit===null?'L’issue est connue, mais aucun gain fictif n’est calculé faute de cotation exécutable.':`Une mise théorique de 10 € aurait produit ${D(c.profit).div(this.repo.state()!.fx!.usd_per_eur).toDecimalPlaces(2)} € nets.`;
+          this.repo.event(row.id+':review','LESSON',`Occasion non retenue : « ${c.question} ». ${result} Motif initial conservé : ${c.reason}. Ce résultat ne suffit pas à qualifier le refus d’erreur.`,'SECRETARY',null,{category:c.category,counterfactual_id:row.id,brier_score:c.brier_score,ex_ante_assessment:c.quality_assessment});
         }
-      }catch(e){this.repo.set('settlement_error:'+id,{at:now(),code:this.errorCode(e)});}
+      }catch(e){failed++;this.repo.set('settlement_error:'+id,{at:now(),code:this.errorCode(e)});}
     }
     this.repo.set('settlement_cursor',cursor+10>=backlog.length?0:cursor+10);
+    this.repo.set('settlement_status',{at:now(),checked,failed,pending_markets:backlog.length,status:failed?'PARTIAL':'OK'});
+    if(failed&&!checked)throw Error('SETTLEMENT_PROVIDER_UNAVAILABLE');
     const s=this.repo.state()!;s.last_cycle=now();this.repo.save(s);
     if(Date.now()>=Date.parse(s.end_at!))this.finish();
   }
@@ -334,9 +371,11 @@ export class Engine {
     const s=this.repo.state()!;if(!s.end_at||Date.now()<Date.parse(s.end_at))return;
     const pending=this.repo.one("SELECT count(*) AS n FROM positions WHERE status='PENDING'")?.n||0;
     s.status=pending?'CLOSING':'FINISHED';this.repo.save(s);
-    if(!pending&&!this.repo.get('final_report')){const report={finished_at:now(),initial_eur:s.initial_eur,final_eur:D(this.repo.cash()).div(s.fx!.usd_per_eur).toFixed(),positions:this.repo.one('SELECT count(*) AS n FROM positions')?.n||0,limitation:'Seven days and a small number of event bets do not establish future profitability.'};this.repo.set('final_report',report);this.repo.event(s.id+':finish','FINISH','Le défi est terminé. Tous les paris du fonds ont un règlement officiel.','SECRETARY',null,report);}
+    if(!pending&&!this.repo.get('final_report')){const report=buildReport(this.repo,s);this.repo.set('final_report',report);this.repo.event(s.id+':finish','FINISH','Le défi est terminé. Tous les paris du fonds ont un règlement officiel.','SECRETARY',null,report);this.repo.notify(s.id+':finish','Le défi est terminé',`Résultat final : ${D(report.final_eur).toDecimalPlaces(2)} € fictifs. Le bilan est disponible.`,this.env.PUBLIC_ORIGIN+'/?phase=3');}
   }
   async notifications(id?:string){
+    if(this.repo.state()?.mode==='validation')return;
+    if(this.env.NTFY_DELIVERY==='github-relay'){await this.dispatchNotifications();return;}
     for(const row of id?this.repo.rows("SELECT * FROM notifications WHERE id=? AND status='PENDING' AND attempt<3",id):this.repo.rows("SELECT * FROM notifications WHERE status='PENDING' AND attempt<3 ORDER BY created_at LIMIT 1")){
       if(!this.env.NTFY_TOPIC)continue;
       const p=JSON.parse(row.payload);this.repo.run('UPDATE notifications SET attempt=attempt+1 WHERE id=?',row.id);
@@ -346,23 +385,48 @@ export class Engine {
       }catch(e){this.repo.run('UPDATE notifications SET error=? WHERE id=?',this.errorCode(e),row.id);if(id)throw Error('NOTIFICATION_UNAVAILABLE');}
     }
   }
+  async dispatchNotifications(){
+    if(!this.env.GITHUB_NOTIFIER_TOKEN||!this.repo.one("SELECT id FROM notifications WHERE status='PENDING' LIMIT 1"))return;
+    const old=this.repo.get<any>('notification_relay');
+    if(old?.dispatched_at&&Date.now()-Date.parse(old.dispatched_at)<30000){this.repo.enqueue('notification-relay:'+old.dispatched_at,'NOTIFY_RELAY',{},new Date(Date.parse(old.dispatched_at)+31000).toISOString());return;}
+    const r=await fetch('https://api.github.com/repos/arthurjanicaudschool/project-survival/actions/workflows/council-services.yml/dispatches',{method:'POST',headers:{Authorization:'Bearer '+this.env.GITHUB_NOTIFIER_TOKEN,'Accept':'application/vnd.github+json','Content-Type':'application/json','User-Agent':'ProjectSurvivalCouncil'},body:JSON.stringify({ref:'main'}),signal:AbortSignal.timeout(12000)});
+    await r.body?.cancel();
+    this.repo.set('notification_relay',{at:now(),dispatched_at:r.status===204?now():old?.dispatched_at||null,status:r.status===204?'DISPATCHED':'ERROR',http_status:r.status});
+    if(r.status!==204)throw Error('NOTIFICATION_RELAY_HTTP_'+r.status);
+  }
+  async dispatchResearch(){
+    if(!this.env.GITHUB_NOTIFIER_TOKEN)return;
+    const r=await fetch('https://api.github.com/repos/arthurjanicaudschool/project-survival/actions/workflows/council-services.yml/dispatches',{method:'POST',headers:{Authorization:'Bearer '+this.env.GITHUB_NOTIFIER_TOKEN,'Accept':'application/vnd.github+json','Content-Type':'application/json','User-Agent':'ProjectSurvivalResearchScheduler'},body:JSON.stringify({ref:'main'}),signal:AbortSignal.timeout(12000)});
+    await r.body?.cancel();this.repo.set('research_dispatch',{at:now(),dispatched_at:r.status===204?now():null,http_status:r.status});if(r.status!==204)throw Error('RESEARCH_DISPATCH_HTTP_'+r.status);
+  }
   summary(){
     const s=this.repo.state()!;const fx=s.fx?.usd_per_eur||'1',cash=this.repo.cash();
     const positions=this.repo.rows('SELECT * FROM positions ORDER BY created_at DESC').map(p=>({...p,payload:JSON.parse(p.payload)}));
-    const calls=this.repo.rows("SELECT actor,status,input_tokens,output_tokens,cached_tokens,cache_write_tokens,estimated_eur FROM calls WHERE id NOT LIKE '%:result'");
-    const cost=calls.reduce((v,r)=>{if(r.estimated_eur){const e=JSON.parse(r.estimated_eur);v.min=v.min.plus(e.min);v.max=v.max.plus(e.max);}return v;},{min:D(0),max:D(0)});
+    const azure=azureSummary(this.repo,this.env.AZURE_DEPLOYMENT);
     const events=this.repo.one('SELECT max(seq) AS seq FROM events')?.seq||0;
     const meetings=this.repo.rows('SELECT * FROM meetings ORDER BY created_at DESC LIMIT 50').map(m=>({...m,payload:JSON.parse(m.payload)}));
     const committed=positions.filter(p=>p.status==='PENDING').reduce((n,p)=>n.plus(p.cost),D(0));
     const profit=positions.filter(p=>p.status==='SETTLED').reduce((n,p)=>n.plus(p.payload.profit),D(0));
     return {state:s,config:CONFIG,members:MEMBERS,cash_quote:cash,cash_eur:D(cash).div(fx).toFixed(),committed_eur:committed.div(fx).toFixed(),profit_eur:profit.div(fx).toFixed(),positions,
-      meetings,next_slots:s.started_at?nextSlots(now(),s.end_at,4):[],dossiers:this.repo.rows('SELECT id,market_id,category,status,priority,updated_at,payload FROM dossiers ORDER BY updated_at DESC LIMIT 80').map(d=>({...d,payload:JSON.parse(d.payload),market:this.repo.market(d.market_id)})),
-      counterfactuals:this.repo.rows('SELECT * FROM counterfactuals ORDER BY id DESC LIMIT 80').map(c=>({...c,payload:JSON.parse(c.payload)})),
-      infrastructure:{azure:{requests:calls.length,failures:calls.filter(c=>!['SUCCESS'].includes(c.status)).length,estimated_eur_min:cost.min.toFixed(),estimated_eur_max:cost.max.toFixed(),invoice_confirmed:false,deployment:this.env.AZURE_DEPLOYMENT,circuit:this.repo.get('azure_circuit')},
+      meetings,next_slots:s.started_at?nextSlots(now(),s.end_at,4):[],dossiers:this.repo.rows('SELECT id,market_id,category,status,priority,updated_at,payload FROM dossiers ORDER BY updated_at DESC LIMIT 80').map(d=>({...d,payload:JSON.parse(d.payload),market:preview(this.repo.market(d.market_id))})),
+      counterfactuals:this.repo.rows('SELECT * FROM counterfactuals ORDER BY rowid DESC LIMIT 80').map(c=>({...c,payload:JSON.parse(c.payload)})),
+      infrastructure:{azure:{...azure,circuit:this.repo.get('azure_circuit')},
         storage_bytes:this.repo.sql.databaseSize??null,notifications_configured:!!this.env.NTFY_TOPIC,notification_failures:this.repo.one("SELECT count(*) AS n FROM notifications WHERE status='PENDING' AND attempt>=3")?.n||0,
-        preflight:this.repo.get('preflight'),provider_errors:this.repo.rows("SELECT key,value FROM meta WHERE key LIKE 'provider_error:%'").map(r=>({provider:r.key.split(':')[1],...JSON.parse(r.value)})),scans:Object.fromEntries(CATEGORIES.map(c=>[c,this.repo.get('scan:'+c)])),health:this.repo.get('health'),quota:this.repo.get('quota'),
+        preflight:this.repo.get('preflight'),notification_delivery:this.env.NTFY_DELIVERY||'direct',notification_relay:this.repo.get('notification_relay'),pending_notifications:this.repo.one("SELECT count(*) n FROM notifications WHERE status='PENDING'")?.n||0,last_notification_sent:this.repo.one("SELECT max(json_extract(payload,'$.sent_at')) at FROM notifications WHERE status='SENT'")?.at||null,research_collector:this.repo.get('research_collector'),settlement_status:this.repo.get('settlement_status'),provider_errors:this.repo.rows("SELECT key,value FROM meta WHERE key LIKE 'provider_error:%'").map(r=>({provider:r.key.split(':')[1],...JSON.parse(r.value)})),scans:Object.fromEntries(CATEGORIES.map(c=>[c,this.repo.get('scan:'+c)])),health:this.repo.get('health'),quota:this.repo.get('quota'),
         jobs:this.repo.rows('SELECT kind,status,count(*) AS count FROM jobs GROUP BY kind,status')},last_event_seq:events,report:this.repo.get('final_report')};
   }
   link(id:string){return this.env.PUBLIC_ORIGIN+'/?phase=3&meeting='+encodeURIComponent(id);}
   errorCode(e:unknown){return e instanceof ProviderError?e.code:e instanceof Error?e.message.slice(0,150):'TECHNICAL_ERROR';}
+}
+function preview(m:Market|null){return m?{...m,description:m.description.slice(0,600),books:Object.fromEntries(Object.entries(m.books).map(([side,b])=>[side,b?{...b,asks:b.asks.slice(0,1),bids:b.bids.slice(0,1)}:null]))}:null;}
+
+function azureSummary(repo:Repository,deployment:string){
+  const saved=repo.get<any>('azure_summary_cache');if(saved?.deployment===deployment&&!repo.get('azure_usage_dirty'))return saved;
+  const calls=repo.rows("SELECT actor,meeting_id,created_at,status,input_tokens,output_tokens,cached_tokens,cache_write_tokens,estimated_eur FROM calls WHERE id NOT LIKE '%:result'");
+  function total(rows:any[]){const costs=rows.reduce((n,c)=>{if(c.estimated_eur){const x=JSON.parse(c.estimated_eur);n.min=n.min.plus(x.min);n.max=n.max.plus(x.max);}return n;},{min:D(0),max:D(0)});return {requests:rows.length,input_tokens:rows.reduce((n,c)=>n+c.input_tokens,0),output_tokens:rows.reduce((n,c)=>n+c.output_tokens,0),cached_tokens:rows.reduce((n,c)=>n+c.cached_tokens,0),estimated_eur_min:costs.min.toFixed(),estimated_eur_max:costs.max.toFixed()};}
+  const result={...total(calls),deployment,invoice_confirmed:false,failures:calls.filter(c=>['FAILED','INVALID'].includes(c.status)).length,unknown:calls.filter(c=>c.status==='UNKNOWN').length,active:calls.filter(c=>c.status==='REQUESTED').length,
+    by_actor:MEMBERS.filter(m=>m.id!=='SECRETARY').map(m=>({id:m.id,name:m.name,...total(calls.filter(c=>c.actor===m.id))})),
+    by_day:[...new Set(calls.map(c=>c.created_at.slice(0,10)))].map(day=>({day,...total(calls.filter(c=>c.created_at.startsWith(day)))})),
+    by_meeting:[...new Set(calls.map(c=>c.meeting_id).filter(Boolean))].map(id=>({id,...total(calls.filter(c=>c.meeting_id===id))}))};
+  repo.set('azure_summary_cache',result);repo.set('azure_usage_dirty',false);return result;
 }

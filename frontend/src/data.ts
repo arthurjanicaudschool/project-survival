@@ -13,6 +13,7 @@ export function useCompetition(demo: boolean, experiment = env.VITE_EXPERIMENT_I
     [loading, setLoading] = useState(true),
     [realtime,setRealtime]=useState("CONNECTING");
   useEffect(() => {
+    const archiveFile=!demo?({"survival-001":"/archive-phase1.json","survival-002":"/archive-phase2.json"} as Record<string,string>)[experiment]:null;
     let active = true,
       lastVersion = "",
       running = false,
@@ -40,6 +41,10 @@ export function useCompetition(demo: boolean, experiment = env.VITE_EXPERIMENT_I
           result = await r.json();
           if (result?.mode !== "demo")
             throw Error("Source de démonstration invalide.");
+        } else if(archiveFile){
+          const r=await fetch(archiveFile,{signal:controller.signal});if(!r.ok)throw Error('Archive finale indisponible.');
+          result=await r.json();if(!result||result.status!=="FINISHED"||!confirmedState(result,experiment))throw Error('Archive finale invalide.');
+          if(active){setRealtime('ARCHIVED');cacheConfirmed(experiment,result);}
         } else {
           if (!supabase)
             throw Error(
@@ -87,6 +92,7 @@ export function useCompetition(demo: boolean, experiment = env.VITE_EXPERIMENT_I
       }
     };
     void refresh();
+    if(archiveFile)return ()=>{active=false;request?.abort();};
     const interval = setInterval(refresh, 60000);
     const channel =
       !demo && supabase

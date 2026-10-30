@@ -1194,7 +1194,7 @@ function App() {
             <strong>{page}</strong>
           </div>
           <div className="header-right">
-            {!demo && !loading && <span className="subtle" title="Le contrôle de secours interroge Supabase chaque minute.">{realtime==="SUBSCRIBED" ? "LIVE" : "SYNC · 60 s"}</span>}
+            {!demo && !loading && <span className="subtle" title="Le contrôle de secours interroge Supabase chaque minute.">{realtime==="ARCHIVED" ? "ARCHIVE FINALE" : realtime==="SUBSCRIBED" ? "LIVE" : "SYNC · 60 s"}</span>}
             <span
               className={`connection ${demo || state?.agents.some(a => !known(a)) ? "warning" : error || stale ? "negative" : "positive"}`}
             >
@@ -1456,6 +1456,6 @@ function App() {
 }
 createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    {new URLSearchParams(location.search).get("phase") === "1" ? <App /> : new URLSearchParams(location.search).get("phase") === "3" ? <PhaseThree /> : <PhaseTwo />}
+    {new URLSearchParams(location.search).get("phase") === "1" ? <App /> : new URLSearchParams(location.search).get("phase") === "2" ? <PhaseTwo /> : <PhaseThree />}
   </React.StrictMode>,
 );

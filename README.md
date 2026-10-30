@@ -1,5 +1,7 @@
 # PROJECT SURVIVAL
 
+**Phase 3 : conseil d’investissement autonome.** Le guide courant est [PHASE3_GUIDE.md](docs/PHASE3_GUIDE.md). Les sections suivantes conservent l’installation et les commandes des phases historiques. Le lancement du nouveau fonds utilise `operations/council_admin.py start --confirm survival-003`, uniquement sur décision explicite.
+
 ## Phase 2 — paris sur événements
 
 **Dix agents, 100 € fictifs chacun, deux par domaine : politique, sport, météo,

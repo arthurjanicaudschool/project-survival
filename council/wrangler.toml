@@ -8,6 +8,7 @@ EXPERIMENT_ID = "survival-003"
 AZURE_DEPLOYMENT = "gpt-6.1-sol-3"
 PUBLIC_ORIGIN = "https://project-survival.pages.dev"
 ALLOW_FIXTURES = "false"
+NTFY_DELIVERY = "github-relay"
 
 [triggers]
 crons = ["* * * * *"]

@@ -4,6 +4,7 @@ import {D,type Execution} from './finance';
 export interface SqlLike {exec(query:string,...bindings:any[]):any;databaseSize?:number;}
 export class Repository {
   reads=0;writes=0;
+  onEvent?: (id:string)=>void;
   constructor(public sql:SqlLike,public atomic:<T>(f:()=>T)=>T){this.migrate();}
   rows<T=any>(q:string,...args:any[]):T[]{const c=this.sql.exec(q,...args);const r=c.toArray();this.reads+=c.rowsRead||0;this.writes+=c.rowsWritten||0;return r;}
   one<T=any>(q:string,...args:any[]):T|undefined{return this.rows<T>(q,...args)[0];}
@@ -39,7 +40,7 @@ export class Repository {
   save(s:State){s.updated_at=now();this.set('state',s);}
   event(id:string,kind:string,text:string,actor='SECRETARY',meeting:string|null=null,details:unknown={}){
     this.run('INSERT OR IGNORE INTO events(id,at,meeting_id,kind,actor,text,details) VALUES(?,?,?,?,?,?,?)',id,now(),meeting,kind,actor,text,JSON.stringify(details));
-    return this.one('SELECT * FROM events WHERE id=?',id);
+    const saved=this.one('SELECT * FROM events WHERE id=?',id);this.onEvent?.(id);return saved;
   }
   events(after=0,meeting?:string,limit=100){
     return (meeting?this.rows('SELECT * FROM events WHERE meeting_id=? AND seq>? ORDER BY seq LIMIT ?',meeting,after,limit):this.rows('SELECT * FROM events WHERE seq>? ORDER BY seq LIMIT ?',after,limit)).map(r=>({...r,details:JSON.parse(r.details)}));
@@ -69,7 +70,7 @@ export class Repository {
   claim(at=now()):any|null{return this.atomic(()=>{
     const job=this.one("SELECT * FROM jobs WHERE (status='PENDING' AND due_at<=?) OR (status='RUNNING' AND lease_until<?) ORDER BY CASE kind WHEN 'MEETING' THEN 0 WHEN 'SLOT' THEN 1 WHEN 'EMERGENCY' THEN 1 WHEN 'NOTIFY' THEN 2 WHEN 'SETTLE' THEN 3 ELSE 4 END,due_at LIMIT 1",at,at);
     if(!job)return null;
-    const lease=new Date(Date.parse(at)+660000).toISOString();
+    const lease=new Date(Date.parse(at)+120000).toISOString();
     this.run("UPDATE jobs SET status='RUNNING',lease_until=?,attempt=attempt+1 WHERE id=?",lease,job.id);
     return {...job,lease_until:lease,attempt:job.attempt+1,payload:JSON.parse(job.payload)};
   });}
@@ -81,23 +82,27 @@ export class Repository {
     const id=`${p.id}:v${p.version}`;
     if(this.one('SELECT id FROM positions WHERE id=?',id))return {id,duplicate:true};
     if(this.one('SELECT id FROM positions WHERE market_id=?',m.id))throw Error('ALREADY_INVESTED');
-    if(!e.fills.length||D(e.spent).gt(this.cash()))throw Error('INSUFFICIENT_CASH');
+    if(!e.fills.length||D(e.spent).lte(0)||D(e.quantity).lte(0)||D(e.spent).gt(this.cash()))throw Error('INSUFFICIENT_CASH');
+    const quantity=e.fills.reduce((n,f)=>n.plus(f.quantity),D(0)),spent=e.fills.reduce((n,f)=>n.plus(D(f.quantity).mul(f.price)).plus(f.fee),D(0));
+    if(!quantity.eq(e.quantity)||!spent.eq(e.spent)||D(e.spent).gt(p.amount))throw Error('INCONSISTENT_EXECUTION');
     this.run('INSERT INTO ledger VALUES(?,?,?,?,?)',id+':buy',now(),'BUY',D(e.spent).neg().toFixed(),id);
     const proof=this.proof(m.books[p.side]);
     const probability=this.dossier(m.id)?.payload?.analysis?.estimated_yes_probability??null;
     const position={proposal:p,question:m.question,url:m.url,category:m.category,end_at:m.event_end_at,estimated_yes_probability:probability,expected_edge_per_share:probability===null?null:D(p.side==='YES'?probability:D(1).minus(probability)).minus(D(e.spent).div(e.quantity)).toFixed(),reason,fees:e.fees,market_version:m.version,book_proof:proof,outcome_label:m.outcome_labels?.[p.side]||p.side};
     this.run("INSERT INTO positions VALUES(?,?,?,'PENDING',?,?,?,?)",id,m.id,p.side,e.spent,e.quantity,now(),JSON.stringify(position));
     e.fills.forEach((f,i)=>this.run('INSERT INTO fills VALUES(?,?,?,?,?,?,?)',`${id}:${i}`,id,m.assets[p.side],m.books[p.side].evidence,f.price,f.quantity,f.fee));
-    this.event(id+':fill','BET',`Le conseil a misé ${e.spent} unités de cotation sur ${p.side==='YES'?'Oui':'Non'}.`,'SECRETARY',p.meeting_id,{position_id:id,execution:e,proposal:p});
+    const fx=this.state()?.fx?.usd_per_eur;
+    const amount=fx?D(e.spent).div(fx).toDecimalPlaces(2).toFixed(2)+' € fictifs':e.spent+' unités de cotation';
+    this.event(id+':fill','BET',`Le conseil a investi ${amount} sur « ${m.outcome_labels?.[p.side]||(p.side==='YES'?'Oui':'Non')} » pour « ${m.question} ».`,'SECRETARY',p.meeting_id,{position_id:id,execution:e,proposal:p,question:m.question,outcome_label:m.outcome_labels?.[p.side]||p.side});
     return {id,duplicate:false};
   });}
   settle(position:any,m:any){return this.atomic(()=>{
     const current=this.one('SELECT * FROM positions WHERE id=?',position.id);
     if(!current||current.status==='SETTLED')return false;
-    if(!m.resolved||!m.payouts)throw Error('UNVERIFIED_RESOLUTION');
+    if(!m.resolved||!m.payouts||Object.keys(m.payouts).sort().join(',')!=='NO,YES'||!D(m.payouts.YES).plus(m.payouts.NO).eq(1)||Object.values(m.payouts).some(v=>D(String(v)).lt(0)||D(String(v)).gt(1)))throw Error('UNVERIFIED_RESOLUTION');
     const payout=D(current.quantity).mul(m.payouts[current.outcome]);
     const payload=JSON.parse(current.payload);const prob=payload.estimated_yes_probability;
-    Object.assign(payload,{payout:payout.toFixed(),profit:payout.minus(current.cost).toFixed(),settled_at:now(),resolution_evidence:m.resolution_evidence,brier_score:prob===null?null:D(prob).minus(m.payouts.YES).pow(2).toFixed(),ex_ante_review:'La qualité initiale dépend des sources et probabilités disponibles ; le résultat seul ne valide ni n’invalide la décision.'});
+    Object.assign(payload,{payout:payout.toFixed(),profit:payout.minus(current.cost).toFixed(),settled_at:now(),resolution_evidence:m.resolution_evidence,brier_score:prob===null||!['0','1'].includes(D(m.payouts.YES).toFixed())?null:D(prob).minus(m.payouts.YES).pow(2).toFixed(),ex_ante_review:'La qualité initiale dépend des sources et probabilités disponibles ; le résultat seul ne valide ni n’invalide la décision.'});
     this.run('INSERT INTO ledger VALUES(?,?,?,?,?)',current.id+':settle',now(),'SETTLEMENT',payout.toFixed(),current.id);
     this.run("UPDATE positions SET status='SETTLED',payload=? WHERE id=?",JSON.stringify(payload),current.id);
     this.event(current.id+':settled','SETTLEMENT',`Pari réglé : ${payout.toFixed()} unités récupérées.`,'SECRETARY',payload.proposal.meeting_id,{position_id:current.id,profit:payload.profit,payout:payload.payout,question:payload.question});

@@ -39,11 +39,11 @@ export function execute(book:Book,budget:string,limit:string,at:string,consumed:
   return {status:remaining.lt('.00001')||cap.eq(0)?'FILLED':'PARTIAL',reason:'',fills,quantity:quantity.toFixed(),gross:gross.toFixed(),fees:fees.toFixed(),spent:gross.plus(fees).toFixed()};
 }
 export function technicalCheck(p:Proposal,m:Market,cash:string,deadline:string,at:string,invested=false):string|null{
+  if(!['YES','NO'].includes(p.side)||typeof p.amount!=='string'||typeof p.max_price!=='string'||!/^(\d+(\.\d+)?|\.\d+)$/.test(p.amount)||!/^(\d+(\.\d+)?|\.\d+)$/.test(p.max_price))return 'INVALID_PROPOSAL';
   if(invested)return 'ALREADY_INVESTED';
   if(!m.active||m.resolved)return 'MARKET_CLOSED';
   if(!m.event_end_at||!Number.isFinite(Date.parse(m.event_end_at)))return 'UNKNOWN_TIMING';
   if(Date.parse(m.event_end_at)>Date.parse(deadline)||Date.parse(m.event_end_at)<=Date.parse(at))return 'OUTSIDE_WINDOW';
-  if(m.start_at&&Date.parse(m.start_at)<=Date.parse(at))return 'EVENT_ALREADY_STARTED';
   if(D(p.amount).lte(0)||D(p.amount).gt(cash))return 'INSUFFICIENT_CASH';
   if(D(p.max_price).lte(0)||D(p.max_price).gte(1))return 'INVALID_PRICE_LIMIT';
   if(!m.books[p.side])return 'UNKNOWN_FEES';

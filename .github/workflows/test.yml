@@ -43,6 +43,6 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
       - run: npm ci && npm run build
         working-directory: frontend
-      - run: node --test tests/data-cache.test.mjs
+      - run: node --test tests/*.test.mjs
         working-directory: frontend
       - run: node --test scheduler/worker.test.mjs

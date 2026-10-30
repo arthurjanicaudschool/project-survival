@@ -1,0 +1,7 @@
+{
+  "archives": [
+    {"file":"archive-phase1.json","experiment_id":"survival-001","bytes":1340264,"sha256":"20a21089414f522d9910916d5ddbc2c9695e0deda79784765f0502435bbb2598"},
+    {"file":"archive-phase2.json","experiment_id":"survival-002","bytes":1025466,"sha256":"30a59443f19b71bc482c7d3d9963700aa6c4998ebafdc19a8a67ad8ba4ee49cc"}
+  ],
+  "source":"Actual finished public Supabase projections, frozen without changing their financial data"
+}
