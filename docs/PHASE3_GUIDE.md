@@ -86,7 +86,7 @@ Pour chaque refus/attente, une référence indépendante de 10 € utilise les p
 
 L’iPhone est abonné à ntfy. Le topic n’est pas intégré au frontend public.
 
-Les débuts, fins et incidents déclenchent le relais GitHub ; le conseil continue sans l’attendre. Lors du test serveur, la notification a été remise à ntfy **9,6 secondes après sa création**. C’est une mesure, pas un délai maximal garanti : GitHub et iOS peuvent retarder la réception. Un secours programmé tente aussi de vider la file. La réception téléphone verrouillé doit être confirmée sur l’appareil.
+Les débuts, fins et incidents déclenchent le relais GitHub ; le conseil continue sans l’attendre. Lors du test serveur, la notification a été remise à ntfy **9,6 secondes après sa création**. C’est une mesure, pas un délai maximal garanti : GitHub et iOS peuvent retarder la réception. Un secours programmé tente aussi de vider la file. L’utilisateur a confirmé le 30 octobre 2026 avoir reçu le nouveau test sur l’écran de son iPhone verrouillé.
 
 Le jeton existant, limité aux Actions du dépôt, a été réutilisé. Son expiration vérifiée est le **12 novembre 2026 à 09:47 UTC**, au-delà d’une semaine lancée le 30 octobre. Si le lancement est reporté, vérifier ce délai. Aucun jeton ne doit être copié dans le chat.
 
@@ -200,7 +200,7 @@ La démonstration `?phase=3&mode=demo` est un replay statique **explicitement id
 - Répétition NBA réelle : cinq votes POUR, achat fictif de 84,999 unités au prix limite de 0,29, frais 0, portefeuille de validation uniquement.
 - Deux marchés historiques : résolution officielle NO puis YES vérifiée avec transactions UMA. La branche v2 dispose de tests de contrat ; aucune exécution réelle de validation v2 n’a été revendiquée.
 - Restauration isolée : tables financières, votes, propositions, événements et appels identiques à la sauvegarde vérifiée.
-- Notification serveur : relais GitHub réussi, remise à ntfy mesurée à 9,6 secondes ; réception iPhone déjà observée, test verrouillé restant à confirmer.
+- Notification serveur : relais GitHub réussi, remise à ntfy mesurée à 9,6 secondes ; réception sur l’écran de l’iPhone verrouillé confirmée par l’utilisateur le 30 octobre 2026.
 - Lecture publique : 25 requêtes de contrôle abouties, médiane 62 ms, maximum 203 ms ; au plus 137 lignes SQLite lues par requête sur cet état de préparation. Cela ne mesure pas une semaine de charge réelle.
 - Stockage de préparation : environ 17 Mo dans le Durable Object. Les artefacts GitHub existants représentent environ 381 Mo ; leur rétention reste limitée à sept jours pour les nouvelles sauvegardes. Aucune donnée phase 3 n’est écrite dans Supabase.
 
