@@ -193,13 +193,15 @@ La démonstration `?phase=3&mode=demo` est un replay statique **explicitement id
 
 ## Preuves et limites de validation
 
-- 45 tests Node du conseil réussis à ce stade, dont 100 cas de parité Python Decimal dans un test de corpus.
+- 47 tests Node du conseil réussis à ce stade, dont 100 cas de parité Python Decimal dans un test de corpus.
 - 132 tests Python réussis localement ; quatre intégrations opt-in non exécutées localement. Le précédent contrôle GitHub avec PostgreSQL a réussi.
 - Azure : déploiement `gpt-6.1-sol-3` vérifié, puis 12 appels de répétition réussis.
-- Cinq domaines : marchés et sources externes vérifiés depuis le système déployé.
+- Cinq domaines : marchés et sources externes vérifiés depuis le système déployé (contrôle du 30 octobre 2026 à 00:12 UTC : cinq domaines disponibles, Azure disponible). Les variantes d’un même match sont regroupées et les abréviations d’équipes ne sont rapprochées que dans leur championnat identifié.
 - Répétition NBA réelle : cinq votes POUR, achat fictif de 84,999 unités au prix limite de 0,29, frais 0, portefeuille de validation uniquement.
 - Deux marchés historiques : résolution officielle NO puis YES vérifiée avec transactions UMA. La branche v2 dispose de tests de contrat ; aucune exécution réelle de validation v2 n’a été revendiquée.
 - Restauration isolée : tables financières, votes, propositions, événements et appels identiques à la sauvegarde vérifiée.
 - Notification serveur : relais GitHub réussi, remise à ntfy mesurée à 9,6 secondes ; réception iPhone déjà observée, test verrouillé restant à confirmer.
+- Lecture publique : 25 requêtes de contrôle abouties, médiane 62 ms, maximum 203 ms ; au plus 137 lignes SQLite lues par requête sur cet état de préparation. Cela ne mesure pas une semaine de charge réelle.
+- Stockage de préparation : environ 17 Mo dans le Durable Object. Les artefacts GitHub existants représentent environ 381 Mo ; leur rétention reste limitée à sept jours pour les nouvelles sauvegardes. Aucune donnée phase 3 n’est écrite dans Supabase.
 
 Les contrôles et délais mesurés ne garantissent ni disponibilité à 100 %, ni profit, ni nombre minimal d’investissements. L’interprétation sémantique d’un modèle peut être erronée malgré un JSON valide ; le débat et les citations réduisent ce risque sans le supprimer. Le journal garde aussi les incidents de préparation et les corrections, plutôt que de les effacer.

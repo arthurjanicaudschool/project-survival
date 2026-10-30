@@ -58,7 +58,7 @@ export class Engine {
       try{
         const candidates=await this.markets.catalog(category,deadline);let checked=0,usable=0,sourceCount=0;const failures:string[]=[];
         const admissible=candidates.filter(raw=>{try{const m=normalize(raw,category);return m.active&&Date.parse(m.event_end_at)>Date.now()&&Date.parse(m.event_end_at)<=Date.parse(deadline);}catch{return false;}}).sort((a,b)=>coveragePreference(normalize(b,category))-coveragePreference(normalize(a,category)));
-        const seenGroups=new Set();const diverse=admissible.filter(raw=>{const group=String(raw.events?.[0]?.id||raw.id);if(seenGroups.has(group))return false;seenGroups.add(group);return true;});
+        const seenGroups=new Set();const diverse=admissible.filter(raw=>{const group=normalize(raw,category).group;if(seenGroups.has(group))return false;seenGroups.add(group);return true;});
         for(const raw of diverse.slice(0,3)){
           try{this.repo.putMarket(normalize(raw,category));const m=await this.markets.inspect(String(raw.id));checked++;const sources=await this.markets.evidence(m);const independent=sources.filter(s=>s.status==='VERIFIED'&&s.provider!=='Polymarket');if(independent.length){usable++;sourceCount+=independent.length;}this.repo.putMarket(m);for(const source of sources)if(source.status==='VERIFIED')this.repo.document(source);}catch(e){failures.push(this.errorCode(e));}
           if(usable)break;
